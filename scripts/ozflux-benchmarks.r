@@ -369,22 +369,28 @@ define_variable <- function(name, units, display_name) {
   return(variable)
 }
 
+#' Print a message to the user.
+#' @param message: The message to be displayed.
+print <- function(message) {
+  cat(paste0(message, "\n"))
+}
+
 ################################################################################
 # User Inputs
 ################################################################################
 
 # Path to LPJ-Guess repository.
-guess <- "/home/drew/code/lpj-guess/dave-daily-grass-photosynthesis"
+guess <- "../dave-daily-grass-photosynthesis"
 
 # Path to directory containing observed data.
-obs_dir <- "/home/drew/code/lpj-guess/scripts/ozflux-lpjg/obs/fluxes"
+obs_dir <- "obs/fluxes"
 
 # Optional path to directory containing baseline data. Set to NULL if not using
 # baseline data.
-baseline_dir <- "/home/drew/code/lpj-guess/output-analysis/baseline"
+baseline_dir <- "baseline"
 
 # Desired output directory.
-out_dir <- paste0(guess, "/benchmarks/ozflux/graphs")
+out_dir <- "ozflux-graphs"
 
 # Names of sites to be plotted.
 sites <- c(
@@ -401,7 +407,7 @@ vars <- list(
 # TRUE to plot data during spinup period, false otherwise.
 show_spinup <- TRUE
 
-# Plot scaling. Increase to make everything bigger.
+# Plot scaling. Increase this to make everything bigger.
 scale <- 2
 
 # Width and height (in px) of the generated graphs.
@@ -412,13 +418,18 @@ height <- 1080
 # End of user inputs
 ################################################################################
 
+# Create output directory if it doesn't already exist.
+if (!dir.exists(out_dir)) {
+  dir.create(out_dir, recursive = TRUE)
+}
+
 for (site in sites) {
   for (var in vars) {
-    cat(paste0("Generating ", var$name, " plots for site ", site, "...\n"))
+    print(paste0("Generating ", var$name, " plots for site ", site, "..."))
     plot_site(guess, obs_dir, var$name, site, var$units, var$title, scale
       , baseline_dir = baseline_dir, width = width, height = height
       , show_spinup = show_spinup)
   }
 }
 
-cat(paste0("Charts successfully generated in ", out_dir, "\n"))
+print(paste0("Charts successfully generated in ", out_dir))
