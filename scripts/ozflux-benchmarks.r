@@ -105,7 +105,7 @@ compute_r2 <- function(x, y) {
 #' Compute root mean square error.
 #'
 #' This is in the units of the variable.
-#' 
+#'
 #' @param x: Observations
 #' @param y: Predictions
 compute_rmse <- function(x, y) {
