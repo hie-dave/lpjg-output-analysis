@@ -324,8 +324,12 @@ read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name, site
   total_idx <- which(colnames(data) == in_colname_total)
   colnames(data)[total_idx] <- colname_total
 
-  # Remove all columns except date, predicted, observed, and baseline.
-  if (!keep_pfts) {
+  if (keep_pfts) {
+    # Keep PFTs, remove year, day, lon, lat
+    cols_to_remove <- c(colname_year, colname_day, "Lon", "Lat")
+    data <- data[, !(colnames(data) %in% cols_to_remove)]
+  } else {
+    # Remove all columns except date, predicted, observed, and baseline.
     cols_to_keep <- c(colname_date, colname_total)
     if (colname_observed %in% colnames(data)) {
       cols_to_keep <- c(cols_to_keep, colname_observed)
