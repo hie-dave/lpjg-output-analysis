@@ -514,9 +514,6 @@ height <- 1080
 # Number of sig figs used when writing stats like RMSE/NSE.
 num_figs <- 2
 
-# TRUE to draw timeseries and P vs O plots together in the same image.
-combined <- TRUE
-
 ################################################################################
 # End of user inputs
 ################################################################################
