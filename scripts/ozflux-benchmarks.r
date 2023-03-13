@@ -1,5 +1,77 @@
+
+#' Create a variable 'object' given its lpj-guess name, units and display name.
+#' @param name: Name of the variable in LPJ-Guess. This is also the name of the
+#'              column in the observed data.
+#' @param units: Units of the variable.
+#' @param display_name: Friendly name of the variable to go in plots/legends.
+define_variable <- function(name, units, display_name, obs_name = name) {
+  variable <- c()
+  variable$name <- name
+  variable$units <- units
+  variable$title <- display_name
+  variable$obs_name <- obs_name
+  return(variable)
+}
+
 ################################################################################
-# Global Variables. Should not be modified by users. See bottom for user inputs.
+# User Inputs - modify as required
+################################################################################
+
+# Path to LPJ-Guess repository.
+guess <- "../dave-daily-grass-photosynthesis"
+
+# Path to directory containing observed data.
+obs_dir <- "obs"
+
+# Optional path to directory containing baseline data. Set to NULL if not using
+# baseline data.
+baseline_dir <- "baseline"
+
+# Desired output directory.
+out_dir <- "ozflux-graphs"
+
+# Names of sites to be plotted.
+sites <- c(
+  "Otway_L6_20070811_20110101",
+  "Samford_L6_20100602_20171231",
+  "SturtPlains_L6_20080828_20220218",
+  "Yanco_L6_20130101_20220218"
+)
+
+# Variables to be plotted
+vars <- list(
+    define_variable("assim", "kgC/m2/day", "GPP", "gpp")
+  , define_variable("resp", "kgC/m2/day", "Respiration")
+  , define_variable("lai", "m2/m2", "LAI")
+  , define_variable("swmm", "mm", "Soil Water Content")
+  # , define_variable("cmass", "kgC/m2", "AboveGround Biomass", "live_biomass")
+)
+
+# TRUE to plot data during spinup period, FALSE otherwise.
+show_spinup <- FALSE
+
+# TRUE to show individual pfts' data. FALSE otherwise (ie just show totals).
+show_pfts <- FALSE
+
+# Plot scaling. Increase this to make everything bigger.
+scale <- 2
+
+# Width and height (in px) of the generated graphs.
+width <- 1920
+height <- 1080
+
+# Number of sig figs used when writing stats like RMSE/NSE.
+num_figs <- 2
+
+# TRUE to create an extra directory containing plots from all sites in a single
+# directory. (Uses links, copies.)
+create_allsite_dir <- TRUE
+
+# Compute and draw on the plot stats (rmse/nse/etc) for baseline vs obs data.
+write_baseline_stats <- FALSE
+
+################################################################################
+# Global Variables. Probably shouldn't be modified by users.
 ################################################################################
 
 # Additional multiplier for legends text.
@@ -33,6 +105,25 @@ colname_date <- "Date"
 # Name of the baseline total column in the processed data.
 colname_baseline_total <- "daily-grass"
 
+out_dir_name <- "out"
+
+by_site_dir <- "by-site"
+all_site_dir <- "all-sites"
+
+all_site_dir <- paste0(out_dir, "/", all_site_dir)
+
+# Name of the total column in the input data.
+in_colname_total <- "total"
+
+# If less than this proportion of the observed data is NA, it will be
+# interpolated and drawn as lines. If more than this proportion of the observed
+# data is NA, it will be drawn as a line.
+interp_threshold <- 0.9
+
+################################################################################
+# Functions.
+################################################################################
+
 #' Read an LPJ-Guess output file and return file data as a dataframe.
 #' @param filename: Path to the output file, may be relative or absolute.
 #' @param nrow: Maximum number of rows to read.
@@ -45,7 +136,7 @@ read_outfile <- function(filename, nrow = -1) {
 #' @param var: The output variable.
 read_site <- function(guess, site, var) {
   ozflux <- paste0(guess, "/benchmarks/ozflux")
-  filename <- paste0(ozflux, "/", site, "/out/", var, ".out")
+  filename <- paste0(ozflux, "/", site, "/", out_dir_name, "/dave_", var, ".out")
   return(read_outfile(filename))
 }
 
@@ -68,6 +159,9 @@ plot_timeseries <- function(data, xcol, ycols, units, var_name, ...) {
     ymax <- max(ymax, max(col))
   }
 
+  xmin <- min(data[, xcol])
+  xmax <- max(data[, xcol])
+
   xlab <- xcol
   ylab <- paste0(var_name, " (", units, ")")
 
@@ -80,8 +174,37 @@ plot_timeseries <- function(data, xcol, ycols, units, var_name, ...) {
       # plot() will go onto the previous plot, rather than creating a new plot.
       par(new = TRUE)
     }
-    plot(data[, xcol], data[, ycols[i]], type = "l", col = colours[i]
-      , xlab = xlab, ylab = ylab, xlim = NULL, ylim = c(ymin, ymax), ...)
+    type <- "l"
+
+    # if y data is missing some points (common for observations), use points,
+    # rather than lines.
+    xdata <- data[, xcol]
+    ydata <- data[, ycols[i]]
+    if (NA %in% ydata) {
+      na_indices <- which(is.na(ydata))
+      na_prop <- length(na_indices) / length(ydata)
+      if (na_prop < interp_threshold) {
+        not_na <- which(!is.na(ydata))
+        first <- not_na[1]
+        last <- not_na[length(not_na)]
+        ydata <- ydata[first:last]
+        xdata <- xdata[first:last]
+        na_indices <- which(is.na(ydata))
+        not_na <- which(!is.na(ydata))
+        for (na_idx in na_indices) {
+          prv <- na_idx - 1
+          nxt <- not_na[not_na > na_idx][1]
+          dlt_x <- nxt - prv
+          dlt_y <- ydata[nxt] - ydata[prv]
+          ydata[na_idx] <- ydata[prv] + dlt_y / dlt_x
+        }
+      } else {
+        type <- "p"
+      }
+    }
+    plot(xdata, ydata, type = type, col = colours[i]
+      , xlab = xlab, ylab = ylab, xlim = c(xmin, xmax), ylim = c(ymin, ymax)
+      , ...)
   }
 
   legend("topleft", legend = ycols, text.col = colours, lwd = par("lwd")
@@ -153,7 +276,15 @@ compute_rsr <- function(x, y) {
   return(compute_rmse(x, y) / sd(x))
 }
 
-write_stats <- function(observations, predictions, units, num_figs) {
+write_stats <- function(observations, predictions, units, num_figs, colour) {
+  # Filter out NA values.
+  filter <- !is.na(observations)
+  observations <- observations[filter]
+  predictions <- predictions[filter]
+  filter <- !is.na(predictions)
+  observations <- observations[filter]
+  predictions <- predictions[filter]
+
   r2 <- compute_r2(observations, predictions)
   rmse <- compute_rmse(observations, predictions)
   nse <- compute_nse(observations, predictions)
@@ -164,7 +295,7 @@ write_stats <- function(observations, predictions, units, num_figs) {
     paste0("rmse = ", signif(rmse, num_figs)),
     paste0("nse = ", signif(nse, num_figs)),
     paste0("rsr = ", signif(rsr, num_figs))
-  ))
+  ), col = colour, text.col = colour)
 }
 
 #' Return a vector of colours of the specified length, to be used for plotting.
@@ -270,8 +401,8 @@ aggregate_patches <- function(data) {
   return(data)
 }
 
-read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name, site
-  , keep_spinup, keep_pfts) {
+read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name
+  , obs_name, site, keep_spinup, keep_pfts) {
   colname_year <- "Year"
   colname_day <- "Day"
 
@@ -287,13 +418,13 @@ read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name, site
   if (file.exists(obs_file)) {
     # Column names different in observed data.
     observed <- read.csv(obs_file)
-    if (var_name %in% colnames(observed)) {
-      observed <- observed[, c("year", "doy", var_name)]
+    if (obs_name %in% colnames(observed)) {
+      observed <- observed[, c("year", "doy", obs_name)]
       colnames(observed)[3] <- colname_observed
       data <- merge(data, observed, by.x = date_cols, by.y = c("year", "doy")
-        , sort = FALSE, all.x = keep_spinup)
+        , sort = FALSE, all.x = TRUE, all.y = TRUE)
     } else {
-      warning(paste0("Variable '", var_name, "' does not exist in observed file '", obs_file, "'"))
+      warning(paste0("Variable '", obs_name, "' does not exist in observed file '", obs_file, "'"))
     }
   } else {
     warning(paste0("Observed data file not found: '", obs_file, "'"))
@@ -301,12 +432,15 @@ read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name, site
 
   has_baseline_total <- FALSE
   if (!is.null(baseline_dir)) {
-    baseline_file <- paste0(baseline_dir, "/", site, "/output/", var$name
-      , ".out")
+    baseline_file <- paste0(baseline_dir, "/", site, "/", out_dir_name, "/dave_"
+      , var$name, ".out")
     if (file.exists(baseline_file)) {
       has_baseline_total <- TRUE
       baseline_data <- read_outfile(baseline_file)
-      baseline_total_index <- which(colnames(baseline_data) == "Total")
+      if (!in_colname_total %in% colnames(baseline_data)) {
+        stop(paste0("Baseline data exists for variable '", var$name, "', but file contains no total column"))
+      }
+      baseline_total_index <- which(colnames(baseline_data) == in_colname_total)
       colnames(baseline_data)[baseline_total_index] <- colname_baseline_total
       baseline_data <- baseline_data[, c(date_cols, colname_baseline_total)]
       data <- merge(data, baseline_data, by = date_cols, sort = FALSE
@@ -320,7 +454,9 @@ read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name, site
     , format = "%Y-%j")
 
   # Rename column 'Total' to 'Predicted'.
-  in_colname_total <- "Total"
+  if (!in_colname_total %in% colnames(data)) {
+    stop(paste0("Column '", in_colname_total, "' does not exist in input data"))
+  }
   total_idx <- which(colnames(data) == in_colname_total)
   colnames(data)[total_idx] <- colname_total
 
@@ -352,19 +488,6 @@ get_pft_names <- function(data) {
       , colname_observed
       , colname_baseline_total)
     return(names(data)[!names(data) %in% not_pfts])
-}
-
-#' Create a variable 'object' given its lpj-guess name, units and display name.
-#' @param name: Name of the variable in LPJ-Guess. This is also the name of the
-#'              column in the observed data.
-#' @param units: Units of the variable.
-#' @param display_name: Friendly name of the variable to go in plots/legends.
-define_variable <- function(name, units, display_name) {
-  variable <- c()
-  variable$name <- name
-  variable$units <- units
-  variable$title <- display_name
-  return(variable)
 }
 
 #' Print a message to the user.
@@ -463,89 +586,121 @@ plot_site <- function(data, out_dir, site, units, title, scale, nsigfig
 
   if (colname_observed %in% colnames(data)) {
     plot_pvo(data, colname_observed, y_names, units, title)
-    write_stats(data[[colname_observed]], data[[colname_total]], units, nsigfig)
+
+    colours <- get_colour_palette(length(timeseries_names))
+    total_colour <- colours[which(timeseries_names == colname_total)[1]]
+    write_stats(data[[colname_observed]], data[[colname_total]], units, nsigfig
+      , total_colour)
+
+    if (write_baseline_stats && colname_baseline_total %in% timeseries_names) {
+      idx <- which(timeseries_names == colname_baseline_total)[1]
+      baseline_colour <- colours[idx]
+      write_stats(data[[colname_observed]], data[[colname_baseline_total]]
+      , units, nsigfig, baseline_colour)
+    }
   }
   finish_graph()
 }
 
+#' Link all files under the input directory (recursively) which match the file
+#' name pattern provided to a file with the same name in the output directory.
+#' @param in_dir: Input directory (ie the search path).
+#' @param out_dir: Output directory. Will be created if required.
+#' @param pattern: Only file names matching this pattern will be linked.
+#' @param copy: Iff true, files will be copied, not linked.
+#' @param hard_link: Ignored if copy = TRUE. True for a hard link, false for a
+#' symlink.
+link_all <- function(in_dir, out_dir, pattern = "*.png", copy = TRUE,
+  hard_link = FALSE) {
+  # Create output directory if it doesn't already exist.
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE)
+  }
+
+  # Enumerate files matching the pattern under the input directory.
+  bysite_files <- list.files(path = in_dir, pattern = pattern
+    , recursive = TRUE, full.names = TRUE)
+
+  # Function pointer to the correct link function.
+  if (copy) {
+    link_func <- file.copy
+  } else {
+    link_func <- if (hard_link) file.link else file.symlink
+  }
+
+  # Symlink each file.
+  for (file in bysite_files) {
+    out_name <- paste0(out_dir, "/", basename(file))
+    if (file.exists(out_name)) {
+      file.remove(out_name)
+    }
+    link_func(file, out_name)
+  }
+}
+
+#' Create all plots for a particular variable/site combination, using the global
+#' user input variables.
+#'
+#' @param site: Name of the site.
+#' @param var: Variable to be plotted.
+#' @param min_date: If provided, only data after this data will be plotted.
+plotting_site <- function(site, var, min_date = NULL) {
+  print(paste0("Generating ", var$name, " plots for site ", site, "..."))
+
+  # Read data for this site.
+  data <- read_data(guess, obs_dir, baseline_dir, var$name, var$obs_name, site
+    , show_spinup, show_pfts)
+
+  if (is.null(min_date) && colname_observed %in% colnames(data)) {
+    min_date <- data[1, colname_date]
+  }
+  if (!is.null(min_date) && !colname_observed %in% colnames(data)) {
+    data <- data[data$Date >= min_date, ]
+  }
+
+  # Generate both combined and separate graphs.
+  comb_bysite <- out_dir
+  sepa_bysite <- out_dir
+
+  if (create_allsite_dir) {
+    comb_bysite <- paste0(comb_bysite, "/", by_site_dir)
+    sepa_bysite <- paste0(sepa_bysite, "/", by_site_dir)
+  }
+
+  comb_bysite <- paste0(comb_bysite, "/combined/", site)
+  sepa_bysite <- paste0(sepa_bysite, "/separate/", site)
+
+  if (colname_observed %in% colnames(data)) {
+    # Only generate a combined plot if we actually have observed data for this
+    # variable.
+    plot_site(data, comb_bysite, site, var$units, var$title, scale, num_figs
+      , show_pfts, TRUE, width = width, height = height)
+  }
+  plot_site(data, sepa_bysite, site, var$units, var$title, scale, num_figs
+    , show_pfts, FALSE, width = width, height = height)
+
+  if (create_allsite_dir) {
+    comb_allsite <- paste0(all_site_dir, "/combined")
+    sepa_allsite <- paste0(all_site_dir, "/separate")
+
+    link_all(comb_bysite, comb_allsite)
+    link_all(sepa_bysite, sepa_allsite)
+  }
+  return(min_date)
+}
+
 ################################################################################
-# User Inputs
+# Main entrypoint.
 ################################################################################
 
-# Path to LPJ-Guess repository.
-guess <- "../dave-daily-grass-photosynthesis"
-
-# Path to directory containing observed data.
-obs_dir <- "obs/fluxes"
-
-# Optional path to directory containing baseline data. Set to NULL if not using
-# baseline data.
-baseline_dir <- "baseline"
-
-# Desired output directory.
-out_dir <- "ozflux-graphs"
-
-# Names of sites to be plotted.
-sites <- c(
-  "SturtPlains_L6_20080828_20220218",
-  "Yanco_L6_20130101_20220218"
-)
-
-# Variables to be plotted
-vars <- list(
-  define_variable("gpp", "kgC/m2/day", "GPP"),
-  define_variable("resp", "kgC/m2/day", "Respiration"),
-  define_variable("lai", "m2/m2", "LAI")
-)
-
-# TRUE to plot data during spinup period, FALSE otherwise.
-show_spinup <- FALSE
-
-# TRUE to show individual pfts' data. FALSE otherwise (ie just show totals).
-show_pfts <- FALSE
-
-# Plot scaling. Increase this to make everything bigger.
-scale <- 2
-
-# Width and height (in px) of the generated graphs.
-width <- 1920
-height <- 1080
-
-# Number of sig figs used when writing stats like RMSE/NSE.
-num_figs <- 2
-
-################################################################################
-# End of user inputs
-################################################################################
+if (dir.exists(all_site_dir)) {
+  unlink(all_site_dir, recursive = TRUE)
+}
 
 for (site in sites) {
   min_date <- NULL
   for (var in vars) {
-    print(paste0("Generating ", var$name, " plots for site ", site, "..."))
-
-    # Read data for this site.
-    data <- read_data(guess, obs_dir, baseline_dir, var$name, site, show_spinup
-      , show_pfts)
-
-    if (is.null(min_date) && colname_observed %in% colnames(data)) {
-      min_date <- data[1, colname_date]
-    }
-    if (!is.null(min_date) && !colname_observed %in% colnames(data)) {
-      data <- data[data$Date >= min_date, ]
-    }
-
-    # Generate both combined and separate graphs.
-    combined_path <- paste0(out_dir, "/combined")
-    separate_path <- paste0(out_dir, "/separate")
-
-    if (colname_observed %in% colnames(data)) {
-      # Only generate a combined plot if we actually have observed data for this
-      # variable.
-      plot_site(data, combined_path, site, var$units, var$title, scale, num_figs
-        , show_pfts, TRUE, width = width, height = height)
-    }
-    plot_site(data, separate_path, site, var$units, var$title, scale, num_figs
-      , show_pfts, FALSE, width = width, height = height)
+    min_date <- plotting_site(site, var, min_date)
   }
 }
 
