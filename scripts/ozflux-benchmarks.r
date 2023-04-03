@@ -4,46 +4,98 @@
 #'              column in the observed data.
 #' @param units: Units of the variable.
 #' @param display_name: Friendly name of the variable to go in plots/legends.
-define_variable <- function(name, units, display_name, obs_name = name) {
+#' @param obs_name: Name of the observed variable.
+#' @param file_name: Name of the output file without file extension.
+#' @param pred_name: Name of the predicted data column.
+#' @param on_right: A variable to be plotted on the right-axis in timeseries
+#'                  plots.
+#' @param right_scale: Scaling factor to be applied to on_right.
+define_variable <- function(name, units, display_name, obs_name = name
+  , file_name = paste0("dave_", name, ".out"), obs_source = "flux data"
+  , pred_name = "total", on_right = NULL, right_scale = 1) {
   variable <- c()
   variable$name <- name
   variable$units <- units
   variable$title <- display_name
   variable$obs_name <- obs_name
+  variable$obs_source <- obs_source
+  variable$file_name <- file_name
+  variable$pred_name <- pred_name
+  variable$on_right <- on_right
+  variable$right_scale <- right_scale
   return(variable)
+}
+
+#' Create an 'object' which represents an LPJ-Guess version.
+#' @param name: Name of the version which will appear in graph legends.
+#' @param path: Path to the repository for this version of the model.
+define_version <- function(name, path) {
+  version <- c()
+  version$name <- name
+  version$path <- path
+  return(version)
 }
 
 ################################################################################
 # User Inputs - modify as required
 ################################################################################
 
-# Path to LPJ-Guess repository.
-guess <- "../dave-daily-grass-photosynthesis"
-
 # Path to directory containing observed data.
 obs_dir <- "obs"
 
-# Optional path to directory containing baseline data. Set to NULL if not using
-# baseline data.
-baseline_dir <- "baseline"
-
 # Desired output directory.
-out_dir <- "ozflux-graphs"
+out_dir <- "graphs"
 
 # Names of sites to be plotted.
 sites <- c(
-  "Otway_L6_20070811_20110101",
-  "Samford_L6_20100602_20171231",
-  "SturtPlains_L6_20080828_20220218",
-  "Yanco_L6_20130101_20220218"
+#   "AdelaideRiver"
+# , "AliceSpringsMulga"
+# , "Boyagin"
+# , "Calperum"
+# , "CapeTribulation"
+# , "Collie"
+# , "CowBay"
+# , "CumberlandPlain"
+# , "DalyPasture"
+# , "DalyUncleared"
+# , "DryRiver"
+# , "Emerald"
+# , "FoggDam"
+# , "Gingin"
+# , "GreatWesternWoodlands"
+# , "HowardSprings"
+# , "Litchfield"
+# , "Longreach"
+# , "Otway"
+# , "RedDirtMelonFarm"
+# , "Ridgefield"
+# , "RiggsCreek"
+# , "RobsonCreek"
+# , "Samford"
+# , "SilverPlains"
+# , "SturtPlains"
+# , "TiTreeEast"
+# , "Tumbarumba"
+# , "WallabyCreek"
+# # , "Warra"
+# # , "Whroo"
+"WombatStateForest"
+, "Yanco"
+)
+
+versions <- list(
+    define_version("dave", "../dave-daily-grass-photosynthesis")
+  , define_version("daily-grass", "../dave-daily-grass")
+  , define_version("trunk", "../dave-baseline")
 )
 
 # Variables to be plotted
 vars <- list(
-    define_variable("assim", "kgC/m2/day", "GPP", "gpp")
-  , define_variable("resp", "kgC/m2/day", "Respiration")
-  , define_variable("lai", "m2/m2", "LAI")
-  , define_variable("swmm", "mm", "Soil Water Content")
+    define_variable("gpp", "gC * m ^ -2 * day ^ -1", "GPP", "gpp")
+  , define_variable("resp", "gC * m ^ -2 * day ^ -1", "Respiration")
+  , define_variable("nee", "gC * m ^ -2 * day ^ -1", "NEE")
+  , define_variable("et", "mm.day ^ -1", "ET")
+  , define_variable("lai", "m ^ 2 * m ^ -2", "LAI", obs_source = "remotely sensed")
   # , define_variable("cmass", "kgC/m2", "AboveGround Biomass", "live_biomass")
 )
 
@@ -85,10 +137,10 @@ title_scale <- 3
 cb_colours <- c(
   "#e69f00",
   "#56b4e9",
+  "#cc79a7",
   "#009e73",
   "#0072b2",
   "#d55e00",
-  "#cc79a7",
   "#f0e442",
   "#000000"
 )
@@ -96,21 +148,26 @@ cb_colours <- c(
 # Name of the observed column in the processed data.
 colname_observed <- "Observed"
 
-# Name of the total column in the processed data.
-colname_total <- "dave"
+# Name of the year column in the predicted data.
+colname_year <- "Year"
+
+# Name of the 'day of year' column in the predicted data. Note that this column
+# contains a day index (ie 0-364).
+colname_day <- "Day"
 
 # Name of the date column in the processed data.
 colname_date <- "Date"
 
-# Name of the baseline total column in the processed data.
-colname_baseline_total <- "daily-grass"
-
+# Name of the site-level output directory.
 out_dir_name <- "out"
 
+# Name of the output directory which will contain site-level graphs in separate
+# directories.
 by_site_dir <- "by-site"
-all_site_dir <- "all-sites"
 
-all_site_dir <- paste0(out_dir, "/", all_site_dir)
+# Name of the output directory which will contain site-level graphs in a single
+# directory.
+all_site_dir <- paste0(out_dir, "/", "all-sites")
 
 # Name of the total column in the input data.
 in_colname_total <- "total"
@@ -119,6 +176,67 @@ in_colname_total <- "total"
 # interpolated and drawn as lines. If more than this proportion of the observed
 # data is NA, it will be drawn as a line.
 interp_threshold <- 0.9
+
+# Name of the 90cm soil moisture column which will be calculated from the
+# predictions.
+name_sw90 <- "sw_90"
+
+# Soil moisture at 90cm variable definition.
+sw90 <- define_variable("sw", "", "90 * cm ~ Soil ~ Moisture ~ Fraction"
+  , obs_name = "swindex_90", obs_source = "SMIPS")
+
+# Relative path to ozflux directory within the repository root.
+ozflux_relpath <- "/benchmarks/ozflux"
+
+# Number of days in an LPJ-Guess year.
+year_len <- 365
+
+# Height of lpj-guess soil layers (cm).
+lpj_layer_height <- 10
+
+# PCH value which yields a filled circle.
+# col sets the border colour and bg sets the background colour.
+pch_filled_circle <- 21
+
+# Scaling factor for symbols used in Predicted vs Observed plots.
+pvo_point_size <- 0.5
+
+# Alpha channel applied to symbols in predicted vs. observed plots. This should
+# be in range [0, 1]. Lower values mean more transparency (ie less opacity).
+symbol_alpha <- 1
+
+# Name of precipitation column in processed data.
+colname_precip <- "Precipitation"
+
+# Name of the precipitation output file.
+filename_precip <- "dave_met_precip.out"
+
+# Precip data scaling factor.
+scale_precip <- 0.25
+
+# Top row margins (in # lines).
+mar_top_row <- c(3, 3, 2, 1) + 0.1
+
+# Bottom row margins (in # lines).
+mar_bottom_row <- c(3, 3, 0, 1) + 0.1
+
+# The bottom side in APIs which take a side index.
+side_bottom <- 1
+
+# The left side in APIs which take a side index.
+side_left <- 2
+
+# The top side in APIs which take a side index.
+side_top <- 3
+
+# The right side in APIs which take a side index.
+side_right <- 4
+
+# The line on which x-axis labels are drawn.
+xaxis_label_line <- 2
+
+# The line on which y-axis labels are drawn.
+yaxis_label_line <- 1.8
 
 ################################################################################
 # Functions.
@@ -135,9 +253,16 @@ read_outfile <- function(filename, nrow = -1) {
 #' @param site: The site.
 #' @param var: The output variable.
 read_site <- function(guess, site, var) {
-  ozflux <- paste0(guess, "/benchmarks/ozflux")
-  filename <- paste0(ozflux, "/", site, "/", out_dir_name, "/dave_", var, ".out")
+  ozflux <- paste0(guess, ozflux_relpath)
+  filename <- paste0(ozflux, "/", site, "/", out_dir_name, "/", var)
   return(read_outfile(filename))
+}
+
+get_series_name <- function(name, units) {
+  if (units == "") {
+    return(name)
+  }
+  return(paste0(name, " ~ (", units, ")"))
 }
 
 #' Plot one column (xcol) of data against all of the column names specified in
@@ -146,9 +271,12 @@ read_site <- function(guess, site, var) {
 #' @param data: Dataframe of data.
 #' @param xcol: Name of the x-data column.
 #' @param ycols: Vector of names of y-data columns to be plotted.
-#' @param units: Units of the variable being displayed.
-#' @param var_name: Friendly/display name of the variable being displayed.
-plot_timeseries <- function(data, xcol, ycols, units, var_name, ...) {
+#' @param var: Metadata of the variable being plotted.
+#' @param interp: Can the observations be interpolated?
+#' @param write_legend: True to write the legend. False otherwise.
+#' @param legend_inside_graph: True to write the legend inside the plot area. False otherwise.
+plot_timeseries <- function(data, xcol, ycols, var, interp = TRUE, write_legend
+  , legend_inside_graph, ...) {
   # We want to plot all series using the same y-axis. Ergo, we need to know the
   # largest and smallest y-values in advance.
   ymax <- -1e300
@@ -161,12 +289,19 @@ plot_timeseries <- function(data, xcol, ycols, units, var_name, ...) {
 
   xmin <- min(data[, xcol])
   xmax <- max(data[, xcol])
+  xlim <- c(xmin, xmax)
 
-  xlab <- xcol
-  ylab <- paste0(var_name, " (", units, ")")
+  xlab <- parse(text = xcol)
+  ylab <- parse(text = get_series_name(var$title, var$units))
 
   # Get colours used for plotting the data.
-  colours <- get_colour_palette(length(ycols))
+  ncol <- length(ycols)
+  if (!is.null(var$on_right)) {
+    ncol <- length(ycols) + 1
+  }
+  colours <- get_colour_palette(ncol)
+
+  mgp <- c(2.5, 1, 0)
 
   for (i in seq_len(length(ycols))) {
     if (i > 1) {
@@ -180,10 +315,10 @@ plot_timeseries <- function(data, xcol, ycols, units, var_name, ...) {
     # rather than lines.
     xdata <- data[, xcol]
     ydata <- data[, ycols[i]]
-    if (NA %in% ydata) {
+    if (ycols[i] == colname_observed && NA %in% ydata) {
       na_indices <- which(is.na(ydata))
       na_prop <- length(na_indices) / length(ydata)
-      if (na_prop < interp_threshold) {
+      if (interp && na_prop < interp_threshold) {
         not_na <- which(!is.na(ydata))
         first <- not_na[1]
         last <- not_na[length(not_na)]
@@ -203,12 +338,73 @@ plot_timeseries <- function(data, xcol, ycols, units, var_name, ...) {
       }
     }
     plot(xdata, ydata, type = type, col = colours[i]
-      , xlab = xlab, ylab = ylab, xlim = c(xmin, xmax), ylim = c(ymin, ymax)
-      , ...)
+      , xlab = "", ylab = "", xlim = xlim, ylim = c(ymin, ymax)
+      , mgp = mgp, ...)
+    mtext(xlab, side = side_bottom, line = xaxis_label_line, cex = scale)
+    mtext(ylab, side = side_left, line = yaxis_label_line, cex = scale)
   }
 
-  legend("topleft", legend = ycols, text.col = colours, lwd = par("lwd")
-    , col = colours)
+  if (!is.null(var$on_right)) {
+    xdata <- data[, xcol]
+    ydata <- data[, var$on_right$name]
+    ymax <- max(ydata) / var$right_scale
+    ymin <- min(ydata)
+    ylim <- c(ymin, ymax)
+
+    par(new = TRUE)
+    plot(xdata, ydata, type = type, col = colours[ncol], xlim = xlim
+      , ylim = ylim, mgp = mgp, xlab = "", ylab = "", xaxt = "n", yaxt = "n"
+      , ...)
+    # side 1 = bottom, 2 = left, 3 = top, 4 = right
+    # line controls distance from plot area
+    # title <- var$on_right$title
+    # units <- var$on_right$units
+    # yname <- parse(text = get_series_name(title, units))
+    # side_top <- 4
+    #axis(side = side_top)
+    #mtext(yname, side = side_top, line = 0.5, cex = scale)
+  }
+
+  if (write_legend) {
+    legend_names <- ycols
+    if (!is.null(var$on_right)) {
+      legend_names <- c(legend_names, var$on_right$title)
+    }
+    legend_names[which(legend_names == colname_observed)] <- paste0(
+      colname_observed, " (", var$obs_source, ")")
+    if (legend_inside_graph) {
+      pos <- "topleft"
+      inset <- c(0, 0)
+    } else {
+      pos <- "topright"
+      inset <- c(-0.475, 0)
+    }
+    legend(pos, legend = legend_names, text.col = colours
+      , lwd = par("lwd"), col = colours, inset = inset)
+  }
+}
+
+#' Plot seasonal trends.
+#'
+#' @param data: Input data.
+#' @param colname_date: Name of the date column.
+#' @param timeseries_names: Column names, for which a seasonal timeseries will
+#' be plotted.
+#' @param var: Output variable metadata.
+#' @param interp: True to interpolate sparse observations, false otherwise.
+#' @param legend_inside_graph: True to write the legend inside the graph area, false otherwise.
+plot_seasonal <- function(data, xcol, ycols, var, interp = TRUE
+  , legend_inside_graph, ...) {
+    aggregated <- data[1:year_len, ]
+    for (i in 1:year_len) {
+      indices <- which(as.integer(format(data$Date, format = "%j")) == i)
+      for (ycol in ycols) {
+        not_na <- indices[which(!is.na(data[indices, ycol]))]
+        aggregated[i, ycol] <- mean(data[not_na, ycol])
+      }
+    }
+    plot_timeseries(aggregated, xcol, ycols, var, interp = TRUE, TRUE
+      , legend_inside_graph, ...)
 }
 
 #' Compute r^2 value
@@ -243,10 +439,13 @@ compute_rmse <- function(x, y) {
 
 #' Compute nash-sutcliffe efficiency (-Inf - 1)
 #'
+#' This is one minus the ratio of the error variance in the predictions to the
+#' variance in the observations.
+#'
 #' An efficiency of 1 means the predictions perfectly match the observations.
 #' An efficiency of 0 means that the predictions are equally accurate predictors
 #' as the mean of the observed data. An efficiency of < 0 means that the mean of
-#' the observations is a better predictor than the model predictions.
+#' the observations is a better predictor than the model.
 #'
 #' @param x: Observations
 #' @param y: Predictions
@@ -260,7 +459,7 @@ compute_nse <- function(x, y) {
   return(1 - (sum((y - x) ^ 2)) / sum((x - mean(x)) ^ 2))
 }
 
-#' Compute RMSE to standard deviation of observations (0 - Inf).
+#' Compute ratio of RMSE to standard deviation of observations (0 - Inf).
 #'
 #' Value of 0 means 0 RMSE (ie perfect fit).
 #'
@@ -276,7 +475,12 @@ compute_rsr <- function(x, y) {
   return(compute_rmse(x, y) / sd(x))
 }
 
-write_stats <- function(observations, predictions, units, num_figs, colour) {
+compute_bias <- function(observations, predictions) {
+  return(mean(predictions - observations))
+}
+
+write_stats <- function(observations, predictions, units, num_figs, colour
+  , inset = c(0, 0)) {
   # Filter out NA values.
   filter <- !is.na(observations)
   observations <- observations[filter]
@@ -289,13 +493,20 @@ write_stats <- function(observations, predictions, units, num_figs, colour) {
   rmse <- compute_rmse(observations, predictions)
   nse <- compute_nse(observations, predictions)
   rsr <- compute_rsr(observations, predictions)
+  bias <- compute_bias(observations, predictions)
 
-  legend("topright", legend = c(
-    paste0("r2 = ", signif(r2, num_figs)),
-    paste0("rmse = ", signif(rmse, num_figs)),
-    paste0("nse = ", signif(nse, num_figs)),
-    paste0("rsr = ", signif(rsr, num_figs))
-  ), col = colour, text.col = colour)
+  mkstats <- function(...) {
+    legend("topright", legend = c(
+        paste0("r2 = ", signif(r2, num_figs))
+      , paste0("rmse = ", signif(rmse, num_figs))
+      , paste0("nse = ", signif(nse, num_figs))
+      , paste0("rsr = ", signif(rsr, num_figs))
+      , paste0("bias = ", signif(bias, num_figs))
+    ), col = colour, text.col = colour, inset = inset, ...)
+  }
+  size <- mkstats(plot = FALSE)
+  mkstats()
+  return(size)
 }
 
 #' Return a vector of colours of the specified length, to be used for plotting.
@@ -313,7 +524,8 @@ get_colour_palette <- function(n) {
 #' @param names: Name of predicted series to be plotted.
 #' @param units: Units of the data (used for display purposes).
 #' @param var_name: Name of the variable being plotted.
-plot_pvo <- function(data, colname_x, y_names, units, var_name) {
+#' @param write_legend: True to write a legend, false otherwise.
+plot_pvo <- function(data, colname_x, y_names, units, var_name, write_legend) {
 
   # The data may include the full spinup period, with NA values for the
   # observations in during this period. We need to remove these NA rows when
@@ -333,35 +545,43 @@ plot_pvo <- function(data, colname_x, y_names, units, var_name) {
   }
   limits <- c(ymin, ymax)
 
-  xlab <- paste0(colname_x, " (", units, ")")
-  ylab <- paste0(var_name, " (", units, ")")
-  pch <- 21 # Filled circle
+  xlab <- parse(text = get_series_name(colname_x, units))
+  ylab <- parse(text = get_series_name(var_name, units))
 
   # Get a colour scheme to be used for plotting.
   colours <- get_colour_palette(length(y_names))
 
+  # Symbol type.
+  pch <- pch_filled_circle
+
   # Plot each series.
   for (i in seq_len(length(y_names))) {
+    colour <- adjustcolor(colours[i], alpha.f = symbol_alpha)
     if (i > 1) {
       # new = TRUE means, rather couter-intuitively, that the next call to
       # plot() will go onto the previous plot, rather than creating a new plot.
       par(new = TRUE)
     }
-    plot(data[, colname_x], data[, y_names[i]], type = "p", xlab = xlab
-      , ylab = ylab, xlim = limits, ylim = limits, col = colours[i], pch = pch)
+    plot(data[, colname_x], data[, y_names[i]], type = "p", xlab = ""
+      , ylab = "", xlim = limits, ylim = limits, col = "transparent"
+      , bg = colour, pch = pch, cex = pvo_point_size)
   }
+  mtext(xlab, side_bottom, line = xaxis_label_line, cex = scale)
+  mtext(ylab, side_left, line = yaxis_label_line, cex = scale)
 
   # Plot a 1:1 line
-  oto_name <- "1:1 line"
   oto_col <- "black"
   oto <- c(ymin, ymax)
   lines(oto, oto, type = "l", col = oto_col)
 
-  legend("topleft"
-    , legend = c(y_names, oto_name)
-    , lwd = c(rep(NA, length(y_names)), par("lwd"))
-    , pch = c(rep(pch, length(y_names)), NA)
-    , col = c(colours, oto_col))
+  if (write_legend) {
+    oto_name <- "1:1 line"
+    legend("topleft"
+      , legend = c(y_names, oto_name)
+      , lwd = c(rep(NA, length(y_names)), par("lwd"))
+      , pch = c(rep(pch, length(y_names)), NA)
+      , col = c(colours, oto_col))
+  }
 }
 
 #' Aggregate data values in the specified table over all patches.
@@ -401,64 +621,67 @@ aggregate_patches <- function(data) {
   return(data)
 }
 
-read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name
-  , obs_name, site, keep_spinup, keep_pfts) {
-  colname_year <- "Year"
-  colname_day <- "Day"
+#' Get the name of the observed data file for a given site.
+#' @param site: Name of the site.
+get_obs_file_name <- function(site) {
+  return(paste0(obs_dir, "/", site, ".csv"))
+}
 
-  data <- read_site(guess_dir, site, var_name)
+read_version <- function(version, var, site, keep_pfts) {
+  data <- read_site(version$path, site, var$file_name)
+  colnames(data)[which(colnames(data) == var$pred_name)] <- version$name
+  if (!keep_pfts) {
+    data <- data[, c(colname_year, colname_day, version$name)]
+  }
+  return(data)
+}
 
-  data <- aggregate_patches(data)
+#' Read data for the specified variable and site from all versions of the model.
+read_data <- function(versions, obs_dir, var, site, keep_spinup, keep_pfts) {
 
   # Column names for date variables in guess output files. NOTE: this would need
   # to be modified for annual outputs (ie just year in that case).
   date_cols <- c(colname_year, colname_day)
 
-  obs_file <- paste0(obs_dir, "/", site, ".csv")
-  if (file.exists(obs_file)) {
-    # Column names different in observed data.
-    observed <- read.csv(obs_file)
-    if (obs_name %in% colnames(observed)) {
-      observed <- observed[, c("year", "doy", obs_name)]
-      colnames(observed)[3] <- colname_observed
-      data <- merge(data, observed, by.x = date_cols, by.y = c("year", "doy")
-        , sort = FALSE, all.x = TRUE, all.y = TRUE)
+  # Read data from all sites into a single data table. This table will contain
+  # year, date, and one column named after each version.
+  data <- NULL
+  for (version in versions) {
+    version_data <- read_version(version, var, site, keep_pfts)
+    if (is.null(data)) {
+      data <- version_data
     } else {
-      warning(paste0("Variable '", obs_name, "' does not exist in observed file '", obs_file, "'"))
+      data <- merge(data, version_data, by = date_cols, sort = FALSE
+        , all.x = TRUE, all.y = TRUE)
     }
-  } else {
-    warning(paste0("Observed data file not found: '", obs_file, "'"))
   }
 
-  has_baseline_total <- FALSE
-  if (!is.null(baseline_dir)) {
-    baseline_file <- paste0(baseline_dir, "/", site, "/", out_dir_name, "/dave_"
-      , var$name, ".out")
-    if (file.exists(baseline_file)) {
-      has_baseline_total <- TRUE
-      baseline_data <- read_outfile(baseline_file)
-      if (!in_colname_total %in% colnames(baseline_data)) {
-        stop(paste0("Baseline data exists for variable '", var$name, "', but file contains no total column"))
+  # Aggregate over all patches.
+  data <- aggregate_patches(data)
+
+  obs_file <- get_obs_file_name(site)
+  if (!is.null(obs_dir)) {
+    if (file.exists(obs_file)) {
+      # Column names different in observed data.
+      observed <- read.csv(obs_file)
+      if (var$obs_name %in% colnames(observed)) {
+        observed <- observed[, c("year", "doy", var$obs_name)]
+        colnames(observed)[3] <- colname_observed
+        # We want to plot all predicted data, and all observed data for which we
+        # have a corresponding prediction. Therefore all.x = TRUE, all.y = FALSE
+        data <- merge(data, observed, by.x = date_cols, by.y = c("year", "doy")
+          , sort = FALSE, all.x = TRUE, all.y = FALSE)
+      } else {
+        warning(paste0("Variable '", var$obs_name, "' does not exist in observed file '", obs_file, "'"))
       }
-      baseline_total_index <- which(colnames(baseline_data) == in_colname_total)
-      colnames(baseline_data)[baseline_total_index] <- colname_baseline_total
-      baseline_data <- baseline_data[, c(date_cols, colname_baseline_total)]
-      data <- merge(data, baseline_data, by = date_cols, sort = FALSE
-        , all.x = keep_spinup)
     } else {
-      warning(paste0("WARNING: baseline directory provided, but baseline output file '", baseline_file, "' does not exist."))
+      warning(paste0("Observed data file not found: '", obs_file, "'"))
     }
   }
 
+  # Convert Year/Day columns into a single date column.
   data$Date <- as.POSIXct(paste(data$Year, data$Day + 1, sep = "-")
     , format = "%Y-%j")
-
-  # Rename column 'Total' to 'Predicted'.
-  if (!in_colname_total %in% colnames(data)) {
-    stop(paste0("Column '", in_colname_total, "' does not exist in input data"))
-  }
-  total_idx <- which(colnames(data) == in_colname_total)
-  colnames(data)[total_idx] <- colname_total
 
   if (keep_pfts) {
     # Keep PFTs, remove year, day, lon, lat
@@ -466,12 +689,12 @@ read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name
     data <- data[, !(colnames(data) %in% cols_to_remove)]
   } else {
     # Remove all columns except date, predicted, observed, and baseline.
-    cols_to_keep <- c(colname_date, colname_total)
+    cols_to_keep <- c(colname_date)
+    for (version in versions) {
+      cols_to_keep <- c(cols_to_keep, version$name)
+    }
     if (colname_observed %in% colnames(data)) {
       cols_to_keep <- c(cols_to_keep, colname_observed)
-    }
-    if (has_baseline_total) {
-      cols_to_keep <- c(cols_to_keep, colname_baseline_total)
     }
     data <- data[, cols_to_keep]
   }
@@ -481,12 +704,12 @@ read_data <- function(guess_dir, obs_dir, baseline_dir = NULL, var_name
 
 #' Get the names of all PFTs defined in the data table.
 #' @param data: A data table.
-get_pft_names <- function(data) {
-    not_pfts <- c(
-        colname_date
-      , colname_total
-      , colname_observed
-      , colname_baseline_total)
+get_pft_names <- function(data, versions) {
+    not_pfts <- c(colname_date)
+    for (version in versions) {
+      not_pfts <- c(not_pfts, version$name)
+    }
+    not_pfts <- c(not_pfts, colname_observed)
     return(names(data)[!names(data) %in% not_pfts])
 }
 
@@ -500,31 +723,33 @@ print <- function(message) {
 #' and write them to a .png file in the specified output directory.
 #'
 #' @param data: The data to be graphed.
+#' @param versions: The versions of the model to plot.
 #' @param out_dir: Output directory into which graphs will be saved.
 #' @param site: Name of the site being plotted.
-#' @param units: Units of the variable being plotted.
-#' @param title: Friendly/display name of the variable being plotted.
+#' @param var: Metadata of the variable being plotted.
 #' @param scale: Graph size scaling factor. Increase for bigger text/lines/etc.
 #' @param nsigfig: Number of significant figures used when writing r2/nse/etc.
 #' @param show_pfts: TRUE to show individual PFTs' data.
 #' @param combined: TRUE to write all graphs to a single file.
+#' @param interp: TRUE to interpolate missing observations and draw them as a
+#'                line. False otherwise.
 #' @param width: Width of the graphs.
 #' @param height: Height of the graphs.
-plot_site <- function(data, out_dir, site, units, title, scale, nsigfig
-  , show_pfts, combined, width = 640, height = 480) {
+plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
+  , show_pfts, combined, interp = TRUE, width = 640, height = 480) {
   # Get the names of y-axis variables (but NOT the observed column name).
   # Technically this is probably not necessary, because the only columns in the
   # data right now are date + the y variables. However it doesn't have a
   # performance impact, and I may change the read function to invalidate that
   # assumption later.
-  y_names <- c(colname_total)
-  if (show_pfts) {
-    y_names <- c(y_names, get_pft_names(data))
+  y_names <- c()
+  for (version in versions) {
+    if (version$name %in% colnames(data)) {
+      y_names <- c(y_names, version$name)
+    }
   }
-
-  # Remember, we may not necessarily have baseline data.
-  if (colname_baseline_total %in% colnames(data)) {
-    y_names <- c(y_names, colname_baseline_total)
+  if (show_pfts) {
+    y_names <- c(y_names, get_pft_names(data, versions))
   }
 
   timeseries_names <- y_names
@@ -533,7 +758,7 @@ plot_site <- function(data, out_dir, site, units, title, scale, nsigfig
   }
 
   # Choose a title.
-  site_title <- paste0(title, " (", site, ")")
+  site_title <- paste0(var$title, " ~ (", site, ")")
 
   # Determine output filename. E.g. out_dir/site_var.png
   # Note: this variable is just a prefix. There may be more text appended later,
@@ -551,28 +776,33 @@ plot_site <- function(data, out_dir, site, units, title, scale, nsigfig
     png(out_file, width = width, height = height)
 
     # Initial graphing parameters.
-    par(mfcol = mfcol, cex = scale, lwd = scale)
+    par(mfrow = mfrow, cex = scale, lwd = scale, xpd = NA)
   }
 
   #' Finish the graph by adding a title and closing the graphics device.
   finish_graph <- function() {
     # Add a title.
-    mtext(site_title, line = -2, outer = TRUE, cex = scale + 1)
+    mtext(parse(text = site_title), line = -2, outer = TRUE, cex = scale + 1)
 
     # Close the png file connection.
     dev.off()
   }
 
   # Determine graph layout.
-  mfcol <- if (combined) c(1, 2) else c(1, 1)
+  mfrow <- if (combined) c(2, 2) else c(1, 1)
 
   # Create a new png file at this location.
   sfx <- if (!combined) "_timeseries" else ""
   out_file <- paste0(out_dir, "/", pfx, sfx, ".png")
   init_graph()
 
+  if (combined) {
+    par(mar = mar_top_row)
+  }
+
   # Create the timeseries plot.
-  plot_timeseries(data, colname_date, timeseries_names, units, title)
+  plot_timeseries(data, colname_date, timeseries_names, var
+    , interp = interp, !combined, TRUE)
 
   # If plotting in individual mode, finish off this plot then get ready for the
   # next one.
@@ -584,20 +814,44 @@ plot_site <- function(data, out_dir, site, units, title, scale, nsigfig
     }
   }
 
+  if (combined) {
+    par(mar = mar_top_row)
+  }
+
   if (colname_observed %in% colnames(data)) {
-    plot_pvo(data, colname_observed, y_names, units, title)
+    plot_pvo(data, colname_observed, y_names, var$units, var$title, !combined)
 
     colours <- get_colour_palette(length(timeseries_names))
-    total_colour <- colours[which(timeseries_names == colname_total)[1]]
-    write_stats(data[[colname_observed]], data[[colname_total]], units, nsigfig
-      , total_colour)
+    nstat <- if (write_baseline_stats) length(versions) else 1
+    inset <- c(0, 0)
+    for (i in 1:nstat) {
+      version <- versions[[i]]
+      idx <- which(timeseries_names == version$name)[1]
+      colour <- colours[idx]
+      obs <- data[[colname_observed]]
+      pred <- data[[version$name]]
 
-    if (write_baseline_stats && colname_baseline_total %in% timeseries_names) {
-      idx <- which(timeseries_names == colname_baseline_total)[1]
-      baseline_colour <- colours[idx]
-      write_stats(data[[colname_observed]], data[[colname_baseline_total]]
-      , units, nsigfig, baseline_colour)
+      size <- write_stats(obs, pred, var$units, nsigfig, colour, inset = inset)
+      inset[1] <- inset[1] + size$rect$w
     }
+  }
+
+  if (combined) {
+    par(mar = mar_bottom_row)
+  }
+
+  if (!combined) {
+    if (colname_observed %in% colnames(data)) {
+      finish_graph()
+      out_file <- paste0(out_dir, "/", pfx, "_seasonal.png")
+      init_graph()
+    }
+  }
+
+  plot_seasonal(data, colname_date, timeseries_names, var, interp = interp
+    , !combined)
+  if (!combined) {
+    site_title <- paste0("Mean ~ Annual ~ ", site_title)
   }
   finish_graph()
 }
@@ -638,25 +892,14 @@ link_all <- function(in_dir, out_dir, pattern = "*.png", copy = TRUE,
   }
 }
 
-#' Create all plots for a particular variable/site combination, using the global
-#' user input variables.
+#' Create all plots for the specified site using the given data.
 #'
-#' @param site: Name of the site.
-#' @param var: Variable to be plotted.
-#' @param min_date: If provided, only data after this data will be plotted.
-plotting_site <- function(site, var, min_date = NULL) {
-  print(paste0("Generating ", var$name, " plots for site ", site, "..."))
-
-  # Read data for this site.
-  data <- read_data(guess, obs_dir, baseline_dir, var$name, var$obs_name, site
-    , show_spinup, show_pfts)
-
-  if (is.null(min_date) && colname_observed %in% colnames(data)) {
-    min_date <- data[1, colname_date]
-  }
-  if (!is.null(min_date) && !colname_observed %in% colnames(data)) {
-    data <- data[data$Date >= min_date, ]
-  }
+#' @param versions: Versions of the model for which data will be read/plotted.
+#' @param data: Dataframe containing predictd and observed timeseries.
+#' @param site: Name of the site (used in plot labels, dir names, etc.).
+#' @param var: Variable name created by a call to define_variable().
+#' @param interp: True to enable interpolation of observations. False otherwise.
+make_plots_site <- function(versions, data, site, var, interp = TRUE) {
 
   # Generate both combined and separate graphs.
   comb_bysite <- out_dir
@@ -673,11 +916,11 @@ plotting_site <- function(site, var, min_date = NULL) {
   if (colname_observed %in% colnames(data)) {
     # Only generate a combined plot if we actually have observed data for this
     # variable.
-    plot_site(data, comb_bysite, site, var$units, var$title, scale, num_figs
-      , show_pfts, TRUE, width = width, height = height)
+    plot_site(data, versions, comb_bysite, site, var, scale, num_figs
+      , show_pfts, TRUE, interp = interp, width = width, height = height)
   }
-  plot_site(data, sepa_bysite, site, var$units, var$title, scale, num_figs
-    , show_pfts, FALSE, width = width, height = height)
+  plot_site(data, versions, sepa_bysite, site, var, scale, num_figs
+    , show_pfts, FALSE, interp = interp, width = width, height = height)
 
   if (create_allsite_dir) {
     comb_allsite <- paste0(all_site_dir, "/combined")
@@ -686,7 +929,113 @@ plotting_site <- function(site, var, min_date = NULL) {
     link_all(comb_bysite, comb_allsite)
     link_all(sepa_bysite, sepa_allsite)
   }
+}
+
+#' Create all plots for a particular variable/site combination, using the global
+#' user input variables.
+#'
+#' @param versions: Versions of the model for which data will be read/plotted.
+#' @param site: Name of the site.
+#' @param var: Variable to be plotted.
+#' @param min_date: If provided, only data after this data will be plotted.
+plotting_site <- function(versions, site, var, min_date = NULL) {
+  print(paste0("Generating ", var$name, " plots for site ", site, "..."))
+
+  # Read data for this site.
+  data <- read_data(versions, obs_dir, var, site, show_spinup, show_pfts)
+
+  if (is.null(min_date) && colname_observed %in% colnames(data)) {
+    min_date <- data[1, colname_date]
+  }
+  if (!is.null(min_date) && !colname_observed %in% colnames(data)) {
+    data <- data[data$Date >= min_date, ]
+  }
+
+  make_plots_site(versions, data, site, var)
+
   return(min_date)
+}
+
+get_soil_moisture_colname <- function(layer) {
+  if (layer < 0 || layer > 14) {
+    stop("Only 15 soil layers exist (0-14)")
+  }
+  return(paste0(sw90$name, "_", layer))
+}
+
+#' Calc cumulative 90cm soil moisture content.
+#'
+#' @param data: Dataframe containing layered soil moisture data.
+calc_sw90 <- function(data) {
+  result <- data[[get_soil_moisture_colname(0)]]
+  nlayer <- 9
+  for (i in 1:(nlayer - 1)) {
+    result <- result + data[[get_soil_moisture_colname(i)]]
+  }
+  result <- result / nlayer
+  return(result)
+}
+
+#' Get a dataframe containing predicted, observed, and baseline timeseries of
+#' cumulative soil moisture at 90cm depth.
+#'
+#' @param site name.
+get_sw90_data <- function(site, versions) {
+
+  data <- NULL
+  for (version in versions) {
+    predictions <- read_data(list(version), obs_dir, sw90, site, FALSE, TRUE)
+    sw90_data <- calc_sw90(predictions)
+    predictions[which(colnames(predictions) == version$name)] <- sw90_data
+    if (is.null(data)) {
+      data <- predictions
+    } else {
+      data <- merge(data, predictions[, c(colname_date, version$name)]
+        , by = colname_date, all = TRUE, sort = FALSE)
+    }
+  }
+  data <- data[order(data[[colname_date]]), ]
+  return(data)
+}
+
+#' Get the index of the LPJ-Guess soil layer which contains the specified depth.
+#' @param depth: The depth in cm.
+get_closest_layer <- function(depth_cm) {
+  return(as.integer(floor(depth_cm / lpj_layer_height)))
+}
+
+#' @param versions: Versions of the model for which data will be read/plotted.
+make_sw_plots_site <- function(site, versions) {
+  # Comparison to smips data. Need to sum swmm over top 90cm.
+  cat(paste0("Generating sw90 plots for site ", site, "...\n"))
+  sw90_data <- get_sw90_data(site, versions)
+  make_plots_site(versions, sw90_data, site, sw90)
+
+  precip <- define_variable(colname_precip, "mm", "Precipitation"
+    , file_name = filename_precip)
+  precip_data <- read_data(list(versions[[1]]), NULL, precip, site, FALSE, FALSE)
+  precip_data <- precip_data[, c(colname_date, versions[[1]]$name)]
+  colnames(precip_data)[2] <- colname_precip
+
+  obs <- read.csv(get_obs_file_name(site), header = TRUE, nrows = 1)
+  pfx <- "swvol_"
+  swcols <- colnames(obs)[which(startsWith(colnames(obs), pfx))]
+  for (observed_layer in swcols) {
+    depth_cm <- sub(pfx, "", observed_layer)
+    lpj_layer <- get_closest_layer(as.integer(depth_cm))
+    lpj_name <- paste0("swvol_", lpj_layer)
+    title <- paste0(depth_cm, " * cm ~ Soilq ~ Moisture")
+    file_name <- "dave_swvol.out"
+    var <- define_variable(lpj_name, "mm * mm ^ -1", title
+      , obs_name = observed_layer
+      , file_name = file_name, pred_name = lpj_name
+      , on_right = precip, right_scale = scale_precip)
+
+    cat(paste0("Generating ", lpj_name, " plots for site ", site, "\n"))
+    data <- read_data(versions, obs_dir, var, site, FALSE, TRUE)
+    data <- merge(data, precip_data, by = colname_date, all = FALSE)
+    make_plots_site(versions, data, site, var)
+  }
 }
 
 ################################################################################
@@ -700,8 +1049,10 @@ if (dir.exists(all_site_dir)) {
 for (site in sites) {
   min_date <- NULL
   for (var in vars) {
-    min_date <- plotting_site(site, var, min_date)
+    min_date <- plotting_site(versions, site, var, min_date)
   }
+
+  make_sw_plots_site(site, versions)
 }
 
-print(paste0("Charts successfully generated in ", out_dir))
+print(paste0("Charts successfully generazted in ", out_dir))
