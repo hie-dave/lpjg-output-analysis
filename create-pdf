@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+QUALITY=50
+GRAPHS_DIR=graphs
+OUTFILE=combined.pdf
+
+convert -compress jpeg -quality ${QUALITY} $(find "${GRAPHS_DIR}" -name '*.png' | sort) "${OUTFILE}"
