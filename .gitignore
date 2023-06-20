@@ -4,4 +4,15 @@
 *.png
 obs
 graphs
+*.4ct
+*.4tc
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.pdf
+*.tex
+*.tmp
+*.xref
 

@@ -36,6 +36,17 @@ define_version <- function(name, path) {
   return(version)
 }
 
+create_stats_table <- function(stat_name) {
+  table <- data.frame(row.names = sites)
+  columns <- c()
+  for (var in vars) {
+    columns <- c(columns, var$name)
+    table[var$name] <- rep(NA, length(sites))
+  }
+  colnames(table) <- columns
+  return(table)
+}
+
 ################################################################################
 # User Inputs - modify as required
 ################################################################################
@@ -48,38 +59,38 @@ out_dir <- "graphs"
 
 # Names of sites to be plotted.
 sites <- c(
-#   "AdelaideRiver"
-# , "AliceSpringsMulga"
-# , "Boyagin"
-# , "Calperum"
-# , "CapeTribulation"
-# , "Collie"
-# , "CowBay"
-# , "CumberlandPlain"
-# , "DalyPasture"
-# , "DalyUncleared"
-# , "DryRiver"
-# , "Emerald"
-# , "FoggDam"
-# , "Gingin"
-# , "GreatWesternWoodlands"
-# , "HowardSprings"
-# , "Litchfield"
-# , "Longreach"
-# , "Otway"
-# , "RedDirtMelonFarm"
-# , "Ridgefield"
-# , "RiggsCreek"
-# , "RobsonCreek"
-# , "Samford"
-# , "SilverPlains"
-# , "SturtPlains"
-# , "TiTreeEast"
-# , "Tumbarumba"
-# , "WallabyCreek"
-# # , "Warra"
-# # , "Whroo"
-"WombatStateForest"
+  "AdelaideRiver"
+, "AliceSpringsMulga"
+, "Boyagin"
+, "Calperum"
+, "CapeTribulation"
+, "Collie"
+, "CowBay"
+, "CumberlandPlain"
+, "DalyPasture"
+, "DalyUncleared"
+, "DryRiver"
+, "Emerald"
+, "FoggDam"
+, "Gingin"
+, "GreatWesternWoodlands"
+, "HowardSprings"
+, "Litchfield"
+, "Longreach"
+, "Otway"
+, "RedDirtMelonFarm"
+, "Ridgefield"
+, "RiggsCreek"
+, "RobsonCreek"
+, "Samford"
+, "SilverPlains"
+, "SturtPlains"
+, "TiTreeEast"
+, "Tumbarumba"
+, "WallabyCreek"
+# , "Warra"
+# , "Whroo"
+, "WombatStateForest"
 , "Yanco"
 )
 
@@ -106,11 +117,11 @@ show_spinup <- FALSE
 show_pfts <- FALSE
 
 # Plot scaling. Increase this to make everything bigger.
-scale <- 2
+scale <- 1.5
 
 # Width and height (in px) of the generated graphs.
-width <- 1920
-height <- 1080
+width <- 1080
+height <- as.integer(width / sqrt(2))
 
 # Number of sig figs used when writing stats like RMSE/NSE.
 num_figs <- 2
@@ -121,6 +132,16 @@ create_allsite_dir <- TRUE
 
 # Compute and draw on the plot stats (rmse/nse/etc) for baseline vs obs data.
 write_baseline_stats <- FALSE
+
+stats_file_name <- "stats.tex"
+
+r2_table <- create_stats_table("r2")
+rmse_table <- create_stats_table("rmse")
+rsr_table <- create_stats_table("rsr")
+nse_table <- create_stats_table("nse")
+bias_table <- create_stats_table("bias")
+
+figures_tex_name <- "figures.tex"
 
 ################################################################################
 # Global Variables. Probably shouldn't be modified by users.
@@ -275,8 +296,7 @@ get_series_name <- function(name, units) {
 #' @param interp: Can the observations be interpolated?
 #' @param write_legend: True to write the legend. False otherwise.
 #' @param legend_inside_graph: True to write the legend inside the plot area. False otherwise.
-plot_timeseries <- function(data, xcol, ycols, var, interp = TRUE, write_legend
-  , legend_inside_graph, ...) {
+plot_timeseries <- function(data, xcol, ycols, var, interp = TRUE, ...) {
   # We want to plot all series using the same y-axis. Ergo, we need to know the
   # largest and smallest y-values in advance.
   ymax <- -1e300
@@ -364,24 +384,23 @@ plot_timeseries <- function(data, xcol, ycols, var, interp = TRUE, write_legend
     #axis(side = side_top)
     #mtext(yname, side = side_top, line = 0.5, cex = scale)
   }
+}
 
-  if (write_legend) {
-    legend_names <- ycols
-    if (!is.null(var$on_right)) {
-      legend_names <- c(legend_names, var$on_right$title)
-    }
-    legend_names[which(legend_names == colname_observed)] <- paste0(
+write_legend <- function(var, names, colours = get_colour_palette(length(names))
+  , inside_graph) {
+  if (!is.null(var$obs_source)) {
+    names[which(names == colname_observed)] <- paste0(
       colname_observed, " (", var$obs_source, ")")
-    if (legend_inside_graph) {
-      pos <- "topleft"
-      inset <- c(0, 0)
-    } else {
-      pos <- "topright"
-      inset <- c(-0.475, 0)
-    }
-    legend(pos, legend = legend_names, text.col = colours
-      , lwd = par("lwd"), col = colours, inset = inset)
   }
+  if (inside_graph) {
+    pos <- "topleft"
+    inset <- c(0, 0)
+  } else {
+    pos <- "topright"
+    inset <- c(-0.475, 0)
+  }
+  legend(pos, legend = names, text.col = colours
+    , lwd = par("lwd"), col = colours, inset = inset)
 }
 
 #' Plot seasonal trends.
@@ -392,9 +411,7 @@ plot_timeseries <- function(data, xcol, ycols, var, interp = TRUE, write_legend
 #' be plotted.
 #' @param var: Output variable metadata.
 #' @param interp: True to interpolate sparse observations, false otherwise.
-#' @param legend_inside_graph: True to write the legend inside the graph area, false otherwise.
-plot_seasonal <- function(data, xcol, ycols, var, interp = TRUE
-  , legend_inside_graph, ...) {
+plot_seasonal <- function(data, xcol, ycols, var, interp = TRUE, ...) {
     aggregated <- data[1:year_len, ]
     for (i in 1:year_len) {
       indices <- which(as.integer(format(data$Date, format = "%j")) == i)
@@ -403,8 +420,7 @@ plot_seasonal <- function(data, xcol, ycols, var, interp = TRUE
         aggregated[i, ycol] <- mean(data[not_na, ycol])
       }
     }
-    plot_timeseries(aggregated, xcol, ycols, var, interp = TRUE, TRUE
-      , legend_inside_graph, ...)
+    plot_timeseries(aggregated, xcol, ycols, var, interp = TRUE, ...)
 }
 
 #' Compute r^2 value
@@ -418,7 +434,11 @@ compute_r2 <- function(x, y) {
   if (length(x) == 0) {
     stop("Cannot compute r2: input data contains no elements")
   }
-  return(cor(x, y)^2)
+  r2 <- cor(x, y)^2
+  if (is.na(r2)) {
+    return(0)
+  }
+  return(r2)
 }
 
 #' Compute root mean square error.
@@ -479,8 +499,12 @@ compute_bias <- function(observations, predictions) {
   return(mean(predictions - observations))
 }
 
+escape_underscores <- function(text) {
+  return(gsub("_", "\\_", text, fixed = TRUE))
+}
+
 write_stats <- function(observations, predictions, units, num_figs, colour
-  , inset = c(0, 0)) {
+  , var_name, site, inset = c(0, 0), write_tex) {
   # Filter out NA values.
   filter <- !is.na(observations)
   observations <- observations[filter]
@@ -494,6 +518,34 @@ write_stats <- function(observations, predictions, units, num_figs, colour
   nse <- compute_nse(observations, predictions)
   rsr <- compute_rsr(observations, predictions)
   bias <- compute_bias(observations, predictions)
+
+  r2_table[site, colnames(r2_table) == var_name] <<- r2
+  rmse_table[site, colnames(rmse_table) == var_name] <<- rmse
+  nse_table[site, colnames(nse_table) == var_name] <<- nse
+  rsr_table[site, colnames(rsr_table) == var_name] <<- rsr
+  bias_table[site, colnames(bias_table) == var_name] <<- bias
+
+  # if (write_tex) {
+  #   fmt <- function(x, ndigits = 3) {
+  #     return(round(x, ndigits))
+  #   }
+  #   site_ref <- paste0("\\hyperref[fig:", tolower(site), "_", tolower(var$name)
+  #     , "]{", site, "}")
+  #   csv_line <- paste(
+  #       site_ref,
+  #       escape_underscores(var_name),
+  #       fmt(r2),
+  #       fmt(rmse),
+  #       fmt(nse),
+  #       fmt(rsr),
+  #       fmt(bias),
+  #       sep = " & ")
+  #   w <- function(text) {
+  #     cat(text, file = stats_file_name, append = TRUE)
+  #   }
+  #   w(csv_line)
+  #   w(" \\\\ \n")
+  # }
 
   mkstats <- function(...) {
     legend("topright", legend = c(
@@ -719,6 +771,23 @@ print <- function(message) {
   cat(paste0(message, "\n"))
 }
 
+#' Write the .tex data for a single figure.
+#' @param graph_file_name: Name of the graph file.
+#' @param site: Site name.
+#' @param var_name: Name of the variable being plotted.
+write_figure_tex <- function(graph_file_name, site, var_name) {
+  w <- function(...) {
+    text <- paste0(...)
+    cat(text, file = figures_tex_name, append = TRUE)
+  }
+  w("\\begin{figure}\n")
+  w("  \\label{fig:", tolower(site), "_", tolower(var_name), "}\n")
+  w("  \\includegraphics{", graph_file_name, "}\n")
+  w("  \\caption{", site, " ", escape_underscores(var_name), "}\n")
+  w("\\end{figure}\n")
+  w("\\clearpage\n")
+}
+
 #' Create graphs for a single variable for a single site from the given data,
 #' and write them to a .png file in the specified output directory.
 #'
@@ -735,6 +804,7 @@ print <- function(message) {
 #'                line. False otherwise.
 #' @param width: Width of the graphs.
 #' @param height: Height of the graphs.
+#' @param write_tex: If TRUE, stats will be written to the output .tex file.
 plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
   , show_pfts, combined, interp = TRUE, width = 640, height = 480) {
   # Get the names of y-axis variables (but NOT the observed column name).
@@ -757,6 +827,11 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
     timeseries_names <- c(timeseries_names, colname_observed)
   }
 
+  legend_names <- timeseries_names
+  if (!is.null(var$on_right)) {
+    legend_names <- c(legend_names, var$on_right$title)
+  }
+
   # Choose a title.
   site_title <- paste0(var$title, " ~ (", site, ")")
 
@@ -771,7 +846,9 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
   }
 
   #' Initialise the graphics device ready for plotting.
-  init_graph <- function() {
+  init_graph <- function(out_file) {
+    file_name <- out_file
+
     # Open graphics device writing to png file.
     png(out_file, width = width, height = height)
 
@@ -781,6 +858,9 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
 
   #' Finish the graph by adding a title and closing the graphics device.
   finish_graph <- function() {
+    # Add a legend.
+    write_legend(var, legend_names, inside_graph = !combined)
+
     # Add a title.
     mtext(parse(text = site_title), line = -2, outer = TRUE, cex = scale + 1)
 
@@ -793,24 +873,22 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
 
   # Create a new png file at this location.
   sfx <- if (!combined) "_timeseries" else ""
-  out_file <- paste0(out_dir, "/", pfx, sfx, ".png")
-  init_graph()
+  file_name <- paste0(out_dir, "/", pfx, sfx, ".png")
+  init_graph(file_name)
 
   if (combined) {
     par(mar = mar_top_row)
   }
 
   # Create the timeseries plot.
-  plot_timeseries(data, colname_date, timeseries_names, var
-    , interp = interp, !combined, TRUE)
+  plot_timeseries(data, colname_date, timeseries_names, var, interp = interp)
 
   # If plotting in individual mode, finish off this plot then get ready for the
   # next one.
   if (!combined) {
     if (colname_observed %in% colnames(data)) {
       finish_graph()
-      out_file <- paste0(out_dir, "/", pfx, "_pvo.png")
-      init_graph()
+      init_graph(paste0(out_dir, "/", pfx, "_pvo.png"))
     }
   }
 
@@ -818,6 +896,8 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
     par(mar = mar_top_row)
   }
 
+  on_right <- var$on_right
+  var$on_right <- NULL
   if (colname_observed %in% colnames(data)) {
     plot_pvo(data, colname_observed, y_names, var$units, var$title, !combined)
 
@@ -831,8 +911,12 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
       obs <- data[[colname_observed]]
       pred <- data[[version$name]]
 
-      size <- write_stats(obs, pred, var$units, nsigfig, colour, inset = inset)
+      size <- write_stats(obs, pred, var$units, nsigfig, colour
+      , var$name, site, inset = inset, write_tex = combined)
       inset[1] <- inset[1] + size$rect$w
+    }
+    if (combined) {
+      write_figure_tex(file_name, site, var$name)
     }
   }
 
@@ -843,13 +927,12 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
   if (!combined) {
     if (colname_observed %in% colnames(data)) {
       finish_graph()
-      out_file <- paste0(out_dir, "/", pfx, "_seasonal.png")
-      init_graph()
+      init_graph(paste0(out_dir, "/", pfx, "_seasonal.png"))
     }
   }
 
-  plot_seasonal(data, colname_date, timeseries_names, var, interp = interp
-    , !combined)
+  plot_seasonal(data, colname_date, timeseries_names, var, interp = interp)
+  var$on_right <- on_right
   if (!combined) {
     site_title <- paste0("Mean ~ Annual ~ ", site_title)
   }
@@ -1024,7 +1107,7 @@ make_sw_plots_site <- function(site, versions) {
     depth_cm <- sub(pfx, "", observed_layer)
     lpj_layer <- get_closest_layer(as.integer(depth_cm))
     lpj_name <- paste0("swvol_", lpj_layer)
-    title <- paste0(depth_cm, " * cm ~ Soilq ~ Moisture")
+    title <- paste0(depth_cm, " * cm ~ Soil ~ Moisture")
     file_name <- "dave_swvol.out"
     var <- define_variable(lpj_name, "mm * mm ^ -1", title
       , obs_name = observed_layer
@@ -1038,6 +1121,107 @@ make_sw_plots_site <- function(site, versions) {
   }
 }
 
+write_stats_table <- function(table, name) {
+  fmt <- function(x, ndigits = 3) {
+    return(round(x, ndigits))
+  }
+  w <- function(text) {
+    cat(text, file = stats_file_name, append = TRUE)
+  }
+
+  start_stats_table(name)
+
+  for (i in seq_len(nrow(table))) {
+    row <- table[i, ]
+    site <- rownames(table)[i]
+
+    line <- site
+    # line <- paste0("\\hyperref[fig:", tolower(site), "_", tolower(var$name)
+    #   , "]{", site, "}")
+
+    for (j in seq_along(vars)) {
+      var <- vars[[j]]
+      href <- paste0("\\hyperref[fig:", tolower(site), "_", tolower(var$name)
+      , "]{", fmt(row[j]), "}")
+      line <- paste(line, href, sep = " & ")
+    }
+    w(line)
+    w(" \\\\ \n")
+  }
+
+  finish_stats_table(name)
+}
+
+start_stats_table <- function(name) {
+  w <- function(text) {
+    cat(text, file = stats_file_name, append = TRUE)
+  }
+
+  w("\\begin{longtable}{c c c c c c c}\n")
+  w(paste0("\\caption[]{", name, "}\\\\\n"))
+  w("\\hline\\hline\n")
+  w("Site")
+  for (var in vars) {
+    w(paste0(" & ", var$name))
+  }
+  w(" \\\\ [0.5ex]\n")
+  w("\\hline\n")
+  w("\\endhead\n")
+}
+
+finish_stats_table <- function(name) {
+  w <- function(text) {
+    cat(text, file = stats_file_name, append = TRUE)
+  }
+
+  w("\\hline\n")
+  w("\\end{longtable}\n")
+  w(paste0("\\label{table:", name, "}\n"))
+}
+
+write_tex_preamble <- function() {
+  w <- function(text, append = TRUE) {
+    cat(text, file = stats_file_name, append = append)
+  }
+
+  w("\\documentclass{article}\n", append = FALSE)
+  w("\\usepackage{geometry}\n")
+  w("\\usepackage{graphicx}\n")
+  w("\\usepackage{hyperref}\n")
+  w("\\usepackage{longtable}\n")
+  w("\\usepackage[table]{xcolor}\n")
+  w("\n")
+  w("% Alternating row colours.\n")
+  w("\\definecolor{lightgray}{gray}{0.9}\n")
+  w("\\let\\oldlongtable\\longtable\n")
+  w("\\let\\endoldlongtable\\endlongtable\n")
+  w("\\renewenvironment{longtable}{\\rowcolors{2}{lightgray}{white}\n")
+  w("\\oldlongtable}{\\endoldlongtable}\n")
+  w("\n")
+  w("\\begin{document}\n")
+  # start_stats_table()
+}
+
+read_file <- function(file_name) {
+  return(paste(readLines(file_name), collapse = "\n"))
+}
+
+write_stats_suffix <- function() {
+  w <- function(...) {
+    text <- paste0(...)
+    cat(text, file = stats_file_name, append = TRUE)
+  }
+  # finish_stats_table()
+  w("\\newgeometry{margin=0bp}\n")
+  w("\\eject \\pdfpagewidth=", width, "bp \\pdfpageheight=", height, "bp\n")
+
+  figures_tex <- read_file(figures_tex_name)
+  w(figures_tex)
+  # file.remove(figures_tex_name)
+
+  w("\\end{document}\n")
+}
+
 ################################################################################
 # Main entrypoint.
 ################################################################################
@@ -1045,6 +1229,14 @@ make_sw_plots_site <- function(site, versions) {
 if (dir.exists(all_site_dir)) {
   unlink(all_site_dir, recursive = TRUE)
 }
+
+if (file.exists(figures_tex_name)) {
+  file.remove(figures_tex_name)
+}
+# stats_csv_header <- paste("site", "variable", "r2", "rmse", "nse", "rsr", "bias"
+#   , sep = ",")
+# cat(stats_csv_header, file = stats_file_name, append = FALSE)
+# cat("\n", file = stats_file_name, append = TRUE)
 
 for (site in sites) {
   min_date <- NULL
@@ -1054,5 +1246,16 @@ for (site in sites) {
 
   make_sw_plots_site(site, versions)
 }
+
+# Generate .tex file.
+write_tex_preamble()
+
+write_stats_table(r2_table, "r2")
+write_stats_table(rmse_table, "rmse")
+write_stats_table(nse_table, "nse")
+write_stats_table(rsr_table, "rsr")
+write_stats_table(bias_table, "bias")
+
+write_stats_suffix()
 
 print(paste0("Charts successfully generazted in ", out_dir))
