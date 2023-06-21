@@ -116,6 +116,9 @@ show_spinup <- FALSE
 # TRUE to show individual pfts' data. FALSE otherwise (ie just show totals).
 show_pfts <- FALSE
 
+# TRUE to generate plotly plots in addition to other plots.
+use_plotly <- TRUE
+
 # Plot scaling. Increase this to make everything bigger.
 scale <- 1.5
 
@@ -146,6 +149,10 @@ figures_tex_name <- "figures.tex"
 ################################################################################
 # Global Variables. Probably shouldn't be modified by users.
 ################################################################################
+
+if (use_plotly) {
+  library(plotly)
+}
 
 # Additional multiplier for legends text.
 legend_scale <- 2
@@ -296,6 +303,84 @@ get_series_name <- function(name, units) {
 #' @param interp: Can the observations be interpolated?
 #' @param write_legend: True to write the legend. False otherwise.
 #' @param legend_inside_graph: True to write the legend inside the plot area. False otherwise.
+plot_timeseries_plotly <- function(data, xcol, ycols, var, interp = TRUE, ...) {
+  library(plotly)
+
+  xlab <- parse(text = xcol)
+  ylab <- parse(text = get_series_name(var$title, var$units))
+
+  # Get colours used for plotting the data.
+  ncol <- length(ycols)
+  if (!is.null(var$on_right)) {
+    ncol <- length(ycols) + 1
+  }
+  colours <- get_colour_palette(ncol)
+  plt <- plot_ly(colors = colours)
+  for (i in seq_len(length(ycols))) {
+    type <- "l"
+
+    # if y data is missing some points (common for observations), use points,
+    # rather than lines.
+    xdata <- data[, xcol]
+    ydata <- data[, ycols[i]]
+    if (ycols[i] == colname_observed && NA %in% ydata) {
+      na_indices <- which(is.na(ydata))
+      na_prop <- length(na_indices) / length(ydata)
+      if (interp && na_prop < interp_threshold) {
+        not_na <- which(!is.na(ydata))
+        first <- not_na[1]
+        last <- not_na[length(not_na)]
+        ydata <- ydata[first:last]
+        xdata <- xdata[first:last]
+        na_indices <- which(is.na(ydata))
+        not_na <- which(!is.na(ydata))
+        for (na_idx in na_indices) {
+          prv <- na_idx - 1
+          nxt <- not_na[not_na > na_idx][1]
+          dlt_x <- nxt - prv
+          dlt_y <- ydata[nxt] - ydata[prv]
+          ydata[na_idx] <- ydata[prv] + dlt_y / dlt_x
+        }
+      } else {
+        type <- "p"
+      }
+    }
+    if (type == "l") {
+      plt <- plt %>% add_lines(x = xdata, y = ydata, name = ycols[i])
+    } else {
+      plt <- plt %>% add_markers(x = xdata, y = ydata, name = ycols[i])
+    }
+    plt <- plt %>% layout(xaxis = xlab, yaxis = ylab, title = title)
+  }
+
+  # TBI: variable on right axis
+  # if (!is.null(var$on_right)) {
+  #   xdata <- data[, xcol]
+  #   ydata <- data[, var$on_right$name]
+  #   ymax <- max(ydata) / var$right_scale
+  #   ymin <- min(ydata)
+  #   ylim <- c(ymin, ymax)
+
+  #   par(new = TRUE)
+  #   plot(xdata, ydata, type = type, col = colours[ncol], xlim = xlim
+  #     , ylim = ylim, mgp = mgp, xlab = "", ylab = "", xaxt = "n", yaxt = "n"
+  #     , ...)
+  # }
+
+  # return(subplot(figures, nrows = 2, shareY = TRUE))
+  return(plt)
+}
+
+#' Plot one column (xcol) of data against all of the column names specified in
+#' ycols, on the same graph, using the same y-axis.
+#'
+#' @param data: Dataframe of data.
+#' @param xcol: Name of the x-data column.
+#' @param ycols: Vector of names of y-data columns to be plotted.
+#' @param var: Metadata of the variable being plotted.
+#' @param interp: Can the observations be interpolated?
+#' @param write_legend: True to write the legend. False otherwise.
+#' @param legend_inside_graph: True to write the legend inside the plot area. False otherwise.
 plot_timeseries <- function(data, xcol, ycols, var, interp = TRUE, ...) {
   # We want to plot all series using the same y-axis. Ergo, we need to know the
   # largest and smallest y-values in advance.
@@ -403,6 +488,35 @@ write_legend <- function(var, names, colours = get_colour_palette(length(names))
     , lwd = par("lwd"), col = colours, inset = inset)
 }
 
+#' Aggregate data to means for each day of year.
+#' @param data: A data frame.
+#' @param ycols: Columns to be aggregated.
+aggregate_seasonal <- function(data, ycols) {
+    aggregated <- data[1:year_len, ]
+    for (i in 1:year_len) {
+      indices <- which(as.integer(format(data$Date, format = "%j")) == i)
+      for (ycol in ycols) {
+        not_na <- indices[which(!is.na(data[indices, ycol]))]
+        aggregated[i, ycol] <- mean(data[not_na, ycol])
+      }
+    }
+    return(aggregated)
+}
+
+#' Plot seasonal trends.
+#'
+#' @param data: Input data.
+#' @param colname_date: Name of the date column.
+#' @param timeseries_names: Column names, for which a seasonal timeseries will
+#' be plotted.
+#' @param var: Output variable metadata.
+#' @param interp: True to interpolate sparse observations, false otherwise.
+plot_seasonal_plotly <- function(data, xcol, ycols, var, interp = TRUE, ...) {
+    aggregated <- aggregate_seasonal(data, ycols)
+    return(plot_timeseries_plotly(aggregated, xcol, ycols, var, interp = TRUE
+      , ...))
+}
+
 #' Plot seasonal trends.
 #'
 #' @param data: Input data.
@@ -412,14 +526,7 @@ write_legend <- function(var, names, colours = get_colour_palette(length(names))
 #' @param var: Output variable metadata.
 #' @param interp: True to interpolate sparse observations, false otherwise.
 plot_seasonal <- function(data, xcol, ycols, var, interp = TRUE, ...) {
-    aggregated <- data[1:year_len, ]
-    for (i in 1:year_len) {
-      indices <- which(as.integer(format(data$Date, format = "%j")) == i)
-      for (ycol in ycols) {
-        not_na <- indices[which(!is.na(data[indices, ycol]))]
-        aggregated[i, ycol] <- mean(data[not_na, ycol])
-      }
-    }
+    aggregated <- aggregate_seasonal(data, ycols)
     plot_timeseries(aggregated, xcol, ycols, var, interp = TRUE, ...)
 }
 
@@ -567,6 +674,57 @@ get_colour_palette <- function(n) {
     return(cb_colours[1:n])
   }
   return(hcl.colors(n))
+}
+
+#' Plot predicted data on the y-axis against observed data on the x-axis.
+#' Data will be displayed as a series of points (not lines).
+#' This function uses plotly (not base plotting functions).
+#' @param data: Dataframe of data.
+#' @param colname_obs: Name of the observed data column.
+#' @param names: Name of predicted series to be plotted.
+#' @param units: Units of the data (used for display purposes).
+#' @param var_name: Name of the variable being plotted.
+#' @param write_legend: True to write a legend, false otherwise.
+plot_pvo_plotly <- function(data, colname_x, y_names, units, var_name) {
+
+  xdata <- data[, colname_x]
+
+  ymin <- min(xdata)
+  ymax <- max(xdata)
+  for (name in y_names) {
+    col <- data[!is.na(data[, name]), name]
+    ymin <- min(ymin, min(col))
+    ymax <- max(ymax, max(col))
+  }
+
+  # The data may include the full spinup period, with NA values for the
+  # observations in during this period. We need to remove these NA rows when
+  # drawing the P vs O plot. (Using spinup data only makes sense in a timeseries
+  # plot.)
+  data <- data[!is.na(data[[colname_x]]), ]
+  xdata <- data[, colname_x]
+
+  xlab <- parse(text = get_series_name(colname_x, units))
+  ylab <- parse(text = get_series_name(var_name, units))
+
+  # Get a colour scheme to be used for plotting.
+  colours <- c(get_colour_palette(length(y_names)), "black")
+
+  # Plot each series.
+  fig <- plot_ly(colors = colours)
+  for (i in seq_len(length(y_names))) {
+    # colour <- adjustcolor(colours[i], alpha.f = symbol_alpha)
+    ydata <- data[, y_names[i]]
+    fig <- fig %>% add_markers(x = xdata, y = ydata, name = y_names[i])
+      # , marker = list(color = colour))
+    fig <- fig %>% layout(xaxis = xlab, yaxis = ylab, title = title)
+  }
+
+  # Plot a 1:1 line
+  ylim <- c(ymin, ymax)
+  fig <- fig %>% add_lines(x = ylim, y = ylim, name = "1:1 line")
+  #, line = c(color = "black"))
+  return(fig)
 }
 
 #' Plot predicted data on the y-axis against observed data on the x-axis.
@@ -845,9 +1003,11 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
     dir.create(out_dir, recursive = TRUE)
   }
 
+  plotlies <- list()
+
   #' Initialise the graphics device ready for plotting.
   init_graph <- function(out_file) {
-    file_name <- out_file
+    file_name <<- out_file
 
     # Open graphics device writing to png file.
     png(out_file, width = width, height = height)
@@ -866,6 +1026,17 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
 
     # Close the png file connection.
     dev.off()
+
+    html_out <- gsub(".png", ".html", file_name)
+    # xlab <- parse(text = xcol)
+    # ylab <- parse(text = get_series_name(var$title, var$units))
+    plt_out <- subplot(plotlies, nrows = mfrow[1])
+    title <- paste0(var$title, " (", site, ")")
+    plt_out <- plt_out %>% layout(title = title)
+    plt_out <- plt_out %>% config(scrollZoom = TRUE)
+    htmlwidgets::saveWidget(plt_out, html_out, selfcontained = FALSE
+      , libdir = "lib")
+    plotlies <<- list()
   }
 
   # Determine graph layout.
@@ -882,6 +1053,11 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
 
   # Create the timeseries plot.
   plot_timeseries(data, colname_date, timeseries_names, var, interp = interp)
+  if (use_plotly) {
+    plt <- plot_timeseries_plotly(data, colname_date, timeseries_names, var
+      , interp = interp)
+    plotlies <- append(plotlies, list(plt))
+  }
 
   # If plotting in individual mode, finish off this plot then get ready for the
   # next one.
@@ -900,6 +1076,12 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
   var$on_right <- NULL
   if (colname_observed %in% colnames(data)) {
     plot_pvo(data, colname_observed, y_names, var$units, var$title, !combined)
+
+    if (use_plotly) {
+      plt <- plot_pvo_plotly(data, colname_observed, y_names, var$units
+        , var$title)
+      plotlies <- append(plotlies, list(plt))
+    }
 
     colours <- get_colour_palette(length(timeseries_names))
     nstat <- if (write_baseline_stats) length(versions) else 1
@@ -932,6 +1114,11 @@ plot_site <- function(data, versions, out_dir, site, var, scale, nsigfig
   }
 
   plot_seasonal(data, colname_date, timeseries_names, var, interp = interp)
+  if (use_plotly) {
+    plt <- plot_seasonal_plotly(data, colname_date, timeseries_names, var
+      , interp = interp)
+    plotlies <- append(plotlies, list(plt))
+  }
   var$on_right <- on_right
   if (!combined) {
     site_title <- paste0("Mean ~ Annual ~ ", site_title)
