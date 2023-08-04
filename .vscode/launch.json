@@ -1,0 +1,99 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "R-Debugger",
+			"name": "testncdf",
+			"request": "launch",
+			"debugMode": "file",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${workspaceFolder}/scripts/testncdf.r"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "ozflux-shiny",
+			"request": "launch",
+			"debugMode": "file",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${workspaceFolder}/debug-ozflux-shiny.r"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "Benchmarks",
+			"request": "launch",
+			"debugMode": "file",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${workspaceFolder}/scripts/ozflux-benchmarks.r"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "DGVMTools Benchmarks",
+			"request": "launch",
+			"debugMode": "file",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${workspaceFolder}/scripts/ozflux-benchmarks-dgvmtools.r"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "Simfire Analysis",
+			"request": "launch",
+			"debugMode": "file",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${workspaceFolder}/simfire-analysis.r"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "SoilWat",
+			"request": "launch",
+			"debugMode": "file",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${workspaceFolder}/scripts/plot-layerwise.r"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "Launch R-Workspace",
+			"request": "launch",
+			"debugMode": "workspace",
+			"workingDirectory": "${workspaceFolder}"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "Debug R-File",
+			"request": "launch",
+			"debugMode": "file",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${file}"
+		},
+		{
+			"type": "R-Debugger",
+			"name": "Debug R-Function",
+			"request": "launch",
+			"debugMode": "function",
+			"workingDirectory": "${workspaceFolder}",
+			"file": "${file}",
+			"mainFunction": "main",
+			"allowGlobalDebugging": false
+		},
+		{
+			"type": "R-Debugger",
+			"name": "Debug R-Package",
+			"request": "launch",
+			"debugMode": "workspace",
+			"workingDirectory": "${workspaceFolder}",
+			"includePackageScopes": true,
+			"loadPackages": [
+				".",
+				"../../dgvmtools"
+			]
+		},
+		{
+			"type": "R-Debugger",
+			"request": "attach",
+			"name": "Attach to R process",
+			"splitOverwrittenOutput": true
+		}
+	]
+}

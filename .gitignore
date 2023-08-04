@@ -15,4 +15,9 @@ graphs
 *.tex
 *.tmp
 *.xref
+man/
+junk/
+NAMESPACE
+daveanalysis_*.tar.gz
+..Rcheck/
 

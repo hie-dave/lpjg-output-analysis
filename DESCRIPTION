@@ -1,0 +1,51 @@
+Package: daveanalysis
+Type: Package
+Version: 0.1.0
+Title: Analysis functions for DAVE simulations
+Date: 2023-08-01
+Authors@R: c(person("Drew", "Holzworth", role=c("aut", "cre"), email = "d.holzworth@westernsydney.edu.au"))
+Author: Drew Holzworth [aut, cre]
+Maintainer: Drew Holzworth <d.holzworth@westernsydney.edu.au>
+Description: This package provides analysis functions for lpj-guess outputs.
+Depends:
+	R (>= 4.0.0),
+	DGVMTools (>= 1.0.0),
+	plotly (>= 4.10.2),
+	knitr (>= 1.43),
+	knitrProgressBar (>= 1.1.0),
+	shiny (>= 1.7.4.1),
+	shinyjs(>= 2.1.0),
+	dplyr(>= 1.1.2),
+	tidyr(>= 1.3.0),
+	purrr(>= 1.0.1),
+	stringr(>= 1.5.0),
+	htmltools(>= 0.5.5)
+Imports:
+	DGVMTools,
+	plotly,
+	shiny,
+	dplyr,
+	tidyr,
+	purrr,
+	knitr
+Suggests:
+	ncdf4,
+	rmarkdown,
+	ggpubr
+License: GPL | file LICENSE
+URL: https://github.com/hie-dave
+BugReports: https://github.com/hie-dave/output-analysis/issues
+NeedsCompilation: no
+RoxygenNote: 7.2.3
+VignetteBuilder: knitr
+Encoding: UTF-8
+Collate:
+	'dave-globals.r'
+	'dave-logging.r'
+	'input-sanitisation.r'
+	'dave-config.r'
+	'dave-stats.r'
+	'dave-processing.r'
+	'ozflux-plotting-internal.r'
+	'ozflux-plotting.r'
+	'ozflux-shiny.r'
