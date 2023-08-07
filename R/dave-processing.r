@@ -60,8 +60,8 @@ read_data <- function(var, sources) {
 		log_debug("Successfully read   data from source ", source@name
 			, " for variable ", var@name)
 		data <- copyLayers(predictions, data, col, new.layer.names = source@name
-		, tolerance = get_global("merge_tol"), keep.all.from = FALSE
-		, keep.all.to = FALSE)
+			, tolerance = get_global("merge_tol"), keep.all.from = FALSE
+			, keep.all.to = FALSE)
 		log_debug("Successfully merged data from source ", source@name
 			, " for variable ", var@name)
 	}
@@ -103,11 +103,11 @@ get_gridcell <- function(data, lat, lon, site_name = NULL) {
 get_observed_vars <- function() {
 	# fixme - should get this from the observed .nc file.
 	return(list(
-	  defineQuantity("dave_gpp", "GPP", "gC m^-2 day^-1")
-	, defineQuantity("dave_resp", "Respiration", "gC m^-2 day^-1")
-	, defineQuantity("dave_nee", "NEE", "gC m^-2 day^-1")
-	, defineQuantity("dave_et", "ET", "mm day^-1")
-	, defineQuantity("dave_lai", "LAI", "m^2 m^-2")
+	  defineQuantity("gpp", "GPP", "gC m^-2 day^-1")
+	, defineQuantity("resp", "Respiration", "gC m^-2 day^-1")
+	, defineQuantity("nee", "NEE", "gC m^-2 day^-1")
+	, defineQuantity("et", "ET", "mm day^-1")
+	, defineQuantity("lai", "LAI", "m^2 m^-2")
 	# , defineQuantity("cmass", "AboveGround Biomass", "kgC/m2")
 	))
 }

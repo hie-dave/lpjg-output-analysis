@@ -11,7 +11,7 @@ set_global("warning_as_error", FALSE)
 #'
 #' Set the log level used by dave_analysis logging functions.
 #'
-#' This should be in range 0-5. Higher values will result in more log messages
+#' This should be in range 0-4. Higher values will result in more log messages
 #' being written.
 #'
 #' @author Drew Holzworth
@@ -65,7 +65,7 @@ write_log_message <- function(..., level) {
 }
 
 log_error <- function(...) {
-	stop(...)
+	stop(..., call. = FALSE)
 }
 
 log_warning <- function(...) {

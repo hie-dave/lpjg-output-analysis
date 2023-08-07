@@ -51,7 +51,7 @@ sanitise_ozflux_site <- function(site) {
 #'
 #' This is an internal helper function and is not intended for external use.
 #'
-#' @param versions: May be one of:
+#' @param sources: May be one of:
 #' 					- A single DGVMTools::Source object
 #' 					- List of DGVMTools::Source objects
 #' 					- A single string providing path to an lpj-guess repository,
@@ -62,20 +62,33 @@ sanitise_ozflux_site <- function(site) {
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @keywords internal
 #'
-sanitise_sources <- function(versions) {
+sanitise_sources <- function(sources) {
 	result <- list()
 
-	for (object in versions) {
+	if (length(sources) == 1) {
+		sources <- c(sources)
+	}
+
+	for (object in sources) {
 		if (class(object)[1] == "Source") {
 			result <- append(result, object)
 		} else if (class(object) == "character") {
 			name <- basename(object)
 			path <- object
-			log_debug("Defining source with path '", path, "' and name ", name)
-			source <- defineSource(id = name, format = GUESS, dir = path)
+			if (dir.exists(file.path(path, "benchmarks", "ozflux"))) {
+				fmt <- OZFLUX
+			} else {
+				fmt <- DGVMTools::GUESS
+			}
+			log_debug("Defining source with name '", name, "', format '", fmt
+				, "', and path '", path, "'")
+			source <- DGVMTools::defineSource(id = name, format = fmt
+				, dir = path)
 			result <- append(result, source)
 		} else {
 			msg <- "Input cannot be parsed as a version and will be ignored: "
+			log_info("class(object) = ", class(object))
+			print(object)
 			warning(msg, object)
 		}
 	}
@@ -85,7 +98,7 @@ sanitise_sources <- function(versions) {
 	}
 
 	if (is.null(.versions) || length(.versions) < 1) {
-		stop("No versions were provided")
+		log_error("No versions were provided")
 	}
 
 	return(.versions)
@@ -101,10 +114,7 @@ sanitise_variable <- function(var) {
 		# Input is a string.
 
 		# Case insensitivity...ew! (but it allows people to pass in "LAI")
-		file_name <- paste0("dave_", tolower(var))
-		log_debug("Argument '", var,
-			"' will be interpreted as file name '", file_name, "'")
-		return(defineQuantity(file_name, var, ""))
+		return(DGVMTools::defineQuantity(tolower(var), var, ""))
 	}
 
 	log_error("Unable to parse object as source: ", var)

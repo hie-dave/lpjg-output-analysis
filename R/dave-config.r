@@ -2,7 +2,7 @@
 
 #' Configure ozflux versions.
 #' @param versions: A list of DGVMTools::version objects.
-#' @param log_level: Optional log level (0-5, default 3)
+#' @param log_level: Optional log level (0-4, default 2)
 #' 					 (\seealso{\link{set_log_level}})
 #' @param warning_as_error: Treat warnings as errors (FALSE by default)
 #'

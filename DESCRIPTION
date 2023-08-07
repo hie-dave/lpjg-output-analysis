@@ -49,3 +49,5 @@ Collate:
 	'ozflux-plotting-internal.r'
 	'ozflux-plotting.r'
 	'ozflux-shiny.r'
+	'definitions.r'
+	'ozflux.r'
