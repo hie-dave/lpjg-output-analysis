@@ -24,7 +24,7 @@ ozflux_ggplot <- function(site, sources, var) {
 	var <- sanitise_variable(var)
 
 	# Read data for this gridcell.
-	data <- read_data(var, sources)
+	data <- read_data(var, sources, site)
 
 	# Extract data for the required grid cell.
 	gridcell <- get_gridcell(data, site$lat, site$lon, site$name)

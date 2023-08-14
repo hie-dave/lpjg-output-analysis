@@ -136,3 +136,46 @@ sanitise_variables <- function(vars) {
 	}
 	return(result)
 }
+
+#'
+#' Get the canonical name of an ozflux site.
+#'
+#' Return the name of the specified ozflux site, or raise an error if the site
+#' name is invalid.
+#'
+#' @param spatial_extent_id: Name of the site specified by the user.
+#' @param sites: List of valid sites.
+#'
+#' @return Returns the name of the ozflux site.
+#' @keywords internal
+#' @author Drew Holzworth
+#'
+sanitise_spatial_extent_id <- function(spatial_extent_id, sites) {
+	if (!(is.character(spatial_extent_id)))
+		log_error("Invalid spatial.extent.id: must be a string")
+	if (!(spatial_extent_id %in% sites))
+		log_error("Invalid spatial_extent: '", spatial_extent_id
+			, "'. This must be the name of an ozflux site (ie one of: "
+			, paste0(sites, collapse = " "), ")")
+	log_debug("site = '", spatial_extent_id, "'")
+	return(spatial_extent_id)
+}
+
+#'
+#'
+#' Get the canonical name of an ozflux site.
+#'
+#' Return the name of the ozflux site specified by the given spatial extent.
+#' Raises an error if the site name is invalid.
+#'
+#' @param spatial_extent: The spatial extent representing the site, supplied as
+#'                        a raster::extent object or an object from which a
+#'                        raster::extent object can be derived - eg. a Raster*
+#'                        object or another Field object.
+sanitise_spatial_extent <- function(spatial_extent, sites) {
+	# TBI
+	log_error("OZFLUX support for spatial.extent is not yet implemented. "
+		, "Either setup and use a GUESS source, or specify spatial.extent.id "
+		, "instead. If specified, spatial.extent.id should be the name of an "
+		, "ozflux site.")
+}

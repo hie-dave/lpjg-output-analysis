@@ -161,18 +161,53 @@ get_field_ozflux <- function(
 	# Get the name of the output directory, as specified in the .ins file.
 	out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
 	verbose <- get_global("log_level") > get_global("LOG_LEVEL_DIAGNOSTIC")
-	base_name <- paste0(quant@id, ".out")
+	quant_id <- quant@id
+	base_name <- paste0(quant_id, ".out")
 	if (is.null(file_name)) {
 		davebase <- paste0("dave_", base_name)
 		dave_file_name <- file.path(ozflux, sites[[1]], out_dir_name, davebase)
 		if (file.exists(dave_file_name)) {
 			file_name <- davebase
+			quant_id <- paste0("dave_", base_name)
 			if (length(layers) == 1 && layers[[1]] == "Total") {
 				layers[[1]] <- "total"
 			}
 		} else {
 			file_name <- base_name
 		}
+	}
+
+	site <- NULL
+	spatial_extent_id <- target_stainfo@spatial.extent.id
+	spatial_extent <- target_stainfo@spatial.extent
+	if (!is.null(spatial_extent_id)) {
+		site <- sanitise_spatial_extent_id(spatial_extent_id, sites)
+	} else if (!is.null(spatial_extent) && spatial_extent != FALSE) {
+		# For some reason, FALSE gets passed in for spatial.extent if no value
+		# is given.
+		site <- sanitise_spatial_extent(spatial_extent, sites)
+	} else {
+		log_debug("spatial.extent and spatial.extent.id not specified.")
+	}
+
+	if (!is.null(site)) {
+		site_path <- file.path(ozflux, site, out_dir_name)
+		if (!dir.exists(site_path)) {
+			log_error("Site '", site, "' does not exist at path '", site_path
+				, "'")
+		}
+		log_debug("Using site '", site, "' at path '", site_path, "'")
+		log_debug("Constructing site source with ID='", source@id, "', name='"
+			, source@name, "', format=GUESS")
+		site_source <- DGVMTools::defineSource(source@id, source@name, site_path
+			, DGVMTools::GUESS)
+		log_debug("Reading ", site, " ", quant_id, " data...")
+		field <- DGVMTools::getField(site_source, quant_id, layers
+			, file.name = file_name, verbose = verbose)
+		log_debug("Successfully read ", nrow(field@data), " rows of ", site, " "
+			, quant_id, " data!")
+		field@source <- source
+		return(field)
 	}
 
 	working_directory <- file.path(ozflux, "combined-output")
@@ -218,13 +253,19 @@ get_field_ozflux <- function(
 		cat(lines, file = working_file, sep = "\n", append = TRUE)
 		rm(lines)
 	}
+	log_debug("Successfully concatenated data from all sites")
 
 	# Construct a Source object which will interrogate the output directory.
-	fmt <- DGVMTools::GUESS
-	src <- DGVMTools::defineSource(site, site, working_directory, fmt)
-	result <- DGVMTools::getField(src, quant, layers = layers
+	log_debug("Constructing a temporary source object...")
+	src <- DGVMTools::defineSource(site, site, working_directory
+		, DGVMTools::GUESS)
+	log_debug("Calling getField() on temporary source object with quant='"
+		, quant_id, "', layers = ", layers, ", file.name = '", file_name, "'")
+	result <- DGVMTools::getField(src, quant_id, layers = layers
 		, file.name = file_name, sta.info = target_stainfo
 		, verbose = verbose)
+	log_debug("Successfully read all data.")
+	log_debug("Removing temporary file...")
 	file.remove(working_file)
 
 	return(result)

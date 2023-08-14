@@ -23,13 +23,15 @@ read_observed_source <- function() {
 #'
 #' @param var: The variable (a DGVMTools::Quantity).
 #' @param sources: Input sources (\seealso{\link{sanitise_sources}}
+#' @param site: Optional name of the ozflux site for which data should be read.
+#'              If NULL, data for all sites will be returned.
 #'
 #' @return A single DGVMTools::Field with a layer of observations, and one layer
 #' for each source specified in sources.
 #' @author Drew Holzworth
 #' @keywords internal
 #'
-read_data <- function(var, sources) {
+read_data <- function(var, sources, site = NULL) {
 	sources <- sanitise_sources(sources)
 	var <- sanitise_variable(var)
 
@@ -38,32 +40,55 @@ read_data <- function(var, sources) {
 	lyr_name <- gsub("dave_", "", var@id)
 
 	# Read all observations for this variable.
-	obs_source <- read_observed_source()
-	log_debug("Reading field ", lyr_name, " from observed source...")
-	data <- getField(source = obs_source, quant = lyr_name, layers = lyr_name
-	, file.name = get_global("obs_file")
-	, verbose = get_global("log_level") >= get_global("LOG_LEVEL_DEBUG"))
+	has_obs <- lyr_name %in% lapply(get_observed_vars(), function(x) x@id)
+	if (has_obs) {
+		obs_source <- read_observed_source()
+		log_debug("Reading field ", lyr_name, " from observed source...")
+		data <- DGVMTools::getField(source = obs_source, quant = lyr_name
+			, layers = lyr_name, file.name = get_global("obs_file")
+			, verbose = get_global("log_level") >= get_global("LOG_LEVEL_DEBUG"))
 
-	log_debug("Successfully read observed data for variable ", var@name)
+		log_debug("Successfully read observed data for variable ", var@name)
 
-	# Rename the (for now only) data layer from lyr_name to "observed", to avoid
-	# conflicts with the prediction layers with which we're about to read/merge.
-	renameLayers(data, lyr_name, get_global("obs_lyr"))
+		# Rename the (for now only) data layer from lyr_name to "observed", to avoid
+		# conflicts with the prediction layers with which we're about to read/merge.
+		DGVMTools::renameLayers(data, lyr_name, get_global("obs_lyr"))
+	} else {
+		log_warning("No observed data found for variable '", lyr_name, "'")
+	}
 
 	# Read outputs of this variable from each configured source.
+	num_decimal_places <- get_global("merge_ndp")
 	for (source in sources) {
 		# fixme: not all of the dave output files have a total column, and even
 		# if they do this is a rather ugly workaround for the fact that some
 		# are individual-level outputs while some are patch-level outputs.
 		col <- "total"
-		predictions <- getField(source = source, layers = col, quant = var@id)
+
+		args <- list()
+		args$source <- source
+		args$layers <- col
+		args$quant <- var@id
+		args$decimal.places = num_decimal_places
+		if (!is.null(site)) {
+			args$spatial.extent.id <- site$name
+			args$spatial.extent <- c(site$lon, site$lat)
+		}
+		predictions <- do.call(DGVMTools::getField, args)
+
 		log_debug("Successfully read   data from source ", source@name
 			, " for variable ", var@name)
-		data <- copyLayers(predictions, data, col, new.layer.names = source@name
-			, tolerance = get_global("merge_tol"), keep.all.from = FALSE
-			, keep.all.to = FALSE)
-		log_debug("Successfully merged data from source ", source@name
-			, " for variable ", var@name)
+		if (has_obs) {
+			data <- DGVMTools::copyLayers(predictions, data, col
+				, new.layer.names = source@name
+				, tolerance = get_global("merge_tol"), keep.all.from = FALSE
+				, keep.all.to = FALSE)
+			log_debug("Successfully merged data from source ", source@name
+				, " for variable ", var@name)
+		} else {
+			data <- predictions
+			DGVMTools::renameLayers(data, source@name)
+		}
 	}
 
 	log_debug("Successfully read all data")
@@ -87,8 +112,8 @@ read_data <- function(var, sources) {
 get_gridcell <- function(data, lat, lon, site_name = NULL) {
   log_debug("Extracting data for gridcell", ifelse(!is.null(site_name)
   	, paste0(" ", site_name), ""), " (", lon, ", ", lat, ")")
-  gc <- selectGridcells(data, c(lon, lat), spatial.extent.id = site_name
-      , decimal.places = get_global("merge_ndp"))
+  gc <- DGVMTools::selectGridcells(data, c(lon, lat)
+  	, spatial.extent.id = site_name, decimal.places = get_global("merge_ndp"))
   log_debug("Successfully extracted gridcell data")
   return(gc)
 }
