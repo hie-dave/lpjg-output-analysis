@@ -15,7 +15,8 @@ set_global("merge_ndp", ceiling(abs(log10(get_global("merge_tol")))))
 read_observed_source <- function() {
 	obs_dir <- system.file("extdata", package = get_global("dave_pkgname"))
 	log_debug("Loading observed source...")
-	return(defineSource("obs", "Ozflux", format = NetCDF, dir = obs_dir))
+	return(DGVMTools::defineSource("obs", "Ozflux", format = DGVMTools::NetCDF
+		, dir = obs_dir))
 }
 
 #'
@@ -69,7 +70,7 @@ read_data <- function(var, sources, site = NULL) {
 		args$source <- source
 		args$layers <- col
 		args$quant <- var@id
-		args$decimal.places = num_decimal_places
+		args$decimal.places <- num_decimal_places
 		if (!is.null(site)) {
 			args$spatial.extent.id <- site$name
 			args$spatial.extent <- c(site$lon, site$lat)
@@ -128,11 +129,11 @@ get_gridcell <- function(data, lat, lon, site_name = NULL) {
 get_observed_vars <- function() {
 	# fixme - should get this from the observed .nc file.
 	return(list(
-	  defineQuantity("gpp", "GPP", "gC m^-2 day^-1")
-	, defineQuantity("resp", "Respiration", "gC m^-2 day^-1")
-	, defineQuantity("nee", "NEE", "gC m^-2 day^-1")
-	, defineQuantity("et", "ET", "mm day^-1")
-	, defineQuantity("lai", "LAI", "m^2 m^-2")
+	  DGVMTools::defineQuantity("gpp", "GPP", "gC m^-2 day^-1")
+	, DGVMTools::defineQuantity("resp", "Respiration", "gC m^-2 day^-1")
+	, DGVMTools::defineQuantity("nee", "NEE", "gC m^-2 day^-1")
+	, DGVMTools::defineQuantity("et", "ET", "mm day^-1")
+	, DGVMTools::defineQuantity("lai", "LAI", "m^2 m^-2")
 	# , defineQuantity("cmass", "AboveGround Biomass", "kgC/m2")
 	))
 }

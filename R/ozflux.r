@@ -1,4 +1,4 @@
-get_ozflux_path <- function(source) { 
+get_ozflux_path <- function(source) {
 	return(file.path(source@dir, "benchmarks", "ozflux"))
 }
 
