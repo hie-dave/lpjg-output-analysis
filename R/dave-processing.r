@@ -26,13 +26,19 @@ read_observed_source <- function() {
 #' @param sources: Input sources (\seealso{\link{sanitise_sources}}
 #' @param site: Optional name of the ozflux site for which data should be read.
 #'              If NULL, data for all sites will be returned.
+#' @param layers: Names of layers to be read.
 #'
 #' @return A single DGVMTools::Field with a layer of observations, and one layer
 #' for each source specified in sources.
 #' @author Drew Holzworth
 #' @keywords internal
 #'
-read_data <- function(var, sources, site = NULL) {
+read_data <- function(
+	var,
+	sources,
+	site = NULL,
+	layers = NULL) {
+
 	sources <- sanitise_sources(sources)
 	var <- sanitise_variable(var)
 
@@ -40,13 +46,17 @@ read_data <- function(var, sources, site = NULL) {
 	# but the variable names in the observed data file don't have this prefix.
 	lyr_name <- gsub("dave_", "", var@id)
 
+	if (is.null(layers)) {
+		layers <- lyr_name
+	}
+
 	# Read all observations for this variable.
 	has_obs <- lyr_name %in% lapply(get_observed_vars(), function(x) x@id)
 	if (has_obs) {
 		obs_source <- read_observed_source()
 		log_debug("Reading field ", lyr_name, " from observed source...")
 		data <- DGVMTools::getField(source = obs_source, quant = lyr_name
-			, layers = lyr_name, file.name = get_global("obs_file")
+			, layers = layers, file.name = get_global("obs_file")
 			, verbose = get_global("log_level") >= get_global("LOG_LEVEL_DEBUG"))
 
 		log_debug("Successfully read observed data for variable ", var@name)
@@ -60,15 +70,16 @@ read_data <- function(var, sources, site = NULL) {
 
 	# Read outputs of this variable from each configured source.
 	num_decimal_places <- get_global("merge_ndp")
+	if (is.null(layers)) {
+		layers <- "total"
+	}
 	for (source in sources) {
 		# fixme: not all of the dave output files have a total column, and even
 		# if they do this is a rather ugly workaround for the fact that some
 		# are individual-level outputs while some are patch-level outputs.
-		col <- "total"
-
 		args <- list()
 		args$source <- source
-		args$layers <- col
+		args$layers <- layers
 		args$quant <- var@id
 		args$decimal.places <- num_decimal_places
 		if (!is.null(site)) {
@@ -79,16 +90,21 @@ read_data <- function(var, sources, site = NULL) {
 
 		log_debug("Successfully read   data from source ", source@name
 			, " for variable ", var@name)
+		if (length(layers) == 1) {
+			layer_names <- source@name
+		} else {
+			layer_names <- paste0(layers, "_", source@name)
+		}
 		if (has_obs) {
-			data <- DGVMTools::copyLayers(predictions, data, col
-				, new.layer.names = source@name
+			data <- DGVMTools::copyLayers(predictions, data, layers
+				, new.layer.names = layer_names
 				, tolerance = get_global("merge_tol"), keep.all.from = FALSE
 				, keep.all.to = FALSE)
 			log_debug("Successfully merged data from source ", source@name
 				, " for variable ", var@name)
 		} else {
 			data <- predictions
-			DGVMTools::renameLayers(data, source@name)
+			DGVMTools::renameLayers(data, layer_names)
 		}
 	}
 
