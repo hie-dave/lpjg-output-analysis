@@ -264,6 +264,9 @@ get_field_ozflux <- function(
 	result <- DGVMTools::getField(src, quant_id, layers = layers
 		, file.name = file_name, sta.info = target_stainfo
 		, verbose = verbose)
+	result@id <- paste(source@id, quant@id, sep = ".")
+	result@source <- source
+	result@quant <- quant
 	log_debug("Successfully read all data.")
 	log_debug("Removing temporary file...")
 	file.remove(working_file)
