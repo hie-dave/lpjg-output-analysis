@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Get directory containing this script.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd -P)"
+
+Rscript -e "rmarkdown::render('${DIR}/ozflux-benchmarks.rmd')"
