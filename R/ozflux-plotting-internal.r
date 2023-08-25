@@ -13,12 +13,12 @@ set_global("cb_colours", c(
 ))
 
 get_colour_palette <- function(n, alpha = 1, begin = 0) {
-	if (n > length(get_global("cb_colours"))) {
-		stop(paste0("Unable to get colour palette with ", n, " colours"))
-	}
+  if (n > length(get_global("cb_colours"))) {
+    stop(paste0("Unable to get colour palette with ", n, " colours"))
+  }
   colours <- get_global("cb_colours")[1:n]
   log_debug("Successfully generated colour palette with ", n, " colours")
-	return(colours)
+  return(colours)
 }
 
 to_plotly <- function(chart, lyr_name) {
@@ -56,7 +56,7 @@ create_panel <- function(
   } else {
     trim_plot <- function(plt) {
       return(plt +
-			ggplot2::labs(title = NULL, subtitle = NULL, caption = NULL))
+      ggplot2::labs(title = NULL, subtitle = NULL, caption = NULL))
     }
     timeseries <- trim_plot(timeseries) + ggpubr::rremove("xylab")
     pvo <- trim_plot(pvo)
@@ -74,16 +74,23 @@ create_panel <- function(
   return(plt)
 }
 
-plot_timeseries <- function(gc, ylim = NULL, text_multiplier = NULL, ylab = NULL) {
-	colours <- get_colour_palette(length(names(gc)))
-	return(DGVMTools::plotTemporal(gc, cols = colours
+plot_timeseries <- function(
+  gc,
+  ylim = NULL,
+  text_multiplier = NULL,
+  ylab = NULL,
+  layers = NULL) {
+
+  ncolour <- ifelse(is.null(layers), length(names(gc)), length(colours))
+  colours <- get_colour_palette(ncolour)
+  return(DGVMTools::plotTemporal(gc, layers = layers, cols = colours
       , text.multiplier = text_multiplier, text.expression = FALSE
       , y.lim = ylim, y.label = ylab))
 }
 
 plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
-	colours <- get_colour_palette(length(names(gc)))
-	return(DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr"), title = NULL
+  colours <- get_colour_palette(length(names(gc)))
+  return(DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr"), title = NULL
       , subtitle = NULL, cols = colours[2:length(colours)]
       , text.multiplier = text_multiplier, x.label = "Observed"
       , y.label = "Predicted", one_to_one_line = TRUE, y.lim = ylim
@@ -91,11 +98,11 @@ plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
 }
 
 plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
-	colours <- get_colour_palette(length(names(gc)))
-	return(DGVMTools::plotSubannual(gc, col.by = "Layer", summary.function = mean
-	, title = NULL, subtitle = NULL, point.size = 0, cols = colours
-	, text.multiplier = text_multiplier, summary.only = TRUE
-	, summary.as.points = FALSE, y.lim = ylim))
+  colours <- get_colour_palette(length(names(gc)))
+  return(DGVMTools::plotSubannual(gc, col.by = "Layer", summary.function = mean
+  , title = NULL, subtitle = NULL, point.size = 0, cols = colours
+  , text.multiplier = text_multiplier, summary.only = TRUE
+  , summary.as.points = FALSE, y.lim = ylim))
 }
 
 create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
@@ -178,4 +185,38 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
   result$bias <- bias
 
   return(result)
+}
+
+trim_ggplot <- function(
+    plt,
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    xlab = FALSE,
+    ylab = FALSE) {
+
+    result <- plt
+    result <- result + ggplot2::labs(
+        title = title,
+        subtitle = subtitle,
+        caption = caption)
+    if (!xlab) {
+        result <- result + ggpubr::rremove("xlab")
+    }
+    if (!ylab) {
+        result <- result + ggpubr::rremove("ylab")
+    }
+    return(result)
+}
+
+get_y_label <- function(var, site = NULL) {
+    var <- sanitise_variable(var)
+    ylab <- gsub("dave_", "", var@name)
+    if (!is.null(site)) {
+      ylab <- paste(site, ylab)
+    }
+    if (!is.null(var@units)) {
+        ylab <- paste0(ylab, " (", var@units, ")")
+    }
+    return(ylab)
 }

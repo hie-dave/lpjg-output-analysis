@@ -24,24 +24,27 @@ read_ozflux_sites <- function() {
 }
 
 #'
-#' Sanitise the a site specifier.
+#' Sanitise a single ozflux site name.
 #'
-#' @param site: This may be the name of an ozflux site, or (lon, lat) tuple.
+#' @param site: Name of the site, or a (lon, lat) tuple.
 #'
-#' @return Returns a named vector with (lon, lat, name) elements.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @return Returns the site as a named vector with (lon, lat, name).
 #' @keywords internal
+#' @author Drew Holzworth
 #'
 sanitise_ozflux_site <- function(site) {
 	if (class(site) == "character") {
 		sites <- read_ozflux_sites()
 		index <- which(sites$Name == site)
 		if (length(index) < 1) {
-			log_error("Unknown ozflux site: '", site, "'")
+			log_error("Unknown ozflux site: '", sites, "'")
+		}
+		if (length(index) > 1) {
+			log_error("Site name '", site, "' somehow matches multiple sites")
 		}
     	lat <- sites$Lat[index]
     	lon <- sites$Lon[index]
-		name <- site
+		name <- sites$Name[index]
 	} else if (class(site) == "numeric" && length(site) == 2) {
 		lon <- as.double(site[1])
 		lat <- as.double(site[2])
@@ -49,8 +52,26 @@ sanitise_ozflux_site <- function(site) {
 	} else {
 		log_error("Unable to interprete site: ", site)
 	}
-	log_debug("Resolved ozflux site '", site, "': lon=", lon, ", lat=", lat)
+	log_debug("Resolved ozflux site '", name, "': lon=", lon, ", lat=", lat)
 	return(list(lon = lon, lat = lat, name = name))
+}
+
+#'
+#' Sanitise the a site specifier.
+#'
+#' @param sites: One or more ozflux site identifiers. These may be expressed as
+#' site names or (lon, lat) tuples.
+#'
+#' @return Returns a list of named vectors with (lon, lat, name) elements.
+#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @keywords internal
+#'
+sanitise_ozflux_sites <- function(sites) {
+	result <- list()
+	for (site in sites) {
+		result[[length(result) + 1]] <- sanitise_ozflux_site(site)
+	}
+	return(result)
 }
 
 #'

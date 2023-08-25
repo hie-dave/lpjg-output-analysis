@@ -19,6 +19,10 @@ read_observed_source <- function() {
 		, dir = obs_dir))
 }
 
+get_layer_name <- function(layer, source) {
+	return(paste0(layer, "_", source@name))
+}
+
 #'
 #' Read data for the specified variable.
 #'
@@ -93,7 +97,7 @@ read_data <- function(
 		if (length(layers) == 1) {
 			layer_names <- source@name
 		} else {
-			layer_names <- paste0(layers, "_", source@name)
+			layer_names <- get_layer_name(layers, source)
 		}
 		if (has_obs) {
 			data <- DGVMTools::copyLayers(predictions, data, layers
