@@ -33,11 +33,65 @@ ozflux_ggplot <- function(site, sources, var) {
 }
 
 #'
+#' Create a panel of ggplots, with one plot per site.
+#'
+#' Plots a single variable across each site, generating one plot per site.
+#'
+#' @param sources: Input sources.
+#' @param var: The variable to be plotted.
+#'
+#' @return Returns a list of ggplot objects.
+#' @author Drew Holzworth
+#' @export
+#'
+ozflux_panel <- function(sources, var) {
+	# Sanitise data sources.
+	sources <- sanitise_sources(sources)
+
+	# Sanitise variables to be plotted.
+	var <- sanitise_variable(var)
+
+	# Read data for this gridcell.
+	data <- read_data(var, sources)
+
+	sites <- read_ozflux_sites()
+
+	plots <- list()
+	for (i in seq_len(nrow(sites))) {
+		site <- sites[i, ]
+		log_info("Plotting ", site$Name, "...")
+
+		# Extract data for the required grid cell.
+		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
+
+		# Plot the gridcell.
+		title <- paste(site$Name, var@name)
+		plt <- plot_timeseries(gridcell) +
+			ggplot2::labs(title = title, subtitle = NULL, caption = NULL) +
+			ggpubr::rremove("xylab")
+
+		plots[[length(plots) + 1]] <- plt
+	}
+
+	xlab <- "Date"
+	ylab <- var@name
+	if (var@units != "") {
+		ylab <- paste0(ylab, " (", var@units, ")")
+	}
+	gp <- grid::gpar(cex = 1.3)
+	panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE)
+	panel <- ggpubr::annotate_figure(panel,
+		left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp),
+		bottom = grid::textGrob(xlab, gp = gp))
+	return(panel)
+}
+
+#'
 #' Plot a variable at the specified site using plotly.
 #'
 #' @param site: Name of the ozflux site, or tuple of (lon, lat).
-#' @param sources: List of sources. \seealso{sanitise_sources}.
-#' @param var: The variable to be plotted. \seealso{sanitise{variable}}.
+#' @param sources: List of sources. \seealso{\link{sanitise_sources}}.
+#' @param var: The variable to be plotted. \seealso{\link{sanitise_variable}}.
 #'
 #' @return Returns a plotly object.
 #' @author Drew Holzworth

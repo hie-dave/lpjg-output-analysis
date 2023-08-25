@@ -5,6 +5,13 @@ set_global("dave_pkgname", "daveanalysis")
 # Ozflux gridcells. This is a data frame with 3 columns (Lon, Lat, Name).
 set_global("ozflux_sites", NULL)
 
+#'
+#' Get a list of all known ozflux sites.
+#'
+#' @return Data table containing three columns: Lon, lat, Name.
+#' @author Drew Holzworth
+#' @keywords internal
+#'
 read_ozflux_sites <- function() {
 	if (is.null(get_global("ozflux_sites"))) {
 		pkg_name <- get_global("dave_pkgname")
@@ -24,6 +31,7 @@ read_ozflux_sites <- function() {
 #' @return Returns a named vector with (lon, lat, name) elements.
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @keywords internal
+#'
 sanitise_ozflux_site <- function(site) {
 	if (class(site) == "character") {
 		sites <- read_ozflux_sites()
@@ -34,7 +42,7 @@ sanitise_ozflux_site <- function(site) {
     	lat <- sites$Lat[index]
     	lon <- sites$Lon[index]
 		name <- site
-	} else if (length(site) == 2) {
+	} else if (class(site) == "numeric" && length(site) == 2) {
 		lon <- as.double(site[1])
 		lat <- as.double(site[2])
 		name <- NULL

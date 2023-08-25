@@ -180,7 +180,7 @@ get_field_ozflux <- function(
 	site <- NULL
 	spatial_extent_id <- target_stainfo@spatial.extent.id
 	spatial_extent <- target_stainfo@spatial.extent
-	if (!is.null(spatial_extent_id)) {
+	if (!is.null(spatial_extent_id) && length(spatial_extent_id) > 0) {
 		site <- sanitise_spatial_extent_id(spatial_extent_id, sites)
 	} else if (!is.null(spatial_extent) && spatial_extent != FALSE) {
 		# For some reason, FALSE gets passed in for spatial.extent if no value
