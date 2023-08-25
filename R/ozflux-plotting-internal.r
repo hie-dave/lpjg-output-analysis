@@ -22,16 +22,23 @@ get_colour_palette <- function(n, alpha = 1, begin = 0) {
 }
 
 to_plotly <- function(chart, lyr_name) {
-  res <- ggplotly(chart)
+  res <- plotly::ggplotly(chart)
   res <- res %>% layout(
     xaxis = list(title = list(text = "Date")),
     yaxis = list(title = list(text = lyr_name)),
     legend = list(bgcolor = "rgba(0,0,0,0)"))
-  res <- res %>% config(scrollZoom = TRUE)
+  res <- res %>% plotly::config(scrollZoom = TRUE)
   return(res)
 }
 
-create_panel <- function(timeseries, pvo, subannual, use_plotly, ncol = 2) {
+create_panel <- function(
+  timeseries,
+  pvo,
+  subannual,
+  use_plotly,
+  ncol = 2,
+  ylab = NULL) {
+
   nplot <- 3
   nrow <- as.integer(ceiling(nplot / ncol))
   if (use_plotly) {
@@ -41,27 +48,42 @@ create_panel <- function(timeseries, pvo, subannual, use_plotly, ncol = 2) {
     timeseries <- fix_legend(timeseries)
     pvo <- fix_legend(pvo)
     subannual <- fix_legend(subannual)
-    plt <- subplot(timeseries, pvo, subannual, nrows = nrow, shareY = TRUE)
+    plt <- plotly::subplot(timeseries, pvo, subannual, nrows = nrow
+      , shareY = TRUE)
     for (layer in seq_len(length(plt$x$data) * (nplot - 1L) / nplot)) {
       plt$x$data[[layer]]$showlegend <- FALSE
     }
   } else {
-    plt <- ggarrange(timeseries, pvo, subannual, ncol = ncol, nrow = nrow
-      , common.legend = TRUE, legend = "bottom", align = "hv")
+    trim_plot <- function(plt) {
+      return(plt +
+			ggplot2::labs(title = NULL, subtitle = NULL, caption = NULL))
+    }
+    timeseries <- trim_plot(timeseries) + ggpubr::rremove("xylab")
+    pvo <- trim_plot(pvo)
+    subannual <- trim_plot(subannual) + ggpubr::remove("ylab")
+
+    gp <- grid::gpar(cex = 1.3)
+
+    plt <- ggpubr::ggarrange(timeseries, pvo, subannual, ncol = ncol
+      , nrow = nrow, common.legend = TRUE, legend = "bottom", align = "hv")
+    if (!is.null(ylab)) {
+      plt <- ggpubr::annotate_figure(plt,
+        left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp))
+    }
   }
   return(plt)
 }
 
 plot_timeseries <- function(gc, ylim = NULL, text_multiplier = NULL, ylab = NULL) {
 	colours <- get_colour_palette(length(names(gc)))
-	return(plotTemporal(gc, cols = colours
+	return(DGVMTools::plotTemporal(gc, cols = colours
       , text.multiplier = text_multiplier, text.expression = FALSE
       , y.lim = ylim, y.label = ylab))
 }
 
 plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
 	colours <- get_colour_palette(length(names(gc)))
-	return(plotScatter(gc, layer.x = get_global("obs_lyr"), title = NULL
+	return(DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr"), title = NULL
       , subtitle = NULL, cols = colours[2:length(colours)]
       , text.multiplier = text_multiplier, x.label = "Observed"
       , y.label = "Predicted", one_to_one_line = TRUE, y.lim = ylim
@@ -70,7 +92,7 @@ plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
 
 plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
 	colours <- get_colour_palette(length(names(gc)))
-	return(plotSubannual(gc, col.by = "Layer", summary.function = mean
+	return(DGVMTools::plotSubannual(gc, col.by = "Layer", summary.function = mean
 	, title = NULL, subtitle = NULL, point.size = 0, cols = colours
 	, text.multiplier = text_multiplier, summary.only = TRUE
 	, summary.as.points = FALSE, y.lim = ylim))

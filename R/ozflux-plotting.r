@@ -98,5 +98,5 @@ ozflux_panel <- function(sources, var) {
 #' @export
 #'
 ozflux_plotly <- function(site, sources, var) {
-	return(ggplotly(ozflux_ggplot(site, sources, var)))
+	return(plotly::ggplotly(ozflux_ggplot(site, sources, var)))
 }

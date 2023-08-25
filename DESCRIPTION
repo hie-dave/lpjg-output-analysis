@@ -33,7 +33,8 @@ Imports:
 Suggests:
 	ncdf4,
 	rmarkdown,
-	ggpubr
+	ggpubr,
+	knitrProgressBar
 License: GPL | file LICENSE
 URL: https://github.com/hie-dave
 BugReports: https://github.com/hie-dave/output-analysis/issues
@@ -53,3 +54,4 @@ Collate:
 	'ozflux-shiny.r'
 	'definitions.r'
 	'ozflux.r'
+	'ozflux-benchmarks.r'
