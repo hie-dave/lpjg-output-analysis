@@ -15,7 +15,7 @@ classoption:
 library("tidyr")
 # Can specify paths to multiple repositories like this:
 # sources <- c("/path/to/guess/repo/0", "/path/to/guess/repo/1")
-sources <- "~/code/lpj-guess/dave-daily-grass-photosynthesis"
+sources <- "../../dave-daily-grass-photosynthesis"
 
 # Set to true to use plotly for graph rendering. Note: requires rendering to
 # HTML; see document header.

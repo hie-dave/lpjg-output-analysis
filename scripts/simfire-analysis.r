@@ -14,7 +14,7 @@ define_outdir <- function(dirname, description) {
 sites <- c("CumberlandPlain", "Litchfield")
 
 # Guess repository path.
-guess_dir <- "~/code/lpj-guess/dave-baseline"
+guess_dir <- "../../dave-baseline"
 
 # Output directories in which model outputs are stored, along with an optional
 # description which will be rendered as a plot subtitle.

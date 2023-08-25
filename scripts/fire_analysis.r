@@ -2,7 +2,7 @@ readout <- function(site, out_dir, filename) {
   return(read.table(paste0(site, "/", out_dir, "/", filename), header = TRUE))
 }
 
-setwd("~/code/lpj-guess/scripts/portable/lpj-guess-4.2_linux_x86_64/examples")
+setwd("../../scripts/portable/lpj-guess-4.2_linux_x86_64/examples")
 sites <- c("Litchfield", "CumberlandPlain")
 colours <- c("black", "red")
 out_dir <- "out"
