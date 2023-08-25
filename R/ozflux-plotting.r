@@ -142,7 +142,7 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 			plots[[length(plots) + 1]] <- plt
 		}
 		panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE
-			, legend = "bottom")
+			, legend = "bottom", align = "hv")
 		xlab <- "Date"
 		ylab <- get_y_label(var, site$name)
 		site_title <- paste(site$name, title)
