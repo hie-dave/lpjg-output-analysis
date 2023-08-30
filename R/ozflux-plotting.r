@@ -33,18 +33,52 @@ ozflux_ggplot <- function(site, sources, var) {
 }
 
 #'
-#' Create a panel of ggplots, with one plot per site.
+#' Create timeseries plots of predictions against observations.
 #'
-#' Plots a single variable across each site, generating one plot per site.
+#' Plots a single variable across predictions at each specified ozflux site,
+#' against observations (if any are available), generating one plot per site. If
+#' separate is TRUE, then a separate plot will be returned for each site. If
+#' separate is FALSE, then a panel of all plots will be returned.
 #'
-#' @param sources: Input sources.
-#' @param var: The variable to be plotted.
+#' If data is missing for any of the sites to be plotted, an error will occur.
 #'
-#' @return Returns a list of ggplot objects.
+#' @param sources: One or more sources. These can be paths to lpj-guess
+#' repositories, or \seealso{\link{DGVMTools::Source}} objects. This argument is
+#' optional if sources have been configured via \seealso{\link{dave_config}}.
+#' @param var: The variable to be plotted. This may be specified as a string
+#' containing the output file name without extension (e.g. "dave_lai"), or as a
+#' \seealso{\link{DGVMTools::Quantity}} object.
+#' @param sites: List of sites to be plotted. These may be specified as either
+#' strings (site names), or as tuples of (lon, lat). If NULL is provided, all
+#' ozflux sites will be plotted.
+#' @param separate: Iff TRUE, a list of the site-level plots will be returned.
+#' If FALSE, all plots will be rendered to a single panel. This has no effect
+#' if a single site is to be plotted.
+#' @param use_plotly: Iff true, graphs will be plotted using plotly.
+#' @param common_yaxis: Iff true, all plots in the panel will have the same y-
+#' axis range. No effect if only 1 site is being plotted.
+#'
+#' @return Can return a single, or vector of, ggplot or plotly objects.
 #' @author Drew Holzworth
 #' @export
 #'
-ozflux_panel <- function(sources, var) {
+ozflux_plot <- function(
+		sources,
+		var,
+		sites = NULL,
+		separate = FALSE,
+		use_plotly = FALSE,
+		common_yaxis = FALSE) {
+	if (is.null(sites)) {
+		sites <- read_ozflux_sites()
+	} else {
+		# read_ozflux_sites() will return a dataframe. sanitise_ozflux_sites()
+		# will return a list. We need to convert the list into a dataframe here
+		# for consistency.
+		sites <- as.data.frame(sanitise_ozflux_sites(sites))
+		colnames(sites) <- c("Lon", "Lat", "Name")
+	}
+
 	# Sanitise data sources.
 	sources <- sanitise_sources(sources)
 
@@ -54,47 +88,62 @@ ozflux_panel <- function(sources, var) {
 	# Read data for this gridcell.
 	data <- read_data(var, sources)
 
-	sites <- read_ozflux_sites()
+	# Get upper/lower limits of y-axis data.
+	if (common_yaxis) {
+		ylim <- get_ylim(data)
+	} else {
+		ylim <- NULL
+	}
 
 	plots <- list()
 	for (i in seq_len(nrow(sites))) {
 		site <- sites[i, ]
-		log_info("Plotting ", site$Name, "...")
+		log_diag("Plotting ", site$Name, "...")
 
 		# Extract data for the required grid cell.
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
+		if (nrow(gridcell@data) == 0) {
+			log_error("No data found for site ", site$Name, " (", site$Lon, ", "
+				, site$Lat, ")")
+		}
 
 		# Plot the gridcell.
-		title <- paste(site$Name, var@name)
-		plt <- plot_timeseries(gridcell)
-		plt <- trim_ggplot(plt, title)
+		plt <- plot_timeseries(gridcell, ylim)
+		if (nrow(sites) == 1) {
+			title <- site$Name
+			if (length(var) == 1) {
+				title <- paste(title, var@name)
+			}
+			plt <- trim_ggplot(plt, title, xlab = TRUE, ylab = TRUE)
+			plt <- convert_plot(plt, use_plotly)
+			return(plt)
+		}
+
+		# Remove plot elements which aren't required when plotting in a panel.
+		if (!separate && !use_plotly) {
+			title <- site$Name
+			plt <- trim_ggplot(plt, title)
+		}
 
 		plots[[length(plots) + 1]] <- plt
 	}
 
-	xlab <- "Date"
-	ylab <- get_y_label(var)
-	gp <- grid::gpar(cex = 1.3)
-	panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE)
-	panel <- ggpubr::annotate_figure(panel,
-		left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp),
-		bottom = grid::textGrob(xlab, gp = gp))
-	return(panel)
-}
+	if (separate) {
+		plotlies <- list()
+		for (plot in plots) {
+			plotlies[[length(plotlies) + 1]] <- convert_plot(plot, use_plotly)
+		}
+		return(plotlies)
+	}
 
-#'
-#' Plot a variable at the specified site using plotly.
-#'
-#' @param site: Name of the ozflux site, or tuple of (lon, lat).
-#' @param sources: List of sources. \seealso{\link{sanitise_sources}}.
-#' @param var: The variable to be plotted. \seealso{\link{sanitise_variable}}.
-#'
-#' @return Returns a plotly object.
-#' @author Drew Holzworth
-#' @export
-#'
-ozflux_plotly <- function(site, sources, var) {
-	return(plotly::ggplotly(ozflux_ggplot(site, sources, var)))
+	# Configure titles and axis text for the panel.
+	xlab <- "Date"
+	ylab <- get_y_label(data@quant)
+	title <- gsub("dave_", "", data@quant@name)
+
+	# Combine plots into a single panel.
+	panel <- dave_panel(plots, xlab, ylab, title, use_plotly, sites)
+	return(panel)
 }
 
 #'

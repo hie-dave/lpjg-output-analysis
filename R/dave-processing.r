@@ -157,3 +157,14 @@ get_observed_vars <- function() {
 	# , defineQuantity("cmass", "AboveGround Biomass", "kgC/m2")
 	))
 }
+
+get_ylim <- function(data) {
+	ymin <- 1e300
+	ymax <- -1e300
+    for (lyr_name in names(data)) {
+        v <- data@data[which(!is.na(data@data[[lyr_name]])), ][[lyr_name]]
+        ymin <- min(ymin, min(v))
+        ymax <- max(ymax, max(v))
+    }
+    return(c(ymin, ymax))
+}
