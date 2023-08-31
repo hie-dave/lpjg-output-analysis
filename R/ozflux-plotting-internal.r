@@ -286,7 +286,7 @@ ozflux_plot_site <- function(
         separate,
         use_plotly,
         nsite,
-        var) {
+        vars) {
     log_diag("Plotting ", site$Name, "...")
 
     # Extract data for the required grid cell.
@@ -298,20 +298,26 @@ ozflux_plot_site <- function(
 
     # Plot the gridcell.
     plt <- plot_timeseries(gridcell, ylim)
-    if (nsite == 1) {
-        title <- site$Name
-        if (length(var) == 1) {
-            title <- paste(title, var@name)
-        }
-        plt <- trim_ggplot(plt, title, xlab = TRUE, ylab = TRUE)
-        plt <- convert_plot(plt, use_plotly)
-        return(plt)
+
+    # The plot title should not include the variable name if plotting a panel
+    # of sites. In that case it's better to have the variable name as the main
+    # title above the panel, and use the site name for the subplot titles.
+    title <- site$Name
+    if (length(vars) == 1 && nsite == 1) {
+        name <- gsub("dave_", "", vars[[1]]@name)
+        title <- paste(title, name)
     }
 
-    # Remove plot elements which aren't required when plotting in a panel.
-    if (!separate && !use_plotly) {
-        title <- site$Name
-        plt <- trim_ggplot(plt, title)
-    }
+    # Keep the axis titles iff plotting 1 site. In a multi-site (ie panel)
+    # scenario, we want a single axis label shared by all the sites.
+    keep_xaxis <- nsite == 1
+    keep_yaxis <- nsite == 1
+
+    # Remove redundant plot elements.
+    plt <- trim_ggplot(plt, title, xlab = keep_xaxis, ylab = keep_yaxis)
+
+    # Convert to plotly (if necessary).
+    plt <- convert_plot(plt, use_plotly)
+
     return(plt)
 }

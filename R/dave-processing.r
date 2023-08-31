@@ -19,14 +19,28 @@ read_observed_source <- function() {
 		, dir = obs_dir))
 }
 
-get_layer_name <- function(layer, source) {
-	return(paste0(layer, "_", source@name))
+get_layer_names <- function(var, nvar, layers, source_name) {
+	nlayer <- length(layers)
+	if (nvar == 1) {
+		if (nlayer == 1) {
+			return(source_name)
+		} else {
+			return(paste0(source_name, "_", layers))
+		}
+	} else {
+		id <- gsub("dave_", "", var@id)
+		if (nlayer == 1) {
+			return(paste0(source_name, "_", id))
+		} else {
+			return(paste0(source_name, "_", id, "_", layers))
+		}
+	}
 }
 
 #'
 #' Read data for the specified variable.
 #'
-#' @param var: The variable (a DGVMTools::Quantity).
+#' @param vars: The variables (a list of DGVMTools::Quantity objects).
 #' @param sources: Input sources (\seealso{\link{sanitise_sources}}
 #' @param site: Optional name of the ozflux site for which data should be read.
 #'              If NULL, data for all sites will be returned.
@@ -38,77 +52,98 @@ get_layer_name <- function(layer, source) {
 #' @keywords internal
 #'
 read_data <- function(
-	var,
+	vars,
 	sources,
 	site = NULL,
 	layers = NULL) {
 
 	sources <- sanitise_sources(sources)
-	var <- sanitise_variable(var)
+	vars <- sanitise_variables(vars)
 
-	# The ozflux output file names from lpj-guess DAVE are prefixed with "dave_"
-	# but the variable names in the observed data file don't have this prefix.
-	lyr_name <- gsub("dave_", "", var@id)
-
-	if (is.null(layers)) {
-		layers <- lyr_name
-	}
-
-	# Read all observations for this variable.
-	has_obs <- lyr_name %in% lapply(get_observed_vars(), function(x) x@id)
-	if (has_obs) {
-		obs_source <- read_observed_source()
-		log_debug("Reading field ", lyr_name, " from observed source...")
-		data <- DGVMTools::getField(source = obs_source, quant = lyr_name
-			, layers = layers, file.name = get_global("obs_file")
-			, verbose = get_global("log_level") >= get_global("LOG_LEVEL_DEBUG"))
-
-		log_debug("Successfully read observed data for variable ", var@name)
-
-		# Rename the (for now only) data layer from lyr_name to "observed", to avoid
-		# conflicts with the prediction layers with which we're about to read/merge.
-		DGVMTools::renameLayers(data, lyr_name, get_global("obs_lyr"))
-	} else {
-		log_warning("No observed data found for variable '", lyr_name, "'")
-	}
-
-	# Read outputs of this variable from each configured source.
-	num_decimal_places <- get_global("merge_ndp")
-	if (is.null(layers)) {
-		layers <- "total"
-	}
-	for (source in sources) {
-		# fixme: not all of the dave output files have a total column, and even
-		# if they do this is a rather ugly workaround for the fact that some
-		# are individual-level outputs while some are patch-level outputs.
-		args <- list()
-		args$source <- source
-		args$layers <- layers
-		args$quant <- var@id
-		args$decimal.places <- num_decimal_places
-		if (!is.null(site)) {
-			args$spatial.extent.id <- site$name
-			args$spatial.extent <- c(site$lon, site$lat)
-		}
-		predictions <- do.call(DGVMTools::getField, args)
-
-		log_debug("Successfully read   data from source ", source@name
-			, " for variable ", var@name)
-		if (length(layers) == 1) {
-			layer_names <- source@name
+	if (is.data.frame(site)) {
+		if (nrow(site) == 1) {
+			site <- site[1, ]
 		} else {
-			layer_names <- get_layer_name(layers, source)
+			site <- NULL
 		}
-		if (has_obs) {
-			data <- DGVMTools::copyLayers(predictions, data, layers
-				, new.layer.names = layer_names
-				, tolerance = get_global("merge_tol"), keep.all.from = FALSE
-				, keep.all.to = FALSE)
-			log_debug("Successfully merged data from source ", source@name
+	}
+
+	data <- NULL
+	verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
+	nvar <- length(vars)
+	original_layer <- layers
+
+	for (var in vars) {
+
+		# The ozflux output file names from lpj-guess DAVE are prefixed with
+		# "dave_" but the variable names in the observed data file don't have
+		# this prefix.
+		lyr_name <- gsub("dave_", "", var@id)
+
+		if (is.null(original_layer)) {
+			layers <- lyr_name
+		}
+
+		# Read all observations for this variable.
+		if (lyr_name %in% lapply(get_observed_vars(), function(x) x@id)) {
+			obs_source <- read_observed_source()
+			log_debug("Reading field ", lyr_name, " from observed source...")
+			obs <- DGVMTools::getField(source = obs_source, quant = lyr_name
+				, layers = layers, file.name = get_global("obs_file")
+				, verbose = verbose)
+
+			log_debug("Successfully read observed data for variable ", var@name)
+
+			# Rename the (for now only) data layer from lyr_name to "observed", to avoid
+			# conflicts with the prediction layers with which we're about to read/merge.
+			out_lyr <- get_layer_names(var, nvar, layers, get_global("obs_lyr"))
+			if (is.null(data)) {
+				DGVMTools::renameLayers(obs, layers, out_lyr)
+				data <- obs
+			} else {
+				data <- DGVMTools::copyLayers(obs, data, layers
+					, new.layer.names = out_lyr
+					, tolerance = get_global("merge_tol"), keep.all.from = FALSE
+					, keep.all.to = FALSE)
+			}
+		} else {
+			log_warning("No observed data found for variable '", lyr_name, "'")
+		}
+
+		# Read outputs of this variable from each configured source.
+		num_decimal_places <- get_global("merge_ndp")
+		if (is.null(layers)) {
+			layers <- "total"
+		}
+		for (source in sources) {
+			# fixme: not all of the dave output files have a total column, and even
+			# if they do this is a rather ugly workaround for the fact that some
+			# are individual-level outputs while some are patch-level outputs.
+			args <- list()
+			args$source <- source
+			args$layers <- layers
+			args$quant <- var@id
+			args$decimal.places <- num_decimal_places
+			if (!is.null(site)) {
+				args$spatial.extent.id <- site$name
+				args$spatial.extent <- c(site$lon, site$lat)
+			}
+			predictions <- do.call(DGVMTools::getField, args)
+
+			log_debug("Successfully read   data from source ", source@name
 				, " for variable ", var@name)
-		} else {
-			data <- predictions
-			DGVMTools::renameLayers(data, layer_names)
+			layer_names <- get_layer_names(var, nvar, layers, source@name)
+			if (is.null(data)) {
+				data <- predictions
+				DGVMTools::renameLayers(data, layers, layer_names)
+			} else {
+				data <- DGVMTools::copyLayers(predictions, data, layers
+					, new.layer.names = layer_names
+					, tolerance = get_global("merge_tol"), keep.all.from = FALSE
+					, keep.all.to = FALSE)
+				log_debug("Successfully merged data from source ", source@name
+					, " for variable ", var@name)
+			}
 		}
 	}
 

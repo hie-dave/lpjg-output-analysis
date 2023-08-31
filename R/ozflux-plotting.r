@@ -45,9 +45,9 @@ ozflux_ggplot <- function(site, sources, var) {
 #' @param sources: One or more sources. These can be paths to lpj-guess
 #' repositories, or \seealso{\link{DGVMTools::Source}} objects. This argument is
 #' optional if sources have been configured via \seealso{\link{dave_config}}.
-#' @param var: The variable to be plotted. This may be specified as a string
-#' containing the output file name without extension (e.g. "dave_lai"), or as a
-#' \seealso{\link{DGVMTools::Quantity}} object.
+#' @param vars: The variables to be plotted. These may be specified as strings
+#' containing the output file names without extension (e.g. "dave_lai"), or as
+#' \seealso{\link{DGVMTools::Quantity}} objects.
 #' @param sites: List of sites to be plotted. These may be specified as either
 #' strings (site names), or as tuples of (lon, lat). If NULL is provided, all
 #' ozflux sites will be plotted.
@@ -64,7 +64,7 @@ ozflux_ggplot <- function(site, sources, var) {
 #'
 ozflux_plot <- function(
 		sources,
-		var,
+		vars,
 		sites = NULL,
 		separate = FALSE,
 		use_plotly = FALSE,
@@ -83,10 +83,10 @@ ozflux_plot <- function(
 	sources <- sanitise_sources(sources)
 
 	# Sanitise variables to be plotted.
-	var <- sanitise_variable(var)
+	vars <- sanitise_variables(vars)
 
 	# Read data for this gridcell.
-	data <- read_data(var, sources)
+	data <- read_data(vars, sources, site = sites)
 
 	# Get upper/lower limits of y-axis data.
 	if (common_yaxis) {
@@ -99,12 +99,18 @@ ozflux_plot <- function(
 	nsite <- nrow(sites)
 	for (i in seq_len(nsite)) {
 		plots[[length(plots) + 1]] <- ozflux_plot_site(data, ylim, sites[i, ]
-			, separate, use_plotly, nsite, var)
+			, separate, use_plotly, nsite, vars)
 	}
 
-	if (separate) {
-		return(lapply(plots, function(p) convert_plot(p, use_plotly)))
+	# Note: ozflux_plot_site will convert the returned plot to a plotly object
+	# if necessary.
+
+	# Iff plotting a single site, return the one and only plot.
+	if (nsite == 1) {
+		return(plots[[1]])
 	}
+
+	# Otherwise, generate a panel of plots (1 child plot per site).
 
 	# Configure titles and axis text for the panel.
 	xlab <- "Date"
@@ -153,7 +159,7 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 		for (layer in layers) {
 			layers_to_plot <- c()
 			for (source in sources) {
-				lyr <- get_layer_name(layer, source)
+				lyr <- get_layer_names(layer, source)
 				layers_to_plot <- c(layers_to_plot, lyr)
 			}
 			plt <- plot_timeseries(gridcell, layers = layers_to_plot)
