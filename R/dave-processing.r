@@ -12,7 +12,11 @@ set_global("merge_tol", 0.01)
 # Same as merge_tol, expressed as number of decimal places.
 set_global("merge_ndp", ceiling(abs(log10(get_global("merge_tol")))))
 
-read_observed_source <- function() {
+trim_dave <- function(text) {
+    return(gsub("dave_", "", text))
+}
+
+get_observed_source <- function() {
 	obs_dir <- system.file("extdata", package = get_global("dave_pkgname"))
 	log_debug("Loading observed source...")
 	return(DGVMTools::defineSource("obs", "Ozflux", format = DGVMTools::NetCDF
@@ -28,13 +32,28 @@ get_layer_names <- function(var, nvar, layers, source_name) {
 			return(paste0(source_name, "_", layers))
 		}
 	} else {
-		id <- gsub("dave_", "", var@id)
+		id <- trim_dave(var@id)
 		if (nlayer == 1) {
 			return(paste0(source_name, "_", id))
 		} else {
 			return(paste0(source_name, "_", id, "_", layers))
 		}
 	}
+}
+
+get_default_layers <- function(source, var) {
+	available <- available_layers_ozflux(source, var)
+	if (length(available) < 1) {
+		log_error("Unknown layers available for quantity ", var@id)
+	}
+
+	to_try <- c("total", "Total", "mean", "Mean")
+	for (l in to_try) {
+		if (l %in% available) {
+			return(l)
+		}
+	}
+	return(available[[length(available)]])
 }
 
 #'
@@ -78,17 +97,18 @@ read_data <- function(
 		# The ozflux output file names from lpj-guess DAVE are prefixed with
 		# "dave_" but the variable names in the observed data file don't have
 		# this prefix.
-		lyr_name <- gsub("dave_", "", var@id)
+		obs_lyr <- trim_dave(var@id)
 
-		if (is.null(original_layer)) {
-			layers <- lyr_name
+		layers <- original_layer
+		if (is.null(layers)) {
+			layers <- obs_lyr
 		}
 
 		# Read all observations for this variable.
-		if (lyr_name %in% lapply(get_observed_vars(), function(x) x@id)) {
-			obs_source <- read_observed_source()
-			log_debug("Reading field ", lyr_name, " from observed source...")
-			obs <- DGVMTools::getField(source = obs_source, quant = lyr_name
+		if (obs_lyr %in% lapply(get_observed_vars(), function(x) x@id)) {
+			obs_source <- get_observed_source()
+			log_debug("Reading field ", obs_lyr, " from observed source...")
+			obs <- DGVMTools::getField(source = obs_source, quant = obs_lyr
 				, layers = layers, file.name = get_global("obs_file")
 				, verbose = verbose)
 
@@ -107,14 +127,16 @@ read_data <- function(
 					, keep.all.to = FALSE)
 			}
 		} else {
-			log_warning("No observed data found for variable '", lyr_name, "'")
+			log_warning("No observed data found for variable '", obs_lyr, "'")
+		}
+
+		layers <- original_layer
+		if (is.null(layers)) {
+			layers <- get_default_layers(sources[[1]], var)
 		}
 
 		# Read outputs of this variable from each configured source.
 		num_decimal_places <- get_global("merge_ndp")
-		if (is.null(layers)) {
-			layers <- "total"
-		}
 		for (source in sources) {
 			# fixme: not all of the dave output files have a total column, and even
 			# if they do this is a rather ugly workaround for the fact that some

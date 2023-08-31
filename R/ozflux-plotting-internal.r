@@ -213,7 +213,7 @@ trim_ggplot <- function(
 
 get_y_label <- function(var, site = NULL) {
     var <- sanitise_variable(var)
-    ylab <- gsub("dave_", "", var@name)
+    ylab <- trim_dave(var@name)
     if (!is.null(site)) {
       ylab <- paste(site, ylab)
     }
@@ -304,7 +304,7 @@ ozflux_plot_site <- function(
     # title above the panel, and use the site name for the subplot titles.
     title <- site$Name
     if (length(vars) == 1 && nsite == 1) {
-        name <- gsub("dave_", "", vars[[1]]@name)
+        name <- trim_dave(vars[[1]]@name)
         title <- paste(title, name)
     }
 
@@ -320,4 +320,10 @@ ozflux_plot_site <- function(
     plt <- convert_plot(plt, use_plotly)
 
     return(plt)
+}
+
+get_panel_title <- function(vars) {
+    if (length(vars) == 1) {
+        return(vars[[1]]@name)
+    }
 }
