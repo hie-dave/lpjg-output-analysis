@@ -96,44 +96,14 @@ ozflux_plot <- function(
 	}
 
 	plots <- list()
-	for (i in seq_len(nrow(sites))) {
-		site <- sites[i, ]
-		log_diag("Plotting ", site$Name, "...")
-
-		# Extract data for the required grid cell.
-		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
-		if (nrow(gridcell@data) == 0) {
-			log_error("No data found for site ", site$Name, " (", site$Lon, ", "
-				, site$Lat, ")")
-		}
-
-		# Plot the gridcell.
-		plt <- plot_timeseries(gridcell, ylim)
-		if (nrow(sites) == 1) {
-			title <- site$Name
-			if (length(var) == 1) {
-				title <- paste(title, var@name)
-			}
-			plt <- trim_ggplot(plt, title, xlab = TRUE, ylab = TRUE)
-			plt <- convert_plot(plt, use_plotly)
-			return(plt)
-		}
-
-		# Remove plot elements which aren't required when plotting in a panel.
-		if (!separate && !use_plotly) {
-			title <- site$Name
-			plt <- trim_ggplot(plt, title)
-		}
-
-		plots[[length(plots) + 1]] <- plt
+	nsite <- nrow(sites)
+	for (i in seq_len(nsite)) {
+		plots[[length(plots) + 1]] <- ozflux_plot_site(data, ylim, sites[i, ]
+			, separate, use_plotly, nsite, var)
 	}
 
 	if (separate) {
-		plotlies <- list()
-		for (plot in plots) {
-			plotlies[[length(plotlies) + 1]] <- convert_plot(plot, use_plotly)
-		}
-		return(plotlies)
+		return(lapply(plots, function(p) convert_plot(p, use_plotly)))
 	}
 
 	# Configure titles and axis text for the panel.

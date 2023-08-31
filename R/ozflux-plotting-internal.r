@@ -269,12 +269,49 @@ dave_panel <- function(plots, xlab, ylab, title, use_plotly, sites) {
     }
 }
 
-convert_plot <- function(plot, to_plotly) {
+convert_plot <- function(plt, to_plotly) {
     if (to_plotly) {
-        plt <- plotly::ggplotly(plot)
+        plt <- plotly::ggplotly(plt)
         plt <- plotly::layout(plt, legend = list(orientation = "h"))
         return(plt)
     } else {
-        return(plot)
+        return(plt)
     }
+}
+
+ozflux_plot_site <- function(
+        data,
+        ylim,
+        site,
+        separate,
+        use_plotly,
+        nsite,
+        var) {
+    log_diag("Plotting ", site$Name, "...")
+
+    # Extract data for the required grid cell.
+    gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
+    if (nrow(gridcell@data) == 0) {
+        log_error("No data found for site ", site$Name, " (", site$Lon, ", "
+            , site$Lat, ")")
+    }
+
+    # Plot the gridcell.
+    plt <- plot_timeseries(gridcell, ylim)
+    if (nsite == 1) {
+        title <- site$Name
+        if (length(var) == 1) {
+            title <- paste(title, var@name)
+        }
+        plt <- trim_ggplot(plt, title, xlab = TRUE, ylab = TRUE)
+        plt <- convert_plot(plt, use_plotly)
+        return(plt)
+    }
+
+    # Remove plot elements which aren't required when plotting in a panel.
+    if (!separate && !use_plotly) {
+        title <- site$Name
+        plt <- trim_ggplot(plt, title)
+    }
+    return(plt)
 }
