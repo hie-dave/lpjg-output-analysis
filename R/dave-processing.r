@@ -41,8 +41,8 @@ get_layer_names <- function(var, nvar, layers, source_name) {
 	}
 }
 
-get_default_layers <- function(source, var) {
-	available <- available_layers_ozflux(source, var)
+get_default_layers <- function(source, var, sites = NULL) {
+	available <- available_layers_ozflux(source, var, sites)
 	if (length(available) < 1) {
 		log_error("Unknown layers available for quantity ", var@id)
 	}

@@ -81,18 +81,21 @@ available_quantities <- function(source, directory, names = TRUE) {
 #'
 #' @param source: An OZFLUX source object.
 #' @param quant: The quantity (ie LPJ-Guess output) to query.
+#' @param sites: Optional list of site names to check. NULL means all sites.
 #'
 #' @return Returns a list of all layers (ie plottable columns) available for
 #' this quantity (output).
 #' @author Drew Holzworth
 #' @keywords internal
 #'
-available_layers_ozflux <- function(source, quant) {
+available_layers_ozflux <- function(source, quant, sites = NULL) {
 	# Get path to the ozflux directory within the repository.
 	ozflux <- get_ozflux_path(source)
 
 	# Get a list of site names.
-	sites <- get_sites_ozflux(source)
+	if (is.null(sites)) {
+		sites <- get_sites_ozflux(source)
+	}
 
 	if (length(sites) < 1) {
 		# No sites. This shouldn't really happen, but if it does, there's
@@ -273,6 +276,10 @@ get_field_ozflux <- function(
 
 		# Get path to this site's output directory.
 		site_out <- file.path(ozflux, site, out_dir_name, file_name)
+		if (!file.exists(site_out)) {
+			log_warning("Ignoring missing file '", site_out, "'")
+			next
+		}
 
 		lines <- readLines(site_out)
 
