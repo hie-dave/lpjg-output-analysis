@@ -53,7 +53,11 @@ get_default_layers <- function(source, var, sites = NULL) {
 			return(l)
 		}
 	}
-	return(available[[length(available)]])
+	last_layer <- available[[length(available)]]
+	log_warning("Unsure which layers to plot for variable ", var@name
+		, "; therefore the last layer (", last_layer
+		, ") will be plotted.")
+	return(last_layer)
 }
 
 #'
@@ -136,6 +140,7 @@ read_data <- function(
 		if (is.null(layers)) {
 			layers <- get_default_layers(sources[[1]], var, site$Name)
 		}
+		log_diag("Plotting layers: ", layers)
 
 		# Read outputs of this variable from each configured source.
 		num_decimal_places <- get_global("merge_ndp")
