@@ -134,7 +134,7 @@ read_data <- function(
 
 		layers <- original_layer
 		if (is.null(layers)) {
-			layers <- get_default_layers(sources[[1]], var)
+			layers <- get_default_layers(sources[[1]], var, site$Name)
 		}
 
 		# Read outputs of this variable from each configured source.
@@ -149,8 +149,8 @@ read_data <- function(
 			args$quant <- var@id
 			args$decimal.places <- num_decimal_places
 			if (!is.null(site)) {
-				args$spatial.extent.id <- site$name
-				args$spatial.extent <- c(site$lon, site$lat)
+				args$spatial.extent.id <- site$Name
+				args$spatial.extent <- c(site$Lon, site$Lat)
 			}
 			predictions <- do.call(DGVMTools::getField, args)
 
