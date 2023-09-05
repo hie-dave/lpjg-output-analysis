@@ -60,7 +60,7 @@ create_panel <- function(
       }
       timeseries <- trim_plot(timeseries) + ggpubr::rremove("xylab")
       pvo <- trim_plot(pvo)
-      subannual <- trim_plot(subannual) + ggpubr::remove("ylab")
+      subannual <- trim_plot(subannual) + ggpubr::rremove("ylab")
 
       gp <- grid::gpar(cex = 1.3)
 

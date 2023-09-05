@@ -76,7 +76,9 @@ read_data <- function(
 	site = NULL,
 	layers = NULL) {
 
+	log_debug("[read_data] Sanitising input sources...")
 	sources <- sanitise_sources(sources)
+	log_debug("[read_data] Sanitising input quantities...")
 	vars <- sanitise_variables(vars)
 
 	if (is.data.frame(site)) {

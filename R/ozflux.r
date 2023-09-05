@@ -4,12 +4,18 @@ get_ozflux_path <- function(source) {
 
 get_sites_ozflux <- function(source) {
 	ozflux <- get_ozflux_path(source)
+	standard_sites <- read_ozflux_sites()$Name
 
 	sites <- c()
 	for (dir in list.dirs(ozflux, full.names = FALSE, recursive = FALSE)) {
 		ins <- file.path(ozflux, dir, paste0(dir, ".ins"))
 		if (file.exists(ins)) {
-			sites <- c(sites, dir)
+			if (dir %in% standard_sites) {
+				sites <- c(sites, dir)
+			} else {
+				log_warning("Ignoring site ", dir
+					, " because it's not in the standard site list")
+			}
 		}
 	}
 	return(sites)

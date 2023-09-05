@@ -95,21 +95,27 @@ sanitise_sources <- function(sources) {
 	result <- list()
 
 	if (length(sources) == 1) {
+		log_debug("Length of sources is 1. Putting it in a vector...")
 		sources <- c(sources)
 	}
 
 	for (object in sources) {
+		log_debug("Parsing object...")
 		if (class(object)[1] == "Source") {
+			log_debug("Source is a DGVMTools::Source object")
 			result <- append(result, object)
 		} else if (class(object) == "character") {
+			log_debug("Source is a string")
 			name <- basename(object)
 			path <- object
 			if (dir.exists(file.path(path, "benchmarks", "ozflux"))) {
 				fmt <- OZFLUX
+				f <- "OZFLUX"
 			} else {
 				fmt <- DGVMTools::GUESS
+				f <- "GUESS"
 			}
-			log_debug("Defining source with name '", name, "', format '", fmt
+			log_debug("Defining source with name '", name, "', format '", f
 				, "', and path '", path, "'")
 			source <- DGVMTools::defineSource(id = name, format = fmt
 				, dir = path)
@@ -126,11 +132,7 @@ sanitise_sources <- function(sources) {
 		return(result)
 	}
 
-	if (is.null(.versions) || length(.versions) < 1) {
-		log_error("No versions were provided")
-	}
-
-	return(.versions)
+	log_error("No versions were provided")
 }
 
 sanitise_variable <- function(var) {

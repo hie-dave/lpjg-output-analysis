@@ -1,5 +1,4 @@
-.versions <- NULL
-
+#'
 #' Configure ozflux versions.
 #' @param versions: A list of DGVMTools::version objects.
 #' @param log_level: Optional log level (0-4, default 2)
@@ -10,12 +9,12 @@
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 dave_config <- function(versions, log_level, warning_as_error) {
 	# Set default sources.
-	if (!missing(versions)) {
-		.versions <<- sanitise_sources(versions)
+	if (!missing(versions) && !is.null(versions)) {
+		set_global(".versions", sanitise_sources(versions))
 	}
 
 	# Set default log level.
-	if (!missing(log_level)) {
+	if (!missing(log_level) && !is.null(log_level)) {
 		set_log_level(log_level)
 	}
 

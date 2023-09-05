@@ -56,6 +56,7 @@ ozflux_benchmarks <- function(
 	marker_size = 1
 ) {
 	# Sanitise input sources.
+	log_debug("Sanitising input sources...")
 	sources <- sanitise_sources(sources)
 
 	if (length(sources) < 1) {
@@ -63,15 +64,20 @@ ozflux_benchmarks <- function(
 	}
 
 	# Variables to be plotted.
+	log_debug("Getting default variables to plot...")
 	vars <- get_vars()
+
+	log_debug("Getting sites to plot...")
 	sites <- read_ozflux_sites()
 
 	write_progress <- is_installed("knitrProgressBar")
 	if (write_progress) {
+		log_debug("Initialising progress bar...")
 		p <- knitrProgressBar::progress_estimated(nrow(sites) * length(vars))
 		knitrProgressBar::update_progress(p)
 	}
 
+	log_debug("Initialising stats dataframes...")
 	r2 <- data.frame(Site = sites$Name)
 	rmse <- data.frame(Site = sites$Name)
 	nse <- data.frame(Site = sites$Name)
@@ -109,15 +115,18 @@ ozflux_benchmarks <- function(
 	for (var in vars) {
 		lyr_name <- gsub("dave_", "", var@id)
 
+		log_diag("Processing variable ", var@name, "...")
+
 		r2[[lyr_name]] <- rep(NA, nrow(sites))
 		rmse[[lyr_name]] <- rep(NA, nrow(sites))
 		nse[[lyr_name]] <- rep(NA, nrow(sites))
 		rsr[[lyr_name]] <- rep(NA, nrow(sites))
 		bias[[lyr_name]] <- rep(NA, nrow(sites))
 
-		data <- read_data(var, sources)
+		data <- read_data(list(var), sources)
 		for (i in seq_len(nrow(sites))) {
 			row <- sites[i, ]
+			log_debug("[", var@name, "] Processing site ", row$Name, "...")
 
 			# Filter data to this site.
 			gc <- get_gridcell(data, row$Lat, row$Lon, row$Name)
