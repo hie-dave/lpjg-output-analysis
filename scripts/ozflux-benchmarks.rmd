@@ -15,7 +15,18 @@ classoption:
 library("tidyr")
 # Can specify paths to multiple repositories like this:
 # sources <- c("/path/to/guess/repo/0", "/path/to/guess/repo/1")
-sources <- "../../dave-daily-grass-photosynthesis"
+# Or by calling defineSource(), which gives more control over the name:
+define_source <- function(name, path) {
+    return(DGVMTools::defineSource(
+        basename(path),
+        name,
+        path,
+        daveanalysis::OZFLUX))
+}
+sources <- c(
+    define_source("DAVE", "../../dave-daily-grass-photosynthesis"),
+    define_source("Trunk", "../../dave-baseline")
+)
 
 # Set to true to use plotly for graph rendering. Note: requires rendering to
 # HTML; see document header.
