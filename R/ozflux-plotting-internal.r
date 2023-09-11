@@ -59,7 +59,7 @@ create_panel <- function(
         return(plt +
         ggplot2::labs(title = NULL, subtitle = NULL, caption = NULL))
       }
-      timeseries <- trim_plot(timeseries) + ggpubr::rremove("xylab")
+      timeseries <- trim_plot(timeseries) + ggpubr::rremove("ylab")
       pvo <- trim_plot(pvo)
       subannual <- trim_plot(subannual) + ggpubr::rremove("ylab")
 
