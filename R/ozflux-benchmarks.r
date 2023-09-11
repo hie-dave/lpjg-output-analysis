@@ -201,7 +201,7 @@ ozflux_benchmarks <- function(
 		for (j in seq_len(length(vars))) {
 			var <- vars[[j]]
 
-			index <- (i - 1) * length(vars) + j
+			index <- (j - 1) * nrow(sites) + i
 
 			if (combined_graph && !is.list(combined_plots[[index]])) {
 				next
