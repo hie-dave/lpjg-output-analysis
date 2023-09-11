@@ -28,7 +28,7 @@ read_ozflux_sites <- function() {
 #'
 #' @param site: Name of the site, or a (lon, lat) tuple.
 #'
-#' @return Returns the site as a named vector with (lon, lat, name).
+#' @return Returns the site as a named vector with (Lon, Lat, Name).
 #' @keywords internal
 #' @author Drew Holzworth
 #'
@@ -53,7 +53,7 @@ sanitise_ozflux_site <- function(site) {
 		log_error("Unable to interprete site: ", site)
 	}
 	log_debug("Resolved ozflux site '", name, "': lon=", lon, ", lat=", lat)
-	return(list(lon = lon, lat = lat, name = name))
+	return(list(Lon = lon, Lat = lat, Name = name))
 }
 
 #'
@@ -135,6 +135,17 @@ sanitise_sources <- function(sources) {
 	log_error("No versions were provided")
 }
 
+# Attempt to get units given a variable name by looking in the observed file.
+get_units <- function(var_name) {
+	var_name <- trim_dave(var_name)
+	for (var in get_observed_vars()) {
+		if (var@id == var_name) {
+			return(var@units)
+		}
+	}
+	return("")
+}
+
 sanitise_variable <- function(var) {
 	if (class(var)[1] == "Quantity") {
 		# Input is already a Quantity object.
@@ -145,7 +156,8 @@ sanitise_variable <- function(var) {
 		# Input is a string.
 
 		# Case insensitivity...ew! (but it allows people to pass in "LAI")
-		return(DGVMTools::defineQuantity(tolower(var), var, ""))
+		units <- get_units(var)
+		return(DGVMTools::defineQuantity(tolower(var), var, units))
 	}
 
 	log_error("Unable to parse object as source: ", var)

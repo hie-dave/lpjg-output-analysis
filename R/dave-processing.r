@@ -222,7 +222,10 @@ get_observed_vars <- function() {
 	))
 }
 
-get_ylim <- function(data) {
+get_ylim <- function(data, common_yaxis = TRUE) {
+	if (!common_yaxis) {
+		return(NULL)
+	}
 	ymin <- 1e300
 	ymax <- -1e300
     for (lyr_name in names(data)) {

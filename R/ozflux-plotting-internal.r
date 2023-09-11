@@ -37,7 +37,8 @@ create_panel <- function(
     subannual,
     use_plotly,
     ncol = 2,
-    ylab = NULL) {
+    ylab = NULL,
+    title = NULL) {
 
     nplot <- 3
     nrow <- as.integer(ceiling(nplot / ncol))
@@ -69,6 +70,10 @@ create_panel <- function(
       if (!is.null(ylab)) {
         plt <- ggpubr::annotate_figure(plt,
           left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp))
+      }
+      if (!is.null(title)) {
+        plt <- ggpubr::annotate_figure(plt,
+          top  = grid::textGrob(title, vjust = 1, gp = gp))
       }
     }
     return(plt)
@@ -109,7 +114,7 @@ plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
 
 create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         , text_multiplier = NULL, do_timeseries = TRUE, do_pvo = TRUE
-        , do_subannual = TRUE, marker_size = 3) {
+        , do_subannual = TRUE, marker_size = 3, ylim = NULL) {
 
     # Compute (and store) statistics).
     obs_lyr <- get_global("obs_lyr")
@@ -139,14 +144,16 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     # Apparently a variable name in the j value will be interpreted literally
     # rather than dereferencing the value stored in the variable. What an
     # amazing language this is.
-    ymin <- min(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
-    ymax <- max(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
-    for (lyr_name in names(gc)) {
-        v <- gc@data[which(!is.na(gc@data[[lyr_name]])), ][[lyr_name]]
-        ymin <- min(ymin, min(v))
-        ymax <- max(ymax, max(v))
+    if (is.null(ylim)) {
+        ymin <- min(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
+        ymax <- max(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
+        for (lyr_name in names(gc)) {
+            v <- gc@data[which(!is.na(gc@data[[lyr_name]])), ][[lyr_name]]
+            ymin <- min(ymin, min(v))
+            ymax <- max(ymax, max(v))
+        }
+        ylim <- c(ymin, ymax)
     }
-    ylim <- c(ymin, ymax)
 
     # Create plots.
     result <- list()
@@ -217,10 +224,17 @@ get_y_label <- function(var, site = NULL) {
     if (!is.null(site)) {
       ylab <- paste(site, ylab)
     }
-    if (!is.null(var@units)) {
+    if (!is.null(var@units) && var@units != "") {
         ylab <- paste0(ylab, " (", var@units, ")")
     }
     return(ylab)
+}
+
+get_y_label_from_vars <- function(vars) {
+    if (length(vars) == 1) {
+        return(get_y_label(vars[[1]]))
+    }
+    return(NULL)
 }
 
 dave_panel <- function(plots, xlab, ylab, title, use_plotly, sites) {
@@ -324,6 +338,7 @@ ozflux_plot_site <- function(
 
 get_panel_title <- function(vars) {
     if (length(vars) == 1) {
-        return(vars[[1]]@name)
+        return(trim_dave(vars[[1]]@name))
     }
+    return(NULL)
 }

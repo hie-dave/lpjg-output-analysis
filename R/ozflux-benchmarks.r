@@ -159,10 +159,7 @@ ozflux_benchmarks <- function(
 			# read/process the data this way, but we want to group plots by site, rather
 			# than by variable).
 			if (combined_graph) {
-				ylab <- var@name
-				if (!is.null(var@units)) {
-					ylab <- paste0(var@name, " (", var@units, ")")
-				}
+				ylab <- get_y_label(var, NULL)
 				plt <- create_panel(res$timeseries, res$pvo, res$subannual
 					, use_plotly, ylab = ylab)
 				combined_plots[[length(combined_plots) + 1L]] <- plt

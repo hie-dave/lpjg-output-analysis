@@ -42,7 +42,6 @@ ozflux_plot <- function(
 		# will return a list. We need to convert the list into a dataframe here
 		# for consistency.
 		sites <- as.data.frame(sanitise_ozflux_sites(sites))
-		colnames(sites) <- c("Lon", "Lat", "Name")
 	}
 
 	# Sanitise data sources.
@@ -89,6 +88,85 @@ ozflux_plot <- function(
 }
 
 #'
+#' Create a 2x2 panel of plots, identical to what is seen in the ozflux
+#' benchmarks.
+#'
+#' One series will be plotted on each graph for each source. One
+#' panel will be created for each site.
+#'
+#' @param sources: One or more sources of data. These may be paths to LPJ-GUESS
+#' repositories, paths to directories containing output files, or as
+#' \seealso{\link{DGVMTools::Source}} objects.
+#' @param var: The variable to be plotted. This may be specified as a string
+#' containing the output file name without extension (e.g. "dave_lai"), or as
+#' a DGVMTools::Quantity}} object.
+#' @param sites: One or more ozflux sites. May be specified as names of sites,
+#' or as tuples of (Lon, Lat). If NULL, all sites will be plotted.
+#' @param use_plotly: TRUE to generate plotly outputs, FALSE to use ggplot.
+#' @param common_yaxis: TRUE to use the same y-axis scales for all sites. FALSE
+#' otherwise.
+#'
+#' @return Returns a single plot object if plotting one site, otherwise returns
+#' a list of plot objects of the same length as the number of sites to be
+#' plotted.
+#' @author Drew Holzworth
+#' @export
+#'
+ozflux_panel <- function(
+		sources,
+		var,
+		sites = NULL,
+		use_plotly = FALSE,
+		common_yaxis = FALSE) {
+	if (is.null(sites)) {
+		sites <- read_ozflux_sites()
+	} else {
+		# read_ozflux_sites() will return a dataframe. sanitise_ozflux_sites()
+		# will return a list. We need to convert the list into a dataframe here
+		# for consistency.
+		sites <- as.data.frame(sanitise_ozflux_sites(sites))
+	}
+
+	# Sanitise data sources.
+	sources <- sanitise_sources(sources)
+
+	# Sanitise variables to be plotted.
+	var <- sanitise_variable(var)
+
+	# Read data for this gridcell.
+	data <- read_data(list(var), sources, site = sites)
+
+	# Get upper/lower limits of y-axis data.
+	ylim <- get_ylim(data, common_yaxis)
+
+	# Get a suitable y-axis label.
+	ylab <- get_y_label(var)
+
+	# Get panel title.
+	title <- get_panel_title(list(var))
+
+	nsite <- nrow(sites)
+	plots <- list()
+	for (i in seq_len(nsite)) {
+		site <- sites[i, ]
+
+		# Get the panel title for this site.
+		site_title <- paste(site$Name, title)
+
+		gc <- get_gridcell(data, site$Lat, site$Lon, site$Name)
+		p <- create_plots(gc, ylab, use_plotly = use_plotly, ylim = ylim)
+		panel <- create_panel(p$timeseries, p$pvo, p$subannual, use_plotly
+			, ylab = ylab, title = site_title)
+		plots[[length(plots) + 1]] <- panel
+	}
+
+	if (nsite == 1) {
+		return(plots[[1]])
+	}
+	return(plots)
+}
+
+#'
 #' Create layerwise plots.
 #'
 #' Create a panel of plots, where each panel contains one of the layers of the
@@ -119,7 +197,7 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 	panels <- list()
 	gp <- grid::gpar(cex = 1.3)
 	for (site in sites) {
-		gridcell <- get_gridcell(data, site$lat, site$lon, site$name)
+		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
 		plots <- list()
 		for (layer in layers) {
@@ -135,8 +213,8 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 		panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE
 			, legend = "bottom", align = "hv")
 		xlab <- "Date"
-		ylab <- get_y_label(var, site$name)
-		site_title <- paste(site$name, title)
+		ylab <- get_y_label(var, site$Name)
+		site_title <- paste(site$Name, title)
 		panel <- ggpubr::annotate_figure(
 			panel,
 			top = grid::textGrob(site_title, gp = gp),
