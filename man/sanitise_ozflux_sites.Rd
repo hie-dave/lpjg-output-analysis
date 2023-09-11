@@ -11,7 +11,8 @@ sanitise_ozflux_sites(sites)
 site names or (lon, lat) tuples.}
 }
 \value{
-Returns a list of named vectors with (lon, lat, name) elements.
+Returns a dataframe with (Lon, Lat, Name) columns, and one row per
+site.
 }
 \description{
 Sanitise the a site specifier.

@@ -35,14 +35,8 @@ ozflux_plot <- function(
 		separate = FALSE,
 		use_plotly = FALSE,
 		common_yaxis = FALSE) {
-	if (is.null(sites)) {
-		sites <- read_ozflux_sites()
-	} else {
-		# read_ozflux_sites() will return a dataframe. sanitise_ozflux_sites()
-		# will return a list. We need to convert the list into a dataframe here
-		# for consistency.
-		sites <- as.data.frame(sanitise_ozflux_sites(sites))
-	}
+	# Sanitise the sites to be plotted.
+	sites <- sanitise_ozflux_sites(sites)
 
 	# Sanitise data sources.
 	sources <- sanitise_sources(sources)
@@ -118,14 +112,9 @@ ozflux_panel <- function(
 		sites = NULL,
 		use_plotly = FALSE,
 		common_yaxis = FALSE) {
-	if (is.null(sites)) {
-		sites <- read_ozflux_sites()
-	} else {
-		# read_ozflux_sites() will return a dataframe. sanitise_ozflux_sites()
-		# will return a list. We need to convert the list into a dataframe here
-		# for consistency.
-		sites <- as.data.frame(sanitise_ozflux_sites(sites))
-	}
+
+	# Sanitise sites to be plotted.
+	sites <- sanitise_ozflux_sites(sites)
 
 	# Sanitise data sources.
 	sources <- sanitise_sources(sources)
@@ -196,7 +185,9 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 
 	panels <- list()
 	gp <- grid::gpar(cex = 1.3)
-	for (site in sites) {
+	nsite <- nrow(sites)
+	for (i in seq_len(nsite)) {
+		site <- sites[i, ]
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
 		plots <- list()

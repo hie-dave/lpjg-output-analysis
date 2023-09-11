@@ -62,15 +62,26 @@ sanitise_ozflux_site <- function(site) {
 #' @param sites: One or more ozflux site identifiers. These may be expressed as
 #' site names or (lon, lat) tuples.
 #'
-#' @return Returns a list of named vectors with (lon, lat, name) elements.
+#' @return Returns a dataframe with (Lon, Lat, Name) columns, and one row per
+#' site.
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @keywords internal
 #'
 sanitise_ozflux_sites <- function(sites) {
+	# Return a dataframe of all sites if sites is NULL.
+	if (is.null(sites)) {
+		return(read_ozflux_sites())
+	}
+
 	result <- list()
 	for (site in sites) {
 		result[[length(result) + 1]] <- sanitise_ozflux_site(site)
 	}
+
+	# Convert to dataframe.
+	result <- do.call(rbind, result)
+	rownames(result) <- NULL
+
 	return(result)
 }
 
