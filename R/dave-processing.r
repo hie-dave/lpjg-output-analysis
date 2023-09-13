@@ -23,8 +23,13 @@ get_observed_source <- function() {
 		, dir = obs_dir))
 }
 
-get_layer_names <- function(var, nvar, layers, source_name) {
-	nlayer <- length(layers)
+get_layer_names <- function(
+		var,
+		nvar,
+		layers,
+		source_name,
+		nlayer = length(layers)) {
+
 	if (nvar == 1) {
 		if (nlayer == 1) {
 			return(source_name)

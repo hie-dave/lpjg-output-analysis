@@ -156,26 +156,40 @@ ozflux_panel <- function(
 }
 
 #'
-#' Create layerwise plots.
+#' Create ozflux site-level layerwise plots.
 #'
-#' Create a panel of plots, where each panel contains one of the layers of the
-#' specified variable. One panel will be generated for each site.
+#' Create a panel of plots, where each plot in the panel contains one of the
+#' layers of the specified variable. One panel will be generated for each site.
 #'
-#' @param sites: Ozflux sites to be plotted, expressed as tuples of (lon, lat).
-#' @param sources: Sources of data. Should be paths to lpj-guess repos.
-#' @param var: The variable to be plotted. E.g. `"dave_sw"``.
+#' (In this nomenclature, a "layer" technically refers to a column in the output
+#' file).
+#'
+#' @param sources: Sources of data. Should be paths to lpj-guess repos or
+#' \seealso{\link{DGVMTools::Source}} objects.
+#' @param var: The variable to be plotted, specified as the output filename
+#' without extension (e.g. `"dave_sw"`), or as
+#' \seealso{\link{DGVMTools::Quantity}} objects.
+#' @param sites: Ozflux sites to be plotted, expressed as site names or as
+#' tuples of (lon, lat).
 #' @param layers: The layers to be plotted. E.g. `paste0("sw_", 0:14)`.
+#' @param title: The desired panel titles.
 #'
 #' @return Returns a list of ggplot objects.
 #' @author Drew Holzworth
 #' @export
 #'
-plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
+ozflux_plot_layerwise <- function(sources, var, sites, layers, title = NULL) {
+	# TODO: refactor this function out of the package. The layers should be an
+	# optional argument to ozflux_plot(). If absent, they're determined using
+	# the current algorithm (ie try total/mean). If present, there should be
+	# a second optional argument which determines whether one plot is generated
+	# per layer, or if all layers are to be plotted on the same plot.
+
 	# Sanitise data sources.
 	sources <- sanitise_sources(sources)
 
 	# Sanitise variables to be plotted.
-	var <- sanitise_variable(var)
+	var <- list(sanitise_variable(var))
 
 	# Get the site to be plotted.
 	sites <- sanitise_ozflux_sites(sites)
@@ -194,7 +208,8 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 		for (layer in layers) {
 			layers_to_plot <- c()
 			for (source in sources) {
-				lyr <- get_layer_names(layer, source)
+				lyr <- get_layer_names(var, 1, layer, source@name
+					, nlayer = length(layers))
 				layers_to_plot <- c(layers_to_plot, lyr)
 			}
 			plt <- plot_timeseries(gridcell, layers = layers_to_plot)
@@ -204,7 +219,7 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 		panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE
 			, legend = "bottom", align = "hv")
 		xlab <- "Date"
-		ylab <- get_y_label(var, site$Name)
+		ylab <- get_y_label(var[[1]], site$Name)
 		site_title <- paste(site$Name, title)
 		panel <- ggpubr::annotate_figure(
 			panel,
@@ -212,6 +227,9 @@ plot_layerwise <- function(sites, sources, var, layers, title = NULL) {
 			left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp),
 			bottom = grid::textGrob(xlab, gp = gp))
 		panels[[length(panels) + 1]] <- panel
+	}
+	if (length(panels) == 1) {
+		return(panels[[1]])
 	}
 	return(panels)
 }
