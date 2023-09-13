@@ -119,9 +119,10 @@ read_data <- function(
 		if (obs_lyr %in% lapply(get_observed_vars(), function(x) x@id)) {
 			obs_source <- get_observed_source()
 			log_debug("Reading field ", obs_lyr, " from observed source...")
-			obs <- DGVMTools::getField(source = obs_source, quant = obs_lyr
-				, layers = layers, file.name = get_global("obs_file")
-				, verbose = verbose)
+			suppressWarnings(obs <- DGVMTools::getField(
+				source = obs_source, quant = obs_lyr, layers = layers
+					, file.name = get_global("obs_file")
+					, verbose = verbose))
 
 			log_debug("Successfully read observed data for variable ", var@name)
 
