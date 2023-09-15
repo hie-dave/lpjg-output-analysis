@@ -5,6 +5,18 @@ set_global("dave_pkgname", "daveanalysis")
 # Ozflux gridcells. This is a data frame with 3 columns (Lon, Lat, Name).
 set_global("ozflux_sites", NULL)
 
+call_foreach <- function(x, fun, ignore_null = TRUE) {
+	if (is.vector(x) || is.list(x)) {
+		result <- lapply(x, fun)
+	} else {
+		result <- list(fun(x))
+	}
+	if (ignore_null) {
+		result <- Filter(Negate(is.null), result)
+	}
+	return(result)
+}
+
 #'
 #' Get a list of all known ozflux sites.
 #'
@@ -72,17 +84,49 @@ sanitise_ozflux_sites <- function(sites) {
 	if (is.null(sites)) {
 		return(read_ozflux_sites())
 	}
+	if (is.data.frame(sites) && ncol(sites) == 3 && "Name" %in% names(sites)
+			&& "Lon" %in% names(sites) && "Lat" %in% names(sites)) {
+		return(sites)
+	}
 
-	result <- list()
-	for (site in sites) {
-		result[[length(result) + 1]] <- sanitise_ozflux_site(site)
+	result <- call_foreach(sites, sanitise_ozflux_site)
+	if (length(result) < 1) {
+		log_error("No sites were specified. To plot all sites, use NULL")
 	}
 
 	# Convert to dataframe.
 	result <- do.call(rbind, result)
 	rownames(result) <- NULL
+	result <- as.data.frame(result)
 
 	return(result)
+}
+
+sanitise_source <- function(source) {
+	if (class(source)[1] == "Source") {
+		log_debug("Source is a DGVMTools::Source object")
+		return(source)
+	} else if (class(source) == "character") {
+		log_debug("Source is a string")
+		name <- basename(source)
+		path <- source
+		if (dir.exists(file.path(path, "benchmarks", "ozflux"))) {
+			fmt <- OZFLUX
+			f <- "OZFLUX"
+		} else {
+			fmt <- DGVMTools::GUESS
+			f <- "GUESS"
+		}
+		log_debug("Defining source with name '", name, "', format '", f
+			, "', and path '", path, "'")
+		source <- DGVMTools::defineSource(id = name, format = fmt, dir = path)
+		return(source)
+	} else {
+		msg <- "Input cannot be parsed as a version and will be ignored: "
+		log_info("class(object) = ", class(source))
+		print(source)
+		warning(msg, source)
+	}
 }
 
 #'
@@ -103,47 +147,11 @@ sanitise_ozflux_sites <- function(sites) {
 #' @keywords internal
 #'
 sanitise_sources <- function(sources) {
-	result <- list()
-
-	if (length(sources) == 1) {
-		log_debug("Length of sources is 1. Putting it in a vector...")
-		sources <- c(sources)
+	result <- call_foreach(sources, sanitise_source)
+	if (length(result) < 1) {
+		log_error("No input sources were provided")
 	}
-
-	for (object in sources) {
-		log_debug("Parsing object...")
-		if (class(object)[1] == "Source") {
-			log_debug("Source is a DGVMTools::Source object")
-			result <- append(result, object)
-		} else if (class(object) == "character") {
-			log_debug("Source is a string")
-			name <- basename(object)
-			path <- object
-			if (dir.exists(file.path(path, "benchmarks", "ozflux"))) {
-				fmt <- OZFLUX
-				f <- "OZFLUX"
-			} else {
-				fmt <- DGVMTools::GUESS
-				f <- "GUESS"
-			}
-			log_debug("Defining source with name '", name, "', format '", f
-				, "', and path '", path, "'")
-			source <- DGVMTools::defineSource(id = name, format = fmt
-				, dir = path)
-			result <- append(result, source)
-		} else {
-			msg <- "Input cannot be parsed as a version and will be ignored: "
-			log_info("class(object) = ", class(object))
-			print(object)
-			warning(msg, object)
-		}
-	}
-
-	if (length(result) >= 1) {
-		return(result)
-	}
-
-	log_error("No versions were provided")
+	return(result)
 }
 
 # Attempt to get units given a variable name by looking in the observed file.
@@ -160,6 +168,7 @@ get_units <- function(var_name) {
 sanitise_variable <- function(var) {
 	if (class(var)[1] == "Quantity") {
 		# Input is already a Quantity object.
+		log_debug("Input variable '", var@name, "' is already a Quantity")
 		return(var)
 	}
 
@@ -168,7 +177,10 @@ sanitise_variable <- function(var) {
 
 		# Case insensitivity...ew! (but it allows people to pass in "LAI")
 		units <- get_units(var)
-		return(DGVMTools::defineQuantity(tolower(var), var, units))
+		id <- tolower(var)
+		log_debug("Creating quantity from input string '", var, "'; id = '"
+			, id, "', name = '", var, "', units = '", units, "'")
+		return(DGVMTools::defineQuantity(id, var, units))
 	}
 
 	log_error("Unable to parse object as source: ", var)
@@ -184,9 +196,9 @@ sanitise_variable <- function(var) {
 #' @author Drew Holzworth
 #'
 sanitise_variables <- function(vars) {
-	result <- list()
-	for (var in vars) {
-		result <- append(result, sanitise_variable(var))
+	result <- call_foreach(vars, sanitise_variable)
+	if (length(result) < 1) {
+		log_error("No variables were provided")
 	}
 	return(result)
 }

@@ -46,6 +46,20 @@ get_layer_names <- function(
 	}
 }
 
+get_layer_names_for_sources <- function(
+		var,
+		nvar,
+		layers,
+		sources,
+		nlayer = length(layers)) {
+	layer_names <- c()
+	for (source in sources) {
+		lyrs <- get_layer_names(var, nvar, layers, source@name, nlayer = nlayer)
+		layer_names <- c(layer_names, lyrs)
+	}
+	return(layer_names)
+}
+
 get_default_layers <- function(source, var, sites = NULL) {
 	available <- available_layers_ozflux(source, var, sites)
 	if (length(available) < 1) {
@@ -90,13 +104,13 @@ read_data <- function(
 	log_debug("[read_data] Sanitising input quantities...")
 	vars <- sanitise_variables(vars)
 
-	if (is.data.frame(site)) {
-		if (nrow(site) == 1) {
-			site <- site[1, ]
-		} else {
-			site <- NULL
-		}
-	}
+	# if (is.data.frame(site)) {
+	# 	if (nrow(site) == 1) {
+	# 		site <- site[1, ]
+	# 	} else {
+	# 		site <- NULL
+	# 	}
+	# }
 
 	data <- NULL
 	verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
@@ -131,6 +145,7 @@ read_data <- function(
 			out_lyr <- get_layer_names(var, nvar, layers, get_global("obs_lyr"))
 			if (is.null(data)) {
 				DGVMTools::renameLayers(obs, layers, out_lyr)
+				obs@quant@name <- var@name
 				data <- obs
 			} else {
 				data <- DGVMTools::copyLayers(obs, data, layers
@@ -146,7 +161,7 @@ read_data <- function(
 		if (is.null(layers)) {
 			layers <- get_default_layers(sources[[1]], var, site$Name)
 		}
-		log_diag("Plotting layers: ", layers)
+		log_diag("Reading data for layers: ", layers)
 
 		# Read outputs of this variable from each configured source.
 		num_decimal_places <- get_global("merge_ndp")
@@ -160,8 +175,12 @@ read_data <- function(
 			args$quant <- var@id
 			args$decimal.places <- num_decimal_places
 			if (!is.null(site)) {
-				args$spatial.extent.id <- site$Name
-				args$spatial.extent <- c(site$Lon, site$Lat)
+				if (is.data.frame(site)) {
+					args$sites <- site
+				} else {
+					args$spatial.extent.id <- site$Name
+					args$spatial.extent <- c(site$Lon, site$Lat)
+				}
 			}
 			predictions <- do.call(DGVMTools::getField, args)
 

@@ -198,14 +198,21 @@ get_field_ozflux <- function(
 	layers = NULL,
 	target_stainfo,
 	file_name,
+	sites,
 	...) {
 	# Get path to the ozflux directory within the repository.
 	ozflux <- get_ozflux_path(source)
 
 	# Get a list of site names.
-	sites <- get_sites_ozflux(source)
+	all_sites <- get_sites_ozflux(source)
 
-	if (length(sites) < 1) {
+	quant <- sanitise_variable(quant)
+
+	if (!is.null(sites)) {
+		sites <- sanitise_ozflux_sites(sites)
+	}
+
+	if (length(all_sites) < 1) {
 		# No sites. This shouldn't really happen, but if it does, there's
 		# nothing more to be done.
 		return(list())
@@ -218,7 +225,8 @@ get_field_ozflux <- function(
 	base_name <- paste0(quant_id, ".out")
 	if (is.null(file_name)) {
 		davebase <- paste0("dave_", base_name)
-		dave_file_name <- file.path(ozflux, sites[[1]], out_dir_name, davebase)
+		site <- all_sites[[1]]
+		dave_file_name <- file.path(ozflux, site, out_dir_name, davebase)
 		if (file.exists(dave_file_name)) {
 			file_name <- davebase
 			quant_id <- paste0("dave_", base_name)
@@ -231,16 +239,18 @@ get_field_ozflux <- function(
 	}
 
 	site <- NULL
-	spatial_extent_id <- target_stainfo@spatial.extent.id
-	spatial_extent <- target_stainfo@spatial.extent
-	if (!is.null(spatial_extent_id) && length(spatial_extent_id) > 0) {
-		site <- sanitise_spatial_extent_id(spatial_extent_id, sites)
-	} else if (!is.null(spatial_extent) && spatial_extent != FALSE) {
-		# For some reason, FALSE gets passed in for spatial.extent if no value
-		# is given.
-		site <- sanitise_spatial_extent(spatial_extent, sites)
-	} else {
-		log_debug("spatial.extent and spatial.extent.id not specified.")
+	if (!is.null(target_stainfo)) {
+		spatial_extent_id <- target_stainfo@spatial.extent.id
+		spatial_extent <- target_stainfo@spatial.extent
+		if (!is.null(spatial_extent_id) && length(spatial_extent_id) > 0) {
+			site <- sanitise_spatial_extent_id(spatial_extent_id, all_sites)
+		} else if (!is.null(spatial_extent) && spatial_extent != FALSE) {
+			# For some reason, FALSE gets passed in for spatial.extent if no value
+			# is given.
+			site <- sanitise_spatial_extent(spatial_extent, all_sites)
+		} else {
+			log_debug("spatial.extent and spatial.extent.id not specified.")
+		}
 	}
 
 	if (!is.null(site)) {
@@ -271,7 +281,10 @@ get_field_ozflux <- function(
 		file.remove(working_file)
 
 	expected_cols <- NULL
-	for (site in sites) {
+	for (site in all_sites) {
+		if (!is.null(sites) && is.data.frame(sites) && !(site %in% sites$Name)) {
+			next
+		}
 		log_debug("Concatenating ", quant@name, " for site ", site, "...")
 
 		# Get path to this site's output directory.

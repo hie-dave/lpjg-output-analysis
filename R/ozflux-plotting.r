@@ -54,11 +54,25 @@ ozflux_plot <- function(
 		ylim <- NULL
 	}
 
+	# Get plot and axis titles.
+	xlab <- "Date"
+	ylab <- get_y_label(data@quant)
+	title <- get_panel_title(vars)
+
 	plots <- list()
 	nsite <- nrow(sites)
+	ncol <- as.integer(ceiling(sqrt(nsite)))
 	for (i in seq_len(nsite)) {
-		plots[[length(plots) + 1]] <- ozflux_plot_site(data, ylim, sites[i, ]
-			, separate, use_plotly, nsite, vars)
+		row <- sites[i, ]
+		site <- c(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
+		plt <- ozflux_plot_site(data, ylim, site, separate, use_plotly, nsite
+			, vars, xlab = xlab, ylab = ylab)
+		if (nsite > 1 && !use_plotly && common_yaxis && (i - 1) %% ncol != 0) {
+			plt <- plt + ggplot2::theme(
+				axis.text.y = ggplot2::element_blank(),
+				axis.ticks.y = ggplot2::element_blank())
+		}
+		plots[[length(plots) + 1]] <- plt
 	}
 
 	# Note: ozflux_plot_site will convert the returned plot to a plotly object
@@ -70,13 +84,6 @@ ozflux_plot <- function(
 	}
 
 	# Otherwise, generate a panel of plots (1 child plot per site).
-
-	# Configure titles and axis text for the panel.
-	xlab <- "Date"
-	ylab <- get_y_label(data@quant)
-	title <- get_panel_title(vars)
-
-	# Combine plots into a single panel.
 	panel <- dave_panel(plots, xlab, ylab, title, use_plotly, sites)
 	return(panel)
 }
@@ -173,12 +180,22 @@ ozflux_panel <- function(
 #' tuples of (lon, lat).
 #' @param layers: The layers to be plotted. E.g. `paste0("sw_", 0:14)`.
 #' @param title: The desired panel titles.
+#' @param separate_plots: TRUE to draw each layer in a separate plot. FALSE to
+#' draw all layers on the same plot.
+#' @param use_plotly: TRUE to draw plots with plotly. FALSE to use ggplot2.
 #'
 #' @return Returns a list of ggplot objects.
 #' @author Drew Holzworth
 #' @export
 #'
-ozflux_plot_layerwise <- function(sources, var, sites, layers, title = NULL) {
+ozflux_plot_layerwise <- function(
+	sources,
+	var,
+	sites,
+	layers,
+	title = NULL,
+	separate_plots = TRUE,
+	use_plotly = FALSE) {
 	# TODO: refactor this function out of the package. The layers should be an
 	# optional argument to ozflux_plot(). If absent, they're determined using
 	# the current algorithm (ie try total/mean). If present, there should be
@@ -198,34 +215,34 @@ ozflux_plot_layerwise <- function(sources, var, sites, layers, title = NULL) {
 	data <- read_data(var, sources, site = sites, layers = layers)
 
 	panels <- list()
-	gp <- grid::gpar(cex = 1.3)
 	nsite <- nrow(sites)
 	for (i in seq_len(nsite)) {
 		site <- sites[i, ]
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
 		plots <- list()
-		for (layer in layers) {
-			layers_to_plot <- c()
-			for (source in sources) {
-				lyr <- get_layer_names(var, 1, layer, source@name
-					, nlayer = length(layers))
-				layers_to_plot <- c(layers_to_plot, lyr)
+		if (separate_plots) {
+			for (layer in layers) {
+				layers_to_plot <- get_layer_names_for_sources(var, 1, layer
+					, sources, nlayer = length(layers))
+				plt <- plot_timeseries(gridcell, layers = layers_to_plot)
+				plt <- trim_ggplot(plt, title = layer)
+				plt <- convert_plot(plt, use_plotly)
+				plots[[length(plots) + 1]] <- plt
 			}
-			plt <- plot_timeseries(gridcell, layers = layers_to_plot)
-			plt <- trim_ggplot(plt, title = layer)
+		} else {
+			lyrs <- get_layer_names_for_sources(var, 1, layers, sources)
+			plt <- plot_timeseries(gridcell, layers = lyrs)
+			plt <- trim_ggplot(plt)
+			plt <- convert_plot(plt, use_plotly)
 			plots[[length(plots) + 1]] <- plt
 		}
-		panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE
-			, legend = "bottom", align = "hv")
 		xlab <- "Date"
 		ylab <- get_y_label(var[[1]], site$Name)
 		site_title <- paste(site$Name, title)
-		panel <- ggpubr::annotate_figure(
-			panel,
-			top = grid::textGrob(site_title, gp = gp),
-			left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp),
-			bottom = grid::textGrob(xlab, gp = gp))
+		args <- c(plots, use_plotly = use_plotly, xlab = xlab, ylab = ylab
+			, title = site_title)
+		panel <- do.call(create_square_panel, args)
 		panels[[length(panels) + 1]] <- panel
 	}
 	if (length(panels) == 1) {

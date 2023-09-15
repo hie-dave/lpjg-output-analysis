@@ -14,7 +14,9 @@ set_global("cb_colours", c(
 
 get_colour_palette <- function(n, alpha = 1, begin = 0) {
     if (n > length(get_global("cb_colours"))) {
-        stop(paste0("Unable to get colour palette with ", n, " colours"))
+        log_warning("Unable to get Wong et al colour palette with ", n
+            , " colours. Default colours will be used instead.")
+        return(NULL)
     }
     colours <- get_global("cb_colours")[1:n]
     log_debug("Successfully generated colour palette with ", n, " colours")
@@ -32,65 +34,79 @@ to_plotly <- function(chart, lyr_name) {
 }
 
 create_panel <- function(
-    timeseries,
-    pvo,
-    subannual,
+    ...,
     use_plotly,
     ncol = 2,
+    xlab = NULL,
     ylab = NULL,
     title = NULL) {
 
-    nplot <- 3
+    plots <- list(...)
+    nplot <- length(plots)
     nrow <- as.integer(ceiling(nplot / ncol))
     if (use_plotly) {
-      fix_legend <- function(p) {
-        return(plotly::layout(p, legendgroup = "Layout"))
-      }
-      timeseries <- fix_legend(timeseries)
-      pvo <- fix_legend(pvo)
-      subannual <- fix_legend(subannual)
-      plt <- plotly::subplot(timeseries, pvo, subannual, nrows = nrow
-        , shareY = TRUE)
-      for (layer in seq_len(length(plt$x$data) * (nplot - 1L) / nplot)) {
-        plt$x$data[[layer]]$showlegend <- FALSE
-      }
+        fix_legend <- function(p) {
+            return(plotly::layout(p, legendgroup = "Layout"))
+        }
+        for (plot in plots) {
+            plot <- fix_legend(plot)
+        }
+        args <- c(plots, nrows = nrow, shareY = TRUE)
+        plt <- do.call(plotly::subplot, args)
+        for (layer in seq_len(length(plt$x$data) * (nplot - 1L) / nplot)) {
+            plt$x$data[[layer]]$showlegend <- FALSE
+        }
     } else {
-      trim_plot <- function(plt) {
-        return(plt +
-        ggplot2::labs(title = NULL, subtitle = NULL, caption = NULL))
-      }
-      timeseries <- trim_plot(timeseries) + ggpubr::rremove("ylab")
-      pvo <- trim_plot(pvo)
-      subannual <- trim_plot(subannual) + ggpubr::rremove("ylab")
+        for (plot in plots) {
+            plot <- trim_ggplot(plot, xlab = TRUE)
+        }
 
-      gp <- grid::gpar(cex = 1.3)
+        gp <- grid::gpar(cex = 1.3)
 
-      plt <- ggpubr::ggarrange(timeseries, pvo, subannual, ncol = ncol
-        , nrow = nrow, common.legend = TRUE, legend = "bottom", align = "hv")
-      if (!is.null(ylab)) {
-        plt <- ggpubr::annotate_figure(plt,
-          left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp))
-      }
-      if (!is.null(title)) {
-        plt <- ggpubr::annotate_figure(plt,
-          top  = grid::textGrob(title, vjust = 1, gp = gp))
-      }
+        args <- c(plots, ncol = ncol, nrow = nrow, common.legend = TRUE
+            , legend = "bottom", align = "hv")
+        plt <- do.call(ggpubr::ggarrange, args)
+        if (!is.null(xlab)) {
+            plt <- ggpubr::annotate_figure(plt,
+                bottom = grid::textGrob(xlab, gp = gp))
+        }
+        if (!is.null(ylab)) {
+            plt <- ggpubr::annotate_figure(plt,
+                left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp))
+        }
+        if (!is.null(title)) {
+            plt <- ggpubr::annotate_figure(plt,
+                top  = grid::textGrob(title, vjust = 1, gp = gp))
+        }
     }
     return(plt)
+}
+
+create_square_panel <- function(
+        ...,
+        use_plotly,
+        xlab = NULL,
+        ylab = NULL,
+        title = NULL) {
+    nplot <- length(list(...))
+    ncol <- as.integer(ceiling(sqrt(nplot)))
+    return(create_panel(..., use_plotly = use_plotly, ncol = ncol, xlab = xlab
+        , ylab = ylab, title = title))
 }
 
 plot_timeseries <- function(
     gc,
     ylim = NULL,
     text_multiplier = NULL,
+    xlab = NULL,
     ylab = NULL,
     layers = NULL) {
 
-    ncolour <- ifelse(is.null(layers), length(names(gc)), length(colours))
+    ncolour <- ifelse(is.null(layers), length(names(gc)), length(layers))
     colours <- get_colour_palette(ncolour)
     return(DGVMTools::plotTemporal(gc, layers = layers, cols = colours
         , text.multiplier = text_multiplier, text.expression = FALSE
-        , y.lim = ylim, y.label = ylab))
+        , y.lim = ylim, x.label = xlab, y.label = ylab))
 }
 
 plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
@@ -274,7 +290,8 @@ dave_panel <- function(plots, xlab, ylab, title, use_plotly, sites) {
         return(plt)
     } else {
         gp <- grid::gpar(cex = 1.3)
-        panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE)
+        panel <- ggpubr::ggarrange(plotlist = plots, common.legend = TRUE
+            , legend = "bottom")
         panel <- ggpubr::annotate_figure(panel,
             top = grid::textGrob(title, gp = gp),
             left = grid::textGrob(ylab, rot = 90, vjust = 1, gp = gp),
@@ -300,7 +317,9 @@ ozflux_plot_site <- function(
         separate,
         use_plotly,
         nsite,
-        vars) {
+        vars,
+        xlab = NULL,
+        ylab = NULL) {
     log_diag("Plotting ", site$Name, "...")
 
     # Extract data for the required grid cell.
@@ -311,7 +330,7 @@ ozflux_plot_site <- function(
     }
 
     # Plot the gridcell.
-    plt <- plot_timeseries(gridcell, ylim)
+    plt <- plot_timeseries(gridcell, ylim, xlab = xlab, ylab = ylab)
 
     # The plot title should not include the variable name if plotting a panel
     # of sites. In that case it's better to have the variable name as the main
