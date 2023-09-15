@@ -52,6 +52,10 @@ get_layer_names_for_sources <- function(
 		layers,
 		sources,
 		nlayer = length(layers)) {
+	if (length(sources) == 1 && nvar == 1) {
+		return(layers)
+	}
+
 	layer_names <- c()
 	for (source in sources) {
 		lyrs <- get_layer_names(var, nvar, layers, source@name, nlayer = nlayer)
@@ -60,13 +64,27 @@ get_layer_names_for_sources <- function(
 	return(layer_names)
 }
 
+get_aggregate_layers <- function() {
+	return(c("total", "Total", "mean", "Mean"))
+}
+
+get_ignored_layers <- function() {
+	return(c(
+		"year",
+		"month",
+		"day",
+		"timestep",
+		"patch"
+	))
+}
+
 get_default_layers <- function(source, var, sites = NULL) {
 	available <- available_layers_ozflux(source, var, sites)
 	if (length(available) < 1) {
 		log_error("Unknown layers available for quantity ", var@id)
 	}
 
-	to_try <- c("total", "Total", "mean", "Mean")
+	to_try <- get_aggregate_layers()
 	for (l in to_try) {
 		if (l %in% available) {
 			return(l)
@@ -77,6 +95,26 @@ get_default_layers <- function(source, var, sites = NULL) {
 		, "; therefore the last layer (", last_layer
 		, ") will be plotted.")
 	return(last_layer)
+}
+
+# Get the plottable layers present in the given data, ignoring layers such as
+# year, day, total, etc.
+get_layers <- function(
+		source,
+		var,
+		sites = NULL,
+		ignore_total = TRUE,
+		ignore_mean = TRUE) {
+
+	ignored_layers <- get_ignored_layers()
+	if (ignore_total) {
+		ignored_layers <- c(ignored_layers, "total", "Total", "TOTAL")
+	}
+	if (ignore_mean) {
+		ignored_layers <- c(ignored_layers, "mean", "Mean", "MEAN")
+	}
+	available <- available_layers_ozflux(source, var, sites)
+	return(setdiff(available, ignored_layers))
 }
 
 #'
@@ -130,7 +168,10 @@ read_data <- function(
 		}
 
 		# Read all observations for this variable.
-		if (obs_lyr %in% lapply(get_observed_vars(), function(x) x@id)) {
+		obs_vars <- get_observed_vars()
+		obs_var_names <- lapply(obs_vars, function(x) x@id)
+		if (obs_lyr %in% obs_var_names
+				&& all(layers %in% obs_var_names)) {
 			obs_source <- get_observed_source()
 			log_debug("Reading field ", obs_lyr, " from observed source...")
 			suppressWarnings(obs <- DGVMTools::getField(
@@ -154,7 +195,9 @@ read_data <- function(
 					, keep.all.to = FALSE)
 			}
 		} else {
-			log_warning("No observed data found for variable '", obs_lyr, "'")
+			layer_names <- paste(layers, collapse = ", ")
+			log_warning("No observed data found for layers [", layer_names
+				, "] of variable '", obs_lyr, "'")
 		}
 
 		layers <- original_layer
@@ -188,8 +231,11 @@ read_data <- function(
 				, " for variable ", var@name)
 			layer_names <- get_layer_names(var, nvar, layers, source@name)
 			if (is.null(data)) {
+				# IE no observations
 				data <- predictions
-				DGVMTools::renameLayers(data, layers, layer_names)
+				if (length(sources) > 1) {
+					DGVMTools::renameLayers(data, layers, layer_names)
+				}
 			} else {
 				data <- DGVMTools::copyLayers(predictions, data, layers
 					, new.layer.names = layer_names

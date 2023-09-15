@@ -144,7 +144,8 @@ ozflux_panel <- function(
 	nsite <- nrow(sites)
 	plots <- list()
 	for (i in seq_len(nsite)) {
-		site <- sites[i, ]
+		row <- sites[i, ]
+		site <- c(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
 
 		# Get the panel title for this site.
 		site_title <- paste(site$Name, title)
@@ -192,7 +193,7 @@ ozflux_plot_layerwise <- function(
 	sources,
 	var,
 	sites,
-	layers,
+	layers = NULL,
 	title = NULL,
 	separate_plots = TRUE,
 	use_plotly = FALSE) {
@@ -206,18 +207,25 @@ ozflux_plot_layerwise <- function(
 	sources <- sanitise_sources(sources)
 
 	# Sanitise variables to be plotted.
-	var <- list(sanitise_variable(var))
+	var <- sanitise_variable(var)
 
 	# Get the site to be plotted.
 	sites <- sanitise_ozflux_sites(sites)
 
 	# Read data for this gridcell.
-	data <- read_data(var, sources, site = sites, layers = layers)
+	if (is.null(layers) && length(sources) > 0) {
+		layers <- get_layers(sources[[1]], var, sites)
+		log_diag("No layers were specified. Therefore the default layers for "
+			, "this file will be used. These are: ["
+			, paste(layers, collapse = ", "), "]")
+	}
+	data <- read_data(list(var), sources, site = sites, layers = layers)
 
 	panels <- list()
 	nsite <- nrow(sites)
 	for (i in seq_len(nsite)) {
-		site <- sites[i, ]
+		row <- sites[i, ]
+		site <- c(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
 		plots <- list()
@@ -238,7 +246,10 @@ ozflux_plot_layerwise <- function(
 			plots[[length(plots) + 1]] <- plt
 		}
 		xlab <- "Date"
-		ylab <- get_y_label(var[[1]], site$Name)
+		ylab <- get_y_label(var, site$Name)
+		if (is.null(title)) {
+			title <- var@name
+		}
 		site_title <- paste(site$Name, title)
 		args <- c(plots, use_plotly = use_plotly, xlab = xlab, ylab = ylab
 			, title = site_title)
