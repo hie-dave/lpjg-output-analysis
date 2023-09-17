@@ -4,7 +4,15 @@
 \alias{get_field_ozflux}
 \title{Get a field for OZFLUX LPJ-GUESS.}
 \usage{
-get_field_ozflux(source, quant, layers = NULL, target_stainfo, file_name, ...)
+get_field_ozflux(
+  source,
+  quant,
+  layers = NULL,
+  target_stainfo,
+  file_name,
+  sites,
+  ...
+)
 }
 \arguments{
 \item{source}{A \code{\linkS4class{Source}} containing metadata about the

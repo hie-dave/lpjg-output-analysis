@@ -4,7 +4,15 @@
 \alias{ozflux_plot_layerwise}
 \title{Create ozflux site-level layerwise plots.}
 \usage{
-ozflux_plot_layerwise(sources, var, sites, layers, title = NULL)
+ozflux_plot_layerwise(
+  sources,
+  var,
+  sites,
+  layers = NULL,
+  title = NULL,
+  separate_plots = TRUE,
+  use_plotly = FALSE
+)
 }
 \arguments{
 \item{sources:}{Sources of data. Should be paths to lpj-guess repos or
@@ -20,6 +28,11 @@ tuples of (lon, lat).}
 \item{layers:}{The layers to be plotted. E.g. `paste0("sw_", 0:14)`.}
 
 \item{title:}{The desired panel titles.}
+
+\item{separate_plots:}{TRUE to draw each layer in a separate plot. FALSE to
+draw all layers on the same plot.}
+
+\item{use_plotly:}{TRUE to draw plots with plotly. FALSE to use ggplot2.}
 }
 \value{
 Returns a list of ggplot objects.
