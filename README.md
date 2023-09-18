@@ -11,7 +11,7 @@ To install the package, run the following R code:
 
 ```R
 install.packages("remotes")
-remotes::install_github("hol430/DGVMTools")
+remotes::install_github("hol430/DGVMTools@dave")
 remotes::install_github("hie-dave/lpjg-output-analysis")
 ```
 
