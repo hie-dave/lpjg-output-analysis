@@ -89,6 +89,14 @@ get_units <- function(var, layer) {
     return(NULL)
 }
 
+get_y_label <- function(var) {
+    units <- get_units(var, NULL)
+    if (is.null(units)) {
+        return(var)
+    }
+    return(paste0(var, " (", units, ")"))
+}
+
 get_title <- function(var, year, layer) {
     title <- var
     units <- get_units(var, layer)
@@ -117,10 +125,8 @@ cfa_shiny <- function(out_path) {
     # (if it contains this variable), or from disk (saving to cache).
     get_data <- function(var_name) {
         if (var_name %in% names(cache)) {
-            cat(paste0("Reading ", var_name, " from cache...\n"))
             return(cache[[var_name]])
         }
-        cat(paste0("Reading ", var_name, " from disk...\n"))
         file_path <- get_file_path(var_name)
         data <- read_lpj_guess_output_file(file_path)
         cache[[var_name]] <<- data
@@ -160,8 +166,13 @@ cfa_shiny <- function(out_path) {
 
             # Main panel for displaying outputs.
             mainPanel(
-                leafletOutput(outputId = "spatial"),
-                plotlyOutput(outputId = "temporal")
+                div(
+                    leafletOutput(outputId = "spatial"),
+                    style = "margin-bottom: 20px;"
+                ),
+                plotlyOutput(
+                    outputId = "temporal"
+                )
             )
         )
     )
@@ -278,12 +289,18 @@ cfa_shiny <- function(out_path) {
             }
 
             # Get the closest grid point to the point clicked on by the user.
-            lats <- unique(data$Lat)
-            lons <- unique(data$Lon)
-            diff_lat <- abs(lats - lat)
-            diff_lon <- abs(lons - lon)
-            lat <- lats[which.min(diff_lat)]
-            lon <- lons[which.min(diff_lon)]
+            coords <- unique(data[, c("Lon", "Lat")])
+            diffs <- sqrt((coords$Lon - lon) ^ 2 + (coords$Lat - lat) ^ 2)
+            min_index <- which.min(diffs)
+            closest <- coords[min_index, ]
+            lat <- closest$Lat
+            lon <- closest$Lon
+
+            max_diff <- 0.5
+            if (diffs[[min_index]] > max_diff) {
+                output$temporal <- NULL
+                return(NULL)
+            }
 
             # Filter data to this grid point.
             data <- data[equal(data$Lat, lat) & equal(data$Lon, lon), ]
@@ -303,6 +320,9 @@ cfa_shiny <- function(out_path) {
             # Create a title for the timeseries plot.
             ti <- paste0(layer, " ", var, " timeseries (", lon, ", ", lat, ")")
 
+            # Get a suitable title for the y-axis (this will include the units).
+            ylab <- get_y_label(var)
+
             # Draw the timeseries plot using plotly.
             output$temporal <- renderPlotly({
                 plot_ly() %>%
@@ -310,7 +330,7 @@ cfa_shiny <- function(out_path) {
                     layout(
                         title = ti,
                         xaxis = list(title = "Date"),
-                        yaxis = list(title = var)
+                        yaxis = list(title = ylab)
                     )
             })
         })
