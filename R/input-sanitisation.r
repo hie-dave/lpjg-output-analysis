@@ -95,7 +95,7 @@ sanitise_ozflux_sites <- function(sites) {
 	}
 
 	# Convert to dataframe.
-	result <- do.call(rbind, result)
+	result <- do.call(rbind, lapply(result, as.data.frame))
 	rownames(result) <- NULL
 	result <- as.data.frame(result)
 

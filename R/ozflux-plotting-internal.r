@@ -34,12 +34,12 @@ to_plotly <- function(chart, lyr_name) {
 }
 
 create_panel <- function(
-    ...,
-    use_plotly,
-    ncol = 2,
-    xlab = NULL,
-    ylab = NULL,
-    title = NULL) {
+        ...,
+        use_plotly,
+        ncol = 2,
+        xlab = NULL,
+        ylab = NULL,
+        title = NULL) {
 
     plots <- list(...)
     nplot <- length(plots)

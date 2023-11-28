@@ -64,7 +64,7 @@ ozflux_plot <- function(
 	ncol <- as.integer(ceiling(sqrt(nsite)))
 	for (i in seq_len(nsite)) {
 		row <- sites[i, ]
-		site <- c(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
+		site <- list(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
 		plt <- ozflux_plot_site(data, ylim, site, separate, use_plotly, nsite
 			, vars, xlab = xlab, ylab = ylab)
 		if (nsite > 1 && !use_plotly && common_yaxis && (i - 1) %% ncol != 0) {
@@ -145,7 +145,7 @@ ozflux_panel <- function(
 	plots <- list()
 	for (i in seq_len(nsite)) {
 		row <- sites[i, ]
-		site <- c(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
+		site <- list(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
 
 		# Get the panel title for this site.
 		site_title <- paste(site$Name, title)
@@ -225,7 +225,7 @@ ozflux_plot_layerwise <- function(
 	nsite <- nrow(sites)
 	for (i in seq_len(nsite)) {
 		row <- sites[i, ]
-		site <- c(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
+		site <- list(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
 		plots <- list()
