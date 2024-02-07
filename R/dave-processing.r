@@ -74,7 +74,8 @@ get_ignored_layers <- function() {
 		"month",
 		"day",
 		"timestep",
-		"patch"
+		"patch",
+		"stand"
 	))
 }
 
