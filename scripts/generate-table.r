@@ -112,7 +112,7 @@ generate_pdf <- function(source, vars, colour_scheme, out_file
     }
 }
 
-trunk <- "~/code/lpj-guess/output-analysis/trunk"
+trunk <- "trunk"
 vars <- c(
     "dave_lai",
     "dave_gpp",
