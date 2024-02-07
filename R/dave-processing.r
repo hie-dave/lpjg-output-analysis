@@ -193,7 +193,7 @@ read_data <- function(
 				data <- DGVMTools::copyLayers(obs, data, layers
 					, new.layer.names = out_lyr
 					, tolerance = get_global("merge_tol"), keep.all.from = FALSE
-					, keep.all.to = FALSE)
+					, keep.all.to = TRUE)
 			}
 		} else {
 			layer_names <- paste(layers, collapse = ", ")

@@ -183,6 +183,8 @@ ozflux_panel <- function(
 #' @param title: The desired panel titles.
 #' @param separate_plots: TRUE to draw each layer in a separate plot. FALSE to
 #' draw all layers on the same plot.
+#' @param combine_sites: TRUE to combine plots for each site into a single
+#' panel. Requires separate_plots = FALSE.
 #' @param use_plotly: TRUE to draw plots with plotly. FALSE to use ggplot2.
 #'
 #' @return Returns a list of ggplot objects.
@@ -192,10 +194,11 @@ ozflux_panel <- function(
 ozflux_plot_layerwise <- function(
 	sources,
 	var,
-	sites,
+	sites = NULL,
 	layers = NULL,
 	title = NULL,
 	separate_plots = TRUE,
+	combine_sites = FALSE,
 	use_plotly = FALSE) {
 	# TODO: refactor this function out of the package. The layers should be an
 	# optional argument to ozflux_plot(). If absent, they're determined using
@@ -234,8 +237,8 @@ ozflux_plot_layerwise <- function(
 				layers_to_plot <- get_layer_names_for_sources(var, 1, layer
 					, sources, nlayer = length(layers))
 				plt <- plot_timeseries(gridcell, layers = layers_to_plot)
-				plt <- trim_ggplot(plt, title = layer)
 				plt <- convert_plot(plt, use_plotly)
+				plt <- set_title(plt, layer, use_plotly)
 				plots[[length(plots) + 1]] <- plt
 			}
 		} else {
@@ -248,16 +251,28 @@ ozflux_plot_layerwise <- function(
 		xlab <- "Date"
 		ylab <- get_y_label(var, site$Name)
 		if (is.null(title)) {
-			title <- var@name
+			title <- trim_dave(var@name)
 		}
 		site_title <- paste(site$Name, title)
-		args <- c(plots, use_plotly = use_plotly, xlab = xlab, ylab = ylab
-			, title = site_title)
-		panel <- do.call(create_square_panel, args)
-		panels[[length(panels) + 1]] <- panel
+		if (length(plots) > 1) {
+			args <- c(plots, use_plotly = use_plotly, xlab = xlab, ylab = ylab
+				, title = site_title)
+			panel <- do.call(create_square_panel, args)
+			panels[[length(panels) + 1]] <- panel
+		} else {
+			plt <- set_title(plots[[1]], site_title, use_plotly)
+			panels[[length(panels) + 1]] <- plt
+		}
 	}
 	if (length(panels) == 1) {
 		return(panels[[1]])
+	}
+	if (combine_sites && !separate_plots && length(sites) > 1) {
+		if (is.null(title)) {
+			title <- var@name
+		}
+		panel <- dave_panel(panels, xlab, ylab, title, use_plotly, sites)
+		return(panel)
 	}
 	return(panels)
 }

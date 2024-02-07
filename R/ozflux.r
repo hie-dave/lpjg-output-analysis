@@ -13,7 +13,7 @@ get_sites_ozflux <- function(source) {
 			if (dir %in% standard_sites) {
 				sites <- c(sites, dir)
 			} else {
-				log_warning("Ignoring site ", dir
+				log_info("Ignoring site ", dir
 					, " because it's not in the standard site list")
 			}
 		}

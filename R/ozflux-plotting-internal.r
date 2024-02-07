@@ -212,6 +212,14 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     return(result)
 }
 
+set_title <- function(plt, title, use_plotly = FALSE) {
+    if (use_plotly) {
+        return(plotly::layout(plt, title = title))
+    } else {
+        return(plt + ggplot2::labs(title = title))
+    }
+}
+
 trim_ggplot <- function(
     plt,
     title = NULL,
@@ -232,6 +240,43 @@ trim_ggplot <- function(
         result <- result + ggpubr::rremove("ylab")
     }
     return(result)
+}
+
+format_plotly <- function(
+    plt,
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    xlab = FALSE,
+    ylab = FALSE
+) {
+    plt <- plotly::layout(plt,
+        legend = list(orientation = "h"),
+        title = title
+    )
+    if (!xlab) {
+        plt <- plotly::layout(plt, xaxis = list(title = ""))
+    }
+    if (!ylab) {
+        plt <- plotly::layout(plt, yaxis = list(title = ""))
+    }
+    return(plt)
+}
+
+format_plot <- function(
+    plt,
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    xlab = FALSE,
+    ylab = FALSE,
+    use_plotly = FALSE
+) {
+    if (use_plotly) {
+        return(format_plotly(plt, title, subtitle, caption, xlab, ylab))
+    } else {
+        return(trim_ggplot(plt, title, subtitle, caption, xlab, ylab))
+    }
 }
 
 get_y_label <- function(var, site = NULL) {
