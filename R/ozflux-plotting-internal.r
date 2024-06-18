@@ -100,13 +100,14 @@ plot_timeseries <- function(
     text_multiplier = NULL,
     xlab = NULL,
     ylab = NULL,
-    layers = NULL) {
+    layers = NULL,
+    subtitle = NULL) {
 
     ncolour <- ifelse(is.null(layers), length(names(gc)), length(layers))
     colours <- get_colour_palette(ncolour)
     return(DGVMTools::plotTemporal(gc, layers = layers, cols = colours
         , text.multiplier = text_multiplier, text.expression = FALSE
-        , y.lim = ylim, x.label = xlab, y.label = ylab))
+        , y.lim = ylim, x.label = xlab, y.label = ylab, subtitle = subtitle))
 }
 
 plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {

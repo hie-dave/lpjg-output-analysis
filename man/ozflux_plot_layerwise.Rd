@@ -7,11 +7,13 @@
 ozflux_plot_layerwise(
   sources,
   var,
-  sites,
+  sites = NULL,
   layers = NULL,
   title = NULL,
   separate_plots = TRUE,
-  use_plotly = FALSE
+  combine_sites = FALSE,
+  use_plotly = FALSE,
+  common_yaxis = FALSE
 )
 }
 \arguments{
@@ -32,7 +34,12 @@ tuples of (lon, lat).}
 \item{separate_plots:}{TRUE to draw each layer in a separate plot. FALSE to
 draw all layers on the same plot.}
 
+\item{combine_sites:}{TRUE to combine plots for each site into a single
+panel. Requires separate_plots = FALSE.}
+
 \item{use_plotly:}{TRUE to draw plots with plotly. FALSE to use ggplot2.}
+
+\item{common_yaxis:}{TRUE to use a common y-axis for all plots. False otherwise.}
 }
 \value{
 Returns a list of ggplot objects.

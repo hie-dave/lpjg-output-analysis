@@ -119,6 +119,8 @@ available_layers_ozflux <- function(source, quant, sites = NULL) {
 			layers <- colnames(table)
 			ignored_layers <- c("Lon", "Lat", "Year", "Day", "patch")
 			return(setdiff(layers, ignored_layers))
+		} else {
+			log_error(paste0("Output file does not exist: ", out_file_name))
 		}
 	}
 }

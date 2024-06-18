@@ -186,6 +186,7 @@ ozflux_panel <- function(
 #' @param combine_sites: TRUE to combine plots for each site into a single
 #' panel. Requires separate_plots = FALSE.
 #' @param use_plotly: TRUE to draw plots with plotly. FALSE to use ggplot2.
+#' @param common_yaxis: TRUE to use a common y-axis for all plots. False otherwise.
 #'
 #' @return Returns a list of ggplot objects.
 #' @author Drew Holzworth
@@ -199,7 +200,8 @@ ozflux_plot_layerwise <- function(
 	title = NULL,
 	separate_plots = TRUE,
 	combine_sites = FALSE,
-	use_plotly = FALSE) {
+	use_plotly = FALSE,
+	common_yaxis = FALSE) {
 	# TODO: refactor this function out of the package. The layers should be an
 	# optional argument to ozflux_plot(). If absent, they're determined using
 	# the current algorithm (ie try total/mean). If present, there should be
@@ -231,19 +233,29 @@ ozflux_plot_layerwise <- function(
 		site <- list(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
+		# Get upper/lower limits of y-axis data.
+		if (common_yaxis) {
+			ylim <- get_ylim(gridcell)
+		} else {
+			ylim <- NULL
+		}
+
 		plots <- list()
 		if (separate_plots) {
 			for (layer in layers) {
 				layers_to_plot <- get_layer_names_for_sources(var, 1, layer
 					, sources, nlayer = length(layers))
-				plt <- plot_timeseries(gridcell, layers = layers_to_plot)
+				multiplot <- length(layers) > 1 || nrow(sites) > 1
+				xlab <- ifelse(multiplot, "", NULL)
+				ylab <- ifelse(multiplot, "", NULL)
+				plt <- plot_timeseries(gridcell, layers = layers_to_plot, ylim = ylim, xlab = xlab, ylab = ylab)
 				plt <- convert_plot(plt, use_plotly)
 				plt <- set_title(plt, layer, use_plotly)
 				plots[[length(plots) + 1]] <- plt
 			}
 		} else {
 			lyrs <- get_layer_names_for_sources(var, 1, layers, sources)
-			plt <- plot_timeseries(gridcell, layers = lyrs)
+			plt <- plot_timeseries(gridcell, layers = lyrs, ylim = ylim)
 			plt <- trim_ggplot(plt)
 			plt <- convert_plot(plt, use_plotly)
 			plots[[length(plots) + 1]] <- plt

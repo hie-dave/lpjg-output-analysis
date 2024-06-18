@@ -38,12 +38,18 @@ get_data_var <- function(sources, sites, var) {
 
         gc <- daveanalysis:::get_gridcell(data, row$Lat, row$Lon, row$Name)
         obs_lyr <- daveanalysis:::get_global("obs_lyr")
-        obs <- gc@data[, ..obs_lyr]
-
         predicted_name <- get_predicted_name(gc, obs_lyr)
-        pred <- gc@data[, ..predicted_name]
 
-        result[[row$Name]] <- daveanalysis:::compute_r2(obs, pred)
+        obs <- unlist(gc@data[, ..obs_lyr])
+        pred <- unlist(gc@data[, ..predicted_name])
+
+        if (length(obs) == 0 || length(pred) == 0) {
+            gc <- daveanalysis:::get_gridcell(data, row$Lat, row$Lon, row$Name)
+            cat(paste0("No data found for variable ", var@name, " at site ", row$Name))
+        }
+
+        r2 <- daveanalysis:::compute_r2(obs, pred)
+        result[[row$Name]] <- r2
     }
     return(result)
 }
@@ -112,7 +118,8 @@ generate_pdf <- function(source, vars, colour_scheme, out_file
     }
 }
 
-trunk <- "trunk"
+# trunk <- "trunk"
+trunk <- defineSource("trunk", "trunk", "~/code/lpj-guess/trunk", format = OZFLUX)
 vars <- c(
     "dave_lai",
     "dave_gpp",

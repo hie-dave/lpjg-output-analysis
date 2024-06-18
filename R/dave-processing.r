@@ -238,10 +238,19 @@ read_data <- function(
 					DGVMTools::renameLayers(data, layers, layer_names)
 				}
 			} else {
+				nr <- nrow(data@data)
 				data <- DGVMTools::copyLayers(predictions, data, layers
 					, new.layer.names = layer_names
 					, tolerance = get_global("merge_tol"), keep.all.from = FALSE
 					, keep.all.to = FALSE)
+				if (nrow(data@data) == 0 && nr > 0 && nrow(predictions@data) > 0) {
+					# No observations for this site.
+					log_warning("No observations found for site ", site$Name)
+					data <- predictions
+					if (length(source) > 1) {
+						DGVMTools::renameLayers(data, layers, layer_names)
+					}
+				}
 				log_debug("Successfully merged data from source ", source@name
 					, " for variable ", var@name)
 			}

@@ -165,6 +165,16 @@ get_units <- function(var_name) {
 	return("")
 }
 
+readable_name <- function(name) {
+	name <- trim_dave(name)
+	lower <- tolower(name)
+	acronyms <- c("lai", "gpp", "nee", "nep", "et", "er")
+	if (lower %in% acronyms) {
+		return(toupper(name))
+	}
+	return(name)
+}
+
 sanitise_variable <- function(var) {
 	if (class(var)[1] == "Quantity") {
 		# Input is already a Quantity object.
@@ -178,6 +188,7 @@ sanitise_variable <- function(var) {
 		# Case insensitivity...ew! (but it allows people to pass in "LAI")
 		units <- get_units(var)
 		id <- tolower(var)
+		var <- readable_name(var)
 		log_debug("Creating quantity from input string '", var, "'; id = '"
 			, id, "', name = '", var, "', units = '", units, "'")
 		return(DGVMTools::defineQuantity(id, var, units))

@@ -20,7 +20,8 @@ Depends:
 	purrr(>= 1.0.1),
 	stringr(>= 1.5.0),
 	htmltools(>= 0.5.5),
-	ggpubr(>= 0.6.0)
+	ggpubr(>= 0.6.0),
+	ncdf4(>= 1.22)
 Imports:
 	DGVMTools,
 	plotly,
@@ -39,7 +40,7 @@ License: GPL | file LICENSE
 URL: https://github.com/hie-dave
 BugReports: https://github.com/hie-dave/output-analysis/issues
 NeedsCompilation: no
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 VignetteBuilder: knitr
 Encoding: UTF-8
 Collate:
