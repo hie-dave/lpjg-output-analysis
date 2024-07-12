@@ -10,6 +10,7 @@ Description: This package provides analysis functions for lpj-guess outputs.
 Depends:
 	R (>= 4.0.0),
 	DGVMTools (>= 1.0.0),
+	DGVMBenchmarks (>= 0.0.0.9000),
 	plotly (>= 4.10.2),
 	knitr (>= 1.43),
 	knitrProgressBar (>= 1.1.0),
@@ -21,9 +22,16 @@ Depends:
 	stringr(>= 1.5.0),
 	htmltools(>= 0.5.5),
 	ggpubr(>= 0.6.0),
-	ncdf4(>= 1.22)
+	ncdf4(>= 1.22),
+	mapproj(>= 1.2.11),
+	pals(>= 1.8),
+	kableExtra(>= 1.4.0),
+	tictoc(>= 1.2.1),
+	showtext(>= 0.9-7),
+	data.table(>= 1.15.4)
 Imports:
 	DGVMTools,
+	DGVMBenchmarks,
 	plotly,
 	shiny,
 	dplyr,
@@ -56,3 +64,6 @@ Collate:
 	'definitions.r'
 	'ozflux.r'
 	'ozflux-benchmarks.r'
+	'benchmark-bom-lai.r'
+	'summary.r'
+	'classes.r'

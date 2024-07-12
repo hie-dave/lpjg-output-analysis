@@ -1,3 +1,7 @@
 \.vscode/
 scripts/
 junk/
+.git/
+.gitignore
+.vscode/
+..Rcheck

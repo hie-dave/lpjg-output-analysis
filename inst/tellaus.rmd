@@ -1,0 +1,405 @@
+---
+title: "TellAus Benchmark Report for LPJ-GUESS DAVE"
+author: "Drew Holzworth"
+date: '`r strftime(Sys.time(), format = "%B %d, %Y")`'
+output:
+ html_document:
+  toc: true
+params:
+  dave_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/inst/extdata/runs/dave/baseline"
+  dave_name:
+    value: "DAVE"
+  trunk_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/inst/extdata/runs/trunk/grass"
+  trunk_name:
+    value: "GrassTrunk"
+  data_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/inst/extdata"
+---
+
+```{r benchmark selection and script parameters, echo=FALSE}
+
+### Select which benchmarks to do
+do_auseflux <- TRUE
+
+do_bom_lai <- TRUE
+
+debug <- FALSE
+
+# Global script parameters.
+settings <- list(
+    analysis_version = "tellme_dave v0.1",
+
+    plot_maps = TRUE,
+
+    # Spatial extent for which data will be plotted. This can be:
+    # - raster::extent
+    # - two-column data.frame of gridcells
+    # - NULL (to plot the entire spatial extent of the data)
+    spatial_extent = NULL,
+
+    # String used to describe the spatial subset.
+    spatial_extent_id = "Australia",
+
+    # Plot formatting arguments.
+    map_overlay = "coastlines",
+
+    # ME (Mean Error)
+    # NME (Normalised Mean Error)
+    # NMSE (Normalised Mean Square Error)
+    # RMSE (Root Mean Squared Error)
+    # NME_2 (NME with mean removed)
+    # NMSE_2 (NMSE with mean removed)
+    # NME_3 (NME with mean and variance removed)
+    # NMSE_3 (NMSE with mean and variance removed)
+    # r2_eff (Nash-Sutcliffe Model Efficiency)
+    # r2 (Coefficient of Determination)
+    # r (Pearson's PMCC)
+    # m (gradient of linear fit mod = m * obs + c)
+    # c (intercept of linear fit mod = m * obs + c)
+    metrics = c("r2", "RMSE", "NMSE", "r2_eff"),
+
+    text_multiplier = 2.5,
+
+    annotation_text_size = 7,
+
+    # Number of columns in which plots will be rendered.
+    num_cols = 2,
+
+    # Coordinates at which metrics/annotations will be rendered on maps.
+    stats_lon = 125,
+    stats_lat = -35
+)
+```
+
+```{r setup, include=FALSE}
+# knitr options
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      out.width = "100%",
+                      fig.height = 7,
+                      warning = debug)
+
+# kable options
+opts <- options(knitr.kable.NA = "")
+
+library("ggplot2")
+
+# Set ggplot theme.
+theme_set(theme_bw())
+
+library("DGVMTools")
+library("daveanalysis")
+library("terra")
+library("viridis")
+library("mapproj")
+library("pals")
+library("knitr")
+library("dplyr")
+library("kableExtra")
+library("tictoc")
+library("lubridate")
+
+# This helps RMarkdown locate fonts on some systems.
+library("showtext")
+showtext_auto()
+
+# Start timer.
+tic()
+```
+
+# Settings {.tabset}
+
+## Click here to hide Settings
+
+## Click here to show settings
+
+```{r settings}
+dave_source <- defineSource(name = params$dave_name,
+                            dir = params$dave_directory,
+                            format = GUESS)
+trunk_source <- defineSource(name = params$trunk_name,
+                             dir = params$trunk_directory,
+                             format = GUESS)
+
+# Create a list of sources and store it in script settings.
+settings$simulations <- list(dave_source, trunk_source)
+
+for (sim in settings$simulations) {
+    cat(sim@name, ": ", sim@dir, "\n")
+}
+```
+
+```{r silent preamble and preparation}
+version_label <- paste(settings$analysis_version, settings$spatial_extent_id
+                       , sep = "_")
+
+# Prepare empty summary table of global numbers.
+summary_col_names <- c("Quantity", "Unit")
+for (simulation in settings$simulations) {
+    summary_col_names <- append(summary_col_names, simulation@name)
+}
+summary_col_names <- append(summary_col_names
+                            , c("Data", "Dataset", "Dataset ref."))
+settings$summary_col_names <- summary_col_names
+
+summary_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+# This table is completely empty; it will by built benchmark by benchmark.
+metric_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+# This list contains tables that gets passed in and out of each benchmark.
+overall_tables <- list(
+    totals = summary_table,
+    metrics = metric_table
+)
+
+# Fix overlapping x-axis labels by removing the overlapping labels.
+fix_xaxis_label_overlap <- function(plt) {
+    xlim <- layer_scales(plt)$x$get_limits()
+    guide <- guide_axis(check.overlap = TRUE)
+    return(plt + scale_x_continuous(guide = guide, limits = xlim))
+}
+```
+
+***
+
+# BoM LAI
+
+Potential intro text about Luigi's LAI data, links to online description of the
+data, what to look for in the benchmark, etc.
+
+```{r luigi_lai}
+if (do_bom_lai) {
+    bom_lai <- benchmark_bom_lai(settings = settings,
+                                 params = params,
+                                 tables_list = overall_tables)
+}
+```
+
+## Spatial patterns {.tabset}
+
+### Absolute Values
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    first_year <- bom_lai$benchmark@first.year
+    last_year <- bom_lai$benchmark@last.year
+    subtitle <- paste(first_year, last_year, sep = "-")
+    bom_lai_plot <- plotSpatial(bom_lai$maps,
+                                ncol = settings$num_cols,
+                                legend.title = expression(m^{"2"}~m^{"-2"}),
+                                map.overlay = settings$map_overlay,
+                                text.multiplier = settings$text_multiplier,
+                                title = "Absolute LAI values",
+                                limits = c(0, 8),
+                                subtitle = subtitle)
+    # total_label_df <- data.frame()
+    # for (panel in names(bom_lai$maps)) {
+    #     total_label_df <- rbind(total_label_df, list(
+    #         label = paste(round(rnorm(1) + 2)),
+    #         Facet = panel,
+    #         x = settings$stats_lon, y = settings$stats_lat
+    #     ), stringsAsFactors = FALSE)
+    # }
+    # total_label_df$Facet <- factor(total_label_df$Facet,
+    #                                levels = names(bom_lai$maps))
+    # txt <- geom_text(data = total_label_df,
+    #                  mapping = aes(x = x, y = y, label = label),
+    #                  size = settings$map_annotation_text_size)
+    # bom_lai_abs_plot <- bom_lai_abs_plot + txt
+    print(fix_xaxis_label_overlap(bom_lai_plot))
+}
+```
+
+### Differences
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    # Set ggplot theme.
+    theme_set(theme_bw())
+
+    comparisons <- bom_lai$comparisons[["Values"]]
+
+    bom_lai_diff_plot <- plotSpatialComparison(
+        comparisons,
+        ncol = settings$num_cols,
+        legend.title = expression(Delta ~ m^{"2"} ~ m^{"-2"}),
+        text.multiplier = settings$text_multiplier,
+        map.overlay = settings$map_overlay,
+        title = "LAI biases",
+        subtitle = paste("2000", "2022", sep = "-"),
+        panel.bg.col = "white"
+    )
+    lat_offset <- 0
+    cnames <- names(comparisons)
+    for (metric in bom_lai$benchmark@metrics) {
+        metric_label_df <- data.frame()
+        for (comparison_name in cnames) {
+            value <- round(comparisons[[comparison_name]]@stats[[metric]], 2)
+            metric_label_df <- rbind(metric_label_df,
+                                list(label = paste(metric, "=", value),
+                                     Facet = comparison_name,
+                                     x = settings$stats_lon,
+                                     y = settings$stats_lat - lat_offset),
+                                stringsAsFactors = FALSE)
+        }
+        metric_label_df$Facet <- factor(metric_label_df$Facet, cnames)
+        bom_lai_diff_plot <- bom_lai_diff_plot + geom_text(data = metric_label_df, mapping = aes(x = x, y = y, label = label), size = settings$annotation_text_size)
+        lat_offset <- lat_offset + 10
+    }
+    print(fix_xaxis_label_overlap(bom_lai_diff_plot))
+}
+```
+
+## Temporal trends {.tabset}
+
+### Trend value
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatial(bom_lai$trends
+                       , layers = "Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.01, 0.01)
+                       , drop.cuts = FALSE
+                       , title = "Trend in LAI"
+                       , legend.title =expression(m^{"2"}~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = subtitle)
+    print(fix_xaxis_label_overlap((plt)))
+}
+```
+
+### Trend Significance
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatial(bom_lai$trends
+                       , layers = "p.value"
+                       , ncol = settings$num_cols
+                       , cols = viridis::turbo(6)
+                       , cuts = c(0, 0.001, 0.01, 0.05, 0.1, 0.5, 1.0)
+                       , drop.cuts = FALSE
+                       , title = "Significance in LAI Trends"
+                       , legend.title = "p value"
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = subtitle)
+    print(fix_xaxis_label_overlap(plt))
+}
+```
+
+### Trend Differences
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(bom_lai$comparisons[["Trend"]]
+                                 , ncol = settings$num_cols
+                                 , drop.cuts = NULL
+                                 , title = "Difference Trend in LAI"
+                                 , legend.title = expression(m^{"2"}~m^{"-2"}~month^{"-2"})
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print(fix_xaxis_label_overlap(plt))
+}
+```
+
+### Significant Trends
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatial(bom_lai$trends
+                       , layers = "Significant_Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.01, 0.01)
+                       , drop.cuts = FALSE
+                       , title = "Significant Trend in LAI (p-value < 0.05)"
+                       , legend.title = expression(m^{"2"}~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = subtitle)
+    print(fix_xaxis_label_overlap(plt))
+}
+```
+
+## Seasonal Analysis {.tabset}
+
+Definition of seasonal concentration and phase follow Kelley *et al.* 2013. **Seasonal concentration** equals one if the variable is concentrated all in one month, and is zero if it is spread evenly across all months.  The **seasonal phase** is a measure of the peak of the season - it is not strictly the maximum monthly, but rather the average of all months when considering months as an angle in the complex plane.
+
+### Seasonal Phase
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , type = "values"
+                                 , cuts = 0:12
+                                 , override.cols = pals::ocean.phase(12)
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print(fix_xaxis_label_overlap(plt))
+}
+```
+
+### Phase Differences
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , cuts = seq(-6, 6)
+                                 , symmetric.scale = FALSE
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print(fix_xaxis_label_overlap(plt))
+}
+```
+
+### Seasonal Concentration
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+                                 , type = "values"
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print(fix_xaxis_label_overlap(plt))
+}
+```
+
+### Concentration Differences
+
+```{r}
+if (do_bom_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print(fix_xaxis_label_overlap(plt))
+}
+```
+
+## {.unlisted .unnumbered}
+
+<a href="#top">Back to top</a>
+
+# Timing
+Total run time:
+``` {r time}
+
+# report total run time
+toc()
+```

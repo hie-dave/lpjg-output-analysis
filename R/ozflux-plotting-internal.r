@@ -112,21 +112,57 @@ plot_timeseries <- function(
 
 plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
     colours <- get_colour_palette(length(names(gc)))
-    return(DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
-        , title = NULL
-        , subtitle = NULL, cols = colours[2:length(colours)]
-        , text.multiplier = text_multiplier, x.label = "Observed"
-        , y.label = "Predicted", one_to_one_line = TRUE, y.lim = ylim
-        , x.lim = ylim, size = marker_size))
+    plt <- DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
+        , text.multiplier = text_multiplier, size = marker_size)
+
+    # Set correct colours.
+    scale <- scale_color_manual(values = colours[2:length(colours)]
+        , labels = y.new, breaks = y.new, name = col.by)
+    plt <- plt + scale
+
+    units <- DGVMTools:::standardiseUnitString(gc@quant@units)
+    x_label <- "Observed"
+    y_label <- "Predicted"
+    if (units != "1" && units != "") {
+        x_label <- paste0(x_label, " (", units, ")")
+        y_label <- paste0(y_label, " (", units, ")")
+    }
+    plt <- plt + ggplot2::labs(y = DGVMTools:::stringToExpression(y_label),
+                               x = DGVMTools:::stringToExpression(x_label))
+
+    # Plot 1:1 line.
+    plt <- plt + geom_abline(slope = 1, intercept = 0)
+
+    # Marker size.
+    plt <- plt + geom_point(size = marker_size, alpha = alpha)
+
+    # scatter.plot <- scatter.plot + theme(legend.position = legend.position, legend.key.size = unit(2, 'lines'))
+
+  # Apply x/y axis limits.
+    if(!is.null(ylim)) {
+        plt <- plt + xlim(x.lim)
+        plt <- plt + scale_y_continuous(limits = y.lim)
+    }
+
+    return(plt)
 }
 
 plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
     colours <- get_colour_palette(length(names(gc)))
-    return(DGVMTools::plotSubannual(gc, col.by = "Layer"
+    plt <- DGVMTools::plotSubannual(gc, col.by = "Layer"
         , summary.function = mean
         , title = NULL, subtitle = NULL, point.size = 0, cols = colours
         , text.multiplier = text_multiplier, summary.only = TRUE
-        , summary.as.points = FALSE, y.lim = ylim))
+        , summary.as.points = FALSE)
+
+    if(!is.null(ylim)) {
+        plt <- plt + ggplot2::scale_y_continuous(limits = ylim)
+    }
+
+    blank <- ggplot2::element_blank()
+    plt <- plt + theme(legend.position = "bottom", legend.title = blank)
+
+    return(plt)
 }
 
 create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
