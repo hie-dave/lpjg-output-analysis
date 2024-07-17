@@ -32,7 +32,7 @@ benchmark_bom_lai <- function(settings,
     areas <- list()
 
     # Read observed data and calculate annual mean over the time period.
-    bom_data <- read_bom_lai()
+    bom_data <- read_bom_lai(settings$data_path)
 
     do_aggregation <- function(field) {
         name <- field@source@name
@@ -66,7 +66,7 @@ benchmark_bom_lai <- function(settings,
                      , id = "bom_lai"
                      , name = "BoM Total LAI"
                      , description = "BoM Total LAI estimates"
-                     , simulation = "tellus"
+                     , simulation = "tellaus"
                      , guess_var = "mlai"
                      , guess_layers = "mlai"
                      , unit = "m2/m2"
@@ -87,9 +87,7 @@ benchmark_bom_lai <- function(settings,
     for (simulation in settings$simulations) {
         # Check if file is present. If not, skip this simulation.
         # TBI: support for compressed output files.
-        path <- file.path(simulation@dir, paste0(benchmark@guess_var, ".out"))
-        gz_path <- paste0(path, ".gz")
-        if (!file.exists(path) && !file.exists(gz_path)) {
+        if (!has_output(simulation, benchmark@guess_var)) {
             warning("No ", benchmark@guess_var, " data found for simulation "
                     , simulation@name)
             next
@@ -103,11 +101,10 @@ benchmark_bom_lai <- function(settings,
         do_aggregation(predictions)
     }
 
-    trunk <- params$trunk_name
     comparisons <- DGVMBenchmarks::fullSpatialComparison(benchmark, maps
                                                          , trends, seasonals
-                                                         , params$dave_name
-                                                         , trunk)
+                                                         , params$new_name
+                                                         , params$old_name)
 
     names(summary) <- names(overall_tables[["totals"]])
     overall_tables[["totals"]] <- rbind(overall_tables[["totals"]], summary)
@@ -133,7 +130,7 @@ benchmark_bom_lai <- function(settings,
 #' Read BoM LAI from the specified data file, or from the default location if
 #' no data file is provided.
 #'
-#' @param data_file: Optional path to the input file.
+#' @param data_path: Path to the directory containing data.
 #' @name read_bom_lai
 #' @rdname read_bom_lai
 #' @import DGVMTools
@@ -143,13 +140,11 @@ benchmark_bom_lai <- function(settings,
 #' @return A DGVMTools::Field object containing the BoM LAI data.
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
-read_bom_lai <- function(data_file = NULL) {
-    if (is.null(data_file)) {
-        data_file <- get_bom_understory_location()
-    }
+read_bom_lai <- function(data_path) {
+    data_file <- get_bom_understory_location(data_path)
 
     if (!file.exists(data_file)) {
-        stop("Unable to locate BoM LAI data")
+        stop("Unable to locate BoM LAI data. File not found: ", data_file)
     }
 
     # Create a DGVMTools::Source object.
@@ -174,9 +169,9 @@ read_bom_lai <- function(data_file = NULL) {
 #' @return Path to the NetCDF file containing BoM LAI data.
 #' @param author Drew Holzworth
 #'
-get_bom_understory_location <- function() {
+get_bom_understory_location <- function(data_path) {
     filename <- "lai_rec.nc"
-    return(get_bom_location(filename))
+    return(get_bom_location(data_path, filename))
 }
 
 #'
@@ -187,9 +182,9 @@ get_bom_understory_location <- function() {
 #' @return Path to the NetCDF file containing BoM LAI data.
 #' @param author Drew Holzworth
 #'
-get_bom_overstory_location <- function() {
+get_bom_overstory_location <- function(data_path) {
     filename <- "lai_per.nc"
-    return(get_bom_location(filename))
+    return(get_bom_location(data_path, filename))
 }
 
 #'
@@ -200,14 +195,15 @@ get_bom_overstory_location <- function() {
 #' @return Path to the NetCDF file containing BoM LAI data.
 #' @param author Drew Holzworth
 #'
-get_bom_total_location <- function() {
+get_bom_total_location <- function(data_path) {
     filename <- "lai_per.nc"
-    return(get_bom_location(filename))
+    return(get_bom_location(data_path, filename))
 }
 
 #'
-#' Get the location of the BoM LAI data that is shipped with this package.
+#' Get the location of the BoM LAI data.
 #'
+#' @param data_path: Path to the data directory provided alongside this package.
 #' @param filename: Filename, which depends on whether we want understory,
 #' overstory, or total LAI.
 #'
@@ -215,7 +211,10 @@ get_bom_total_location <- function() {
 #' @return Path to the NetCDF file containing BoM LAI data.
 #' @param author Drew Holzworth
 #'
-get_bom_location <- function(filename) {
-    pkg <- get_global("dave_pkgname")
-    return(system.file("extdata", "bom_lai", filename, package = pkg))
+get_bom_location <- function(data_path, filename) {
+    dir <- file.path(data_path, "bom_lai")
+    if (!dir.exists(dir)) {
+        dir <- data_path
+    }
+    return(file.path(dir, filename))
 }

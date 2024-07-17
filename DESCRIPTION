@@ -65,5 +65,7 @@ Collate:
 	'ozflux.r'
 	'ozflux-benchmarks.r'
 	'benchmark-bom-lai.r'
+	'benchmark-auseflux.r'
+	'benchmark-grasses.r'
 	'summary.r'
 	'classes.r'

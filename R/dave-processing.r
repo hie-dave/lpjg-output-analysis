@@ -12,6 +12,20 @@ set_global("merge_tol", 0.01)
 # Same as merge_tol, expressed as number of decimal places.
 set_global("merge_ndp", ceiling(abs(log10(get_global("merge_tol")))))
 
+#'
+#' Check if the given layer exists in the given source.
+#'
+#' @param source A DGVMTools::Source object
+#' @param layer Name of a layer (e.g. "mlai")
+#'
+#' @keywords internal
+#'
+has_output <- function(source, layer) {
+    path <- file.path(source@dir, paste0(layer, ".out"))
+    gz_path <- paste0(path, ".gz")
+    return(file.exists(path) || file.exists(gz_path))
+}
+
 trim_dave <- function(text) {
     return(gsub("dave_", "", text))
 }

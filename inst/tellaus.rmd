@@ -6,29 +6,33 @@ output:
  html_document:
   toc: true
 params:
-  dave_directory:
-    value: "/home/drew/code/lpj-guess/output-analysis/inst/extdata/runs/dave/baseline"
-  dave_name:
+  new_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/dave/baseline"
+  new_name:
     value: "DAVE"
-  trunk_directory:
-    value: "/home/drew/code/lpj-guess/output-analysis/inst/extdata/runs/trunk/grass"
-  trunk_name:
+  old_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/trunk/grass"
+  old_name:
     value: "GrassTrunk"
   data_directory:
-    value: "/home/drew/code/lpj-guess/output-analysis/inst/extdata"
+    value: "/home/drew/code/lpj-guess/output-analysis/.data"
 ---
 
 ```{r benchmark selection and script parameters, echo=FALSE}
 
 ### Select which benchmarks to do
-do_auseflux <- TRUE
-
-do_bom_lai <- TRUE
+do_auseflux_gpp <- FALSE
+do_auseflux_nee <- TRUE
+do_auseflux_er <- FALSE
+do_grass_dist <- FALSE
+do_bom_lai <- FALSE
 
 debug <- FALSE
 
 # Global script parameters.
 settings <- list(
+    data_path = "/home/drew/code/lpj-guess/output-analysis/.data",
+
     analysis_version = "tellme_dave v0.1",
 
     plot_maps = TRUE,
@@ -69,7 +73,12 @@ settings <- list(
 
     # Coordinates at which metrics/annotations will be rendered on maps.
     stats_lon = 125,
-    stats_lat = -35
+    stats_lat = -35,
+
+    # The two time periods used for comparison of C3/C4 grass distribution.
+    # The first time period is defined by the first two numbers.
+    # The second time period is defined by the third and fourth numbers.
+    grass_dist_years = c(1980, 1989, 2013, 2022)
 )
 ```
 
@@ -116,11 +125,11 @@ tic()
 ## Click here to show settings
 
 ```{r settings}
-dave_source <- defineSource(name = params$dave_name,
-                            dir = params$dave_directory,
+dave_source <- defineSource(name = params$new_name,
+                            dir = params$new_directory,
                             format = GUESS)
-trunk_source <- defineSource(name = params$trunk_name,
-                             dir = params$trunk_directory,
+trunk_source <- defineSource(name = params$old_name,
+                             dir = params$old_directory,
                              format = GUESS)
 
 # Create a list of sources and store it in script settings.
@@ -161,6 +170,10 @@ fix_xaxis_label_overlap <- function(plt) {
     guide <- guide_axis(check.overlap = TRUE)
     return(plt + scale_x_continuous(guide = guide, limits = xlim))
 }
+print_plot <- function(plt) {
+    plt <- fix_xaxis_label_overlap(plt)
+    print(plt)
+}
 ```
 
 ***
@@ -182,12 +195,12 @@ if (do_bom_lai) {
 
 ### Absolute Values
 
-```{r}
+```{r bom_lai_plots_absolute_values}
 if (do_bom_lai && settings$plot_maps) {
     first_year <- bom_lai$benchmark@first.year
     last_year <- bom_lai$benchmark@last.year
     subtitle <- paste(first_year, last_year, sep = "-")
-    bom_lai_plot <- plotSpatial(bom_lai$maps,
+    plt <- plotSpatial(bom_lai$maps,
                                 ncol = settings$num_cols,
                                 legend.title = expression(m^{"2"}~m^{"-2"}),
                                 map.overlay = settings$map_overlay,
@@ -209,20 +222,20 @@ if (do_bom_lai && settings$plot_maps) {
     #                  mapping = aes(x = x, y = y, label = label),
     #                  size = settings$map_annotation_text_size)
     # bom_lai_abs_plot <- bom_lai_abs_plot + txt
-    print(fix_xaxis_label_overlap(bom_lai_plot))
+    print_plot(plt)
 }
 ```
 
 ### Differences
 
-```{r}
+```{r bom_lai_plots_deltas}
 if (do_bom_lai && settings$plot_maps) {
     # Set ggplot theme.
     theme_set(theme_bw())
 
     comparisons <- bom_lai$comparisons[["Values"]]
 
-    bom_lai_diff_plot <- plotSpatialComparison(
+    plt <- plotSpatialComparison(
         comparisons,
         ncol = settings$num_cols,
         legend.title = expression(Delta ~ m^{"2"} ~ m^{"-2"}),
@@ -246,10 +259,10 @@ if (do_bom_lai && settings$plot_maps) {
                                 stringsAsFactors = FALSE)
         }
         metric_label_df$Facet <- factor(metric_label_df$Facet, cnames)
-        bom_lai_diff_plot <- bom_lai_diff_plot + geom_text(data = metric_label_df, mapping = aes(x = x, y = y, label = label), size = settings$annotation_text_size)
+        plt <- plt + geom_text(data = metric_label_df, mapping = aes(x = x, y = y, label = label), size = settings$annotation_text_size)
         lat_offset <- lat_offset + 10
     }
-    print(fix_xaxis_label_overlap(bom_lai_diff_plot))
+    print_plot(plt)
 }
 ```
 
@@ -257,7 +270,7 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Trend value
 
-```{r}
+```{r bom_lai_plots_trend_values}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatial(bom_lai$trends
                        , layers = "Trend"
@@ -270,13 +283,13 @@ if (do_bom_lai && settings$plot_maps) {
                        , map.overlay = settings$map_overlay
                        , text.multiplier = settings$text_multiplier
                        , subtitle = subtitle)
-    print(fix_xaxis_label_overlap((plt)))
+    print_plot(plt)
 }
 ```
 
 ### Trend Significance
 
-```{r}
+```{r bom_lai_plots_trend_significance}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatial(bom_lai$trends
                        , layers = "p.value"
@@ -289,13 +302,13 @@ if (do_bom_lai && settings$plot_maps) {
                        , map.overlay = settings$map_overlay
                        , text.multiplier = settings$text_multiplier
                        , subtitle = subtitle)
-    print(fix_xaxis_label_overlap(plt))
+    print_plot(plt)
 }
 ```
 
 ### Trend Differences
 
-```{r}
+```{r bom_lai_plots_trend_deltas}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatialComparison(bom_lai$comparisons[["Trend"]]
                                  , ncol = settings$num_cols
@@ -305,13 +318,13 @@ if (do_bom_lai && settings$plot_maps) {
                                  , map.overlay = settings$map_overlay
                                  , text.multiplier = settings$text_multiplier
                                  , subtitle = subtitle)
-    print(fix_xaxis_label_overlap(plt))
+    print_plot(plt)
 }
 ```
 
 ### Significant Trends
 
-```{r}
+```{r bom_lai_plots_trends}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatial(bom_lai$trends
                        , layers = "Significant_Trend"
@@ -324,7 +337,7 @@ if (do_bom_lai && settings$plot_maps) {
                        , map.overlay = settings$map_overlay
                        , text.multiplier = settings$text_multiplier
                        , subtitle = subtitle)
-    print(fix_xaxis_label_overlap(plt))
+    print_plot(plt)
 }
 ```
 
@@ -334,7 +347,7 @@ Definition of seasonal concentration and phase follow Kelley *et al.* 2013. **Se
 
 ### Seasonal Phase
 
-```{r}
+```{r bom_lai_plots_phases}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
                                  , do.phase = TRUE
@@ -345,13 +358,13 @@ if (do_bom_lai && settings$plot_maps) {
                                  , map.overlay = settings$map_overlay
                                  , text.multiplier = settings$text_multiplier
                                  , subtitle = subtitle)
-    print(fix_xaxis_label_overlap(plt))
+    print_plot(plt)
 }
 ```
 
 ### Phase Differences
 
-```{r}
+```{r bom_lai_plots_phase_deltas}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
                                  , do.phase = TRUE
@@ -361,13 +374,13 @@ if (do_bom_lai && settings$plot_maps) {
                                  , map.overlay = settings$map_overlay
                                  , text.multiplier = settings$text_multiplier
                                  , subtitle = subtitle)
-    print(fix_xaxis_label_overlap(plt))
+    print_plot(plt)
 }
 ```
 
 ### Seasonal Concentration
 
-```{r}
+```{r bom_lai_plots_seasonsal_concentration}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
                                  , type = "values"
@@ -375,20 +388,559 @@ if (do_bom_lai && settings$plot_maps) {
                                  , map.overlay = settings$map_overlay
                                  , text.multiplier = settings$text_multiplier
                                  , subtitle = subtitle)
-    print(fix_xaxis_label_overlap(plt))
+    print_plot(plt)
 }
 ```
 
 ### Concentration Differences
 
-```{r}
+```{r bom_lai_plots_concentration_deltas}
 if (do_bom_lai && settings$plot_maps) {
     plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
                                  , ncol = settings$num_cols
                                  , map.overlay = settings$map_overlay
                                  , text.multiplier = settings$text_multiplier
                                  , subtitle = subtitle)
-    print(fix_xaxis_label_overlap(plt))
+    print_plot(plt)
+}
+```
+
+## {.unlisted .unnumbered}
+
+<a href="#top">Back to top</a>
+
+# C3/C4 Distribution
+
+```{r grass_dist}
+if (do_grass_dist) {
+    grass_benchmark <- benchmark_grass_dist(settings, params, overall_tables)
+    grass_first_year <- min(grass_benchmark$trends[[1]]@first.year)
+    grass_last_year <- max(grass_benchmark$trends[[1]]@last.year)
+    grass_subtitle <- paste(grass_first_year, grass_last_year, sep = "-")
+    grass_delta_subtitle <- paste0(params$new_name, " - ", params$old_name
+                                   , " (", grass_subtitle, ")")
+}
+```
+
+## Spatial Patterns (Fixed Time Period) {.tabset}
+
+```{r}
+cat("Spatial patterns for ", length(years), " time periods\n")
+```
+
+### Absolute Values
+
+```{r grass_dist_plots_abs}
+if (do_grass_dist && settings$plot_maps) {
+    plt <- plotSpatial(grass_benchmark$period_maps
+                       , legend.title = expression(1)
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , title = "C4 Fraction")
+                       #, subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Differences
+
+```{r grass_dist_plots_deltas}
+if (do_grass_dist && settings$plot_maps) {
+    years <- settings$grass_dist_years
+    r0 <- paste0(years[1], "-", years[2])
+    r1 <- paste0(years[3], "-", years[4])
+    title <- paste0("C4 Fraction Change from (", r0, ") - (", r1, ")")
+    plt <- plotSpatial(grass_benchmark$diffs
+                       , legend.title = expression((0-1))
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , title = title
+                       , subtitle = character(0)
+                       , panel.bg.col = "white"
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu")))
+    print_plot(plt)
+}
+```
+
+## Spatial Patterns (Full Time Period) {.tabset}
+
+### Absolute Values
+
+```{r grass_dist_plots_abs_values}
+if (do_grass_dist && settings$plot_maps) {
+    plt <- plotSpatial(grass_benchmark$means
+                       , ncol = settings$num_cols
+                       , legend.title = expression((0-1))
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , title = "C4 Fraction"
+                       , subtitle = grass_subtitle)
+    print_plot(plt)
+}
+```
+
+### Differences
+
+```{r grass_dist_plots_abs_differences}
+if (do_grass_dist && settings$plot_maps) {
+    plt <- plotSpatialComparison(grass_benchmark$comparisons[["Values"]]
+                                 , ncol = settings$num_cols
+                                 , legend.title = expression(Delta)
+                                 , text.multiplier = settings$text_multiplier
+                                 , map.overlay = settings$map_overlay
+                                 , title = "C4 Fraction Biases"
+                                 , subtitle = grass_delta_subtitle
+                                 , panel.bg.col = "white")
+    print_plot(plt)
+}
+```
+
+## Temporal Trends {.tabset}
+
+### Trend Value
+
+```{r grass_dist_plots_trend_values}
+if (do_grass_dist && settings$plot_maps) {
+    plt <- plotSpatial(grass_benchmark$trends
+                       , layers = "Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-6e-5, 6e-5)
+                       , drop.cuts = FALSE
+                       , title = "Trend in C4 Fraction"
+                       , legend.title = expression(~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier)
+    print_plot(plt)
+}
+```
+
+### Trend Significances
+
+```{r grass_dist_plots_trend_significances}
+if (do_grass_dist && settings$plot_maps) {
+    plt <- plotSpatial(grass_benchmark$trends
+                       , layers = "p.value"
+                       , ncol = settings$num_cols
+                       , cols = viridis::turbo(6)
+                       , cuts = c(0, 0.001, 0.01, 0.05, 0.1, 0.5, 1.0)
+                       , drop.cuts = FALSE
+                       , title = "Significance in C4 Fraction Trends"
+                       , legend.title = "p value"
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = grass_subtitle)
+    print_plot(plt)
+}
+```
+
+### Trend Differences
+
+```{r grass_dist_plots_trend_deltas}
+if (do_grass_dist && settings$plot_maps) {
+    plt <- plotSpatialComparison(grass_benchmark$comparisons[["Trend"]]
+                                 , ncol = settings$num_cols
+                                 , drop.cuts = NULL
+                                 , title = "Difference Trend in C4 Fraction"
+                                 , legend.title = expression((0-1))
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = grass_subtitle)
+    print_plot(plt)
+}
+```
+
+### Significant Trends
+
+```{r grass_dist_plots_significant_trends}
+if (do_grass_dist && settings$plot_maps) {
+    plt <- plotSpatial(grass_benchmark$trends
+                       , layers = "Significant_Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.01, 0.01)
+                       , drop.cuts = FALSE
+                       , title = "Significant Trend in LAI (p-value < 0.05)"
+                       , legend.title = expression(m^{"2"}~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = grass_subtitle)
+    print_plot(plt)
+}
+# todo: add seasonal analysis once we have observations of c3/c4 distribution
+```
+
+# AusEFlux GPP
+
+Intro, data links, etc.
+
+```{r auseflux_gpp}
+if (do_auseflux_gpp) {
+    auseflux_gpp <- benchmark_auseflux("GPP", settings, params, overall_tables)
+    benchmark <- auseflux_gpp$benchmark
+    auseflux_subtitle <- paste0(benchmark@first.year, "-", benchmark@last.year)
+}
+```
+
+## Spatial Patterns {.tabset}
+
+### Absolute Values
+
+```{r auseflux_gpp_plots_absolute}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_gpp$maps
+                       , ncol = settings$num_cols
+                       , legend.title = expression(gC~m^{"-2"}~year^{"-1"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , title = "Absolute GPP values"
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Differences
+
+```{r auseflux_gpp_plots_deltas}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_gpp$comparisons[["Values"]]
+                                 , ncol = settings$num_cols
+                                 , legend.title = expression(Delta~gC~m^{"-2"}~year^{"-1"})
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , title = "GPP biases"
+                                 , subtitle = auseflux_subtitle
+                                 , panel.bg.col = "white")
+    print_plot(plt)
+}
+```
+
+## Temporal Trends {.tabset}
+
+### Trend Value
+
+```{r auseflux_gpp_plots_trend_values}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_gpp$trends
+                       , layers = "Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.01, 0.01)
+                       , drop.cuts = FALSE
+                       , title = "Trend in GPP"
+                       , legend.title = expression(gC~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Trend Significance
+
+```{r auseflux_gpp_plots_trend_significance}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_gpp$trends
+                       , layers = "p.value"
+                       , ncol = settings$num_cols
+                       , cols = viridis::turbo(6)
+                       , cuts = c(0, 0.001, 0.01, 0.05, 0.1, 0.5, 1.0)
+                       , drop.cuts = FALSE
+                       , title = "Significance in GPP Trends"
+                       , legend.title = "p value"
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Trend Differences
+
+```{r auseflux_gpp_plots_trend_deltas}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_gpp$comparisons[["Trend"]]
+                                 , ncol = settings$num_cols
+                                 , drop.cuts = NULL
+                                 , title = "Difference Trend in GPP"
+                                 , legend.title = expression(Delta~gC~m^{"-2"}~month^{"-2"})
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Significant Trends
+
+```{r auseflux_gpp_plots_significant_trends}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_gpp$trends
+                       , layers = "Significant_Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.01, 0.01)
+                       , drop.cuts = FALSE
+                       , title = "Significant Trend in GPP (p-value < 0.05)"
+                       , legend.title = expression(gC~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+## Seasonal Analysis {.tabset}
+
+Definition of seasonal concentration and phase follow Kelley *et al.* 2013.  **Seasonal concentration** equals one if the variable is concentrated all in one month, and is zero if it is spread even across all months.  The **seasonal phase** is a measure of the peak of the season - it is not strictly the maximum monthly, but rather the average of all months when considering months as an angle in the complex plane.  
+
+### Seasonal Phase
+
+```{r auseflux_gpp_plots_phases}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_gpp$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , type = "values"
+                                 , cuts = 0:12
+                                 , override.cols = pals::ocean.phase(12)
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Phase Differences
+
+```{r auseflux_gpp_plots_phase_deltas}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_gpp$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , cuts = seq(-6, 6)
+                                 , symmetric.scale = FALSE
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Seasonal Concentration
+
+```{r auseflux_gpp_plots_seasonal_concentration}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_gpp$comparisons[["Seasonal"]]
+                                 , type = "values"
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Concentration Differences
+
+```{r auseflux_gpp_plots_concentration_deltas}
+if (do_auseflux_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_gpp$comparisons[["Seasonal"]]
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+## {.unlisted .unnumbered}
+
+<a href="#top">Back to top</a>
+
+# AusEFlux NEE
+
+Intro, data links, etc.
+
+```{r auseflux_nee}
+if (do_auseflux_nee) {
+    auseflux_nee <- benchmark_auseflux("NEE", settings, params, overall_tables)
+    benchmark <- auseflux_nee$benchmark
+    auseflux_subtitle <- paste0(benchmark@first.year, "-", benchmark@last.year)
+}
+```
+
+## Spatial Patterns {.tabset}
+
+### Absolute Values
+
+```{r auseflux_nee_plots_absolute}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_nee$maps
+                       , ncol = settings$num_cols
+                       , legend.title = expression(gC~m^{"-2"}~year^{"-1"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , title = "Absolute NEE Values"
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Differences
+
+```{r auseflux_nee_plots_deltas}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_nee$comparisons[["Values"]]
+                                 , ncol = settings$num_cols
+                                 , legend.title = expression(Delta~gC~m^{"-2"}~year^{"-1"})
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , title = "NEE biases"
+                                 , subtitle = auseflux_subtitle
+                                 , panel.bg.col = "white")
+    print_plot(plt)
+}
+```
+
+## Temporal Trends {.tabset}
+
+### Trend Value
+
+```{r auseflux_nee_plots_trend_values}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_nee$trends
+                       , layers = "Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.01, 0.01)
+                       , drop.cuts = FALSE
+                       , title = "Trend in NEE"
+                       , legend.title = expression(gC~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Trend Significance
+
+```{r auseflux_nee_plots_trend_significance}
+# TODO: create a variable for cuts, and change the 6 in the number of colours
+# to be the length of this variable.
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_nee$trends
+                       , layers = "p.value"
+                       , ncol = settings$num_cols
+                       , cols = viridis::turbo(6)
+                       , cuts = c(0, 0.001, 0.01, 0.05, 0.1, 0.5, 1.0)
+                       , drop.cuts = FALSE
+                       , title = "Signifiance in NEE Trends"
+                       , legend.title = "p value"
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Trend Differences
+
+```{r auseflux_nee_plots_trend_deltas}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_nee$comparisons[["Trend"]]
+                                 , ncol = settings$num_cols
+                                 , drop.cuts = NULL
+                                 , title = "Difference Trend in NEE"
+                                 , legend.title = expression(Delta~gC~m^{"-2"}~month^{"-2"})
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Significant Trends
+
+```{r auseflux_nee_plots_significant_trends}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatial(auseflux_nee$trends
+                       , layers = "Significant_Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.01, 0.01)
+                       , drop.cuts = FALSE
+                       , title = "Significant Trend in NEE (p-value < 0.05)"
+                       , legend.title = expression(gC~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+## Seasonal Analysis {.tabset}
+
+Definition of seasonal concentration and phase follow Kelley *et al.* 2013.  **Seasonal concentration** equals one if the variable is concentrated all in one month, and is zero if it is spread even across all months.  The **seasonal phase** is a measure of the peak of the season - it is not strictly the maximum monthly, but rather the average of all months when considering months as an angle in the complex plane.  
+
+### Seasonal Phase
+
+```{r auseflux_nee_plots_phases}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_nee$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , type = "values"
+                                 , cuts = 0:12
+                                 , override.cols = pals::ocean.phase(12)
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Phase Differences
+
+```{r auseflux_nee_plots_phase_deltas}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_nee$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , cuts = seq(-6, 6)
+                                 , symmetric.scale = FALSE
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Seasonal Concentration
+
+```{r auseflux_nee_plots_seasonal_concentration}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_nee$comparisons[["Seasonal"]]
+                                 , type = "values"
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
+}
+```
+
+### Concentration Differences
+
+```{r auseflux_nee_plots_concentration_deltas}
+if (do_auseflux_nee && settings$plot_maps) {
+    plt <- plotSpatialComparison(auseflux_nee$comparisons[["Seasonal"]]
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = auseflux_subtitle)
+    print_plot(plt)
 }
 ```
 
@@ -399,7 +951,6 @@ if (do_bom_lai && settings$plot_maps) {
 # Timing
 Total run time:
 ``` {r time}
-
 # report total run time
 toc()
 ```
