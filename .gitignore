@@ -19,4 +19,5 @@ junk/
 NAMESPACE
 daveanalysis_*.tar.gz
 ..Rcheck/
+*.html
 
