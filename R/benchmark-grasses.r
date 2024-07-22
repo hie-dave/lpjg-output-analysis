@@ -53,13 +53,15 @@ benchmark_grass_dist <- function(settings, params, tables) {
     }
 
     for (simulation in settings$simulations) {
-        if (!has_output(simulation, "mlai")) {
+        if (!has_output(simulation, var)) {
             warning("No ", var, " data found for simulation ", simulation@name)
             next
         }
 
         predictions <- DGVMTools::getField(simulation, var, verbose = verbose)
         predictions@data <- calc_c4_frac(predictions@data)
+        predictions@quant@name <- "C4 Fraction"
+        predictions@quant@units <- "0-1"
 
         predictions <- DGVMTools::selectLayers(predictions, "c4_frac")
 
@@ -72,11 +74,18 @@ benchmark_grass_dist <- function(settings, params, tables) {
         do_aggregation(period0, name0)
         do_aggregation(period1, name1)
 
+        # It's possible that some gridcells may be missing from one or both
+        # data frames. Subtracting two data frames with different rows is going
+        # to cause problems, so we need to merge them.
+        p1 <- period_maps[[name1]]@data
+        p0 <- period_maps[[name0]]@data
+
+        merged <- base::merge(p1, p0, by = c("Lon", "Lat"), all = TRUE)
+        merged$c4_frac <- merged$c4_frac.x - merged$c4_frac.y
+        merged <- merged[, c("Lon", "Lat", "c4_frac")]
+
         diff <- period_maps[[name1]]
-        p1 <- period_maps[[name1]]@data$c4_frac
-        p0 <- period_maps[[name0]]@data$c4_frac
-        dlt <- p1 - p0
-        diff@data$c4_frac <- dlt
+        diff@data <- merged
         diffs[[simulation@name]] <- diff
 
         meanfrac <- DGVMTools::aggregateSubannual(predictions)
@@ -112,6 +121,15 @@ benchmark_grass_dist <- function(settings, params, tables) {
                                                          , trends, seasonals
                                                          , name0, name1)
 
+    for (i in seq_along(comparisons[["Seasonal"]])) {
+        name <- comparisons[["Seasonal"]][[i]]@name
+        name <- sub("Seasonal comparison ", "", name)
+        comparisons[["Seasonal"]][[i]]@name <- name
+    }
+
+    # TODO: generate metric table once we have some observations.
+    # This requires us to set benchmark@datasets
+
     result <- list()
     result$period_maps <- period_maps
     result$diffs <- diffs
@@ -119,5 +137,7 @@ benchmark_grass_dist <- function(settings, params, tables) {
     result$comparisons <- comparisons
     result$means <- means
     result$seasonals <- seasonals
+    result$tables <- tables
+    result$benchmark <- benchmark
     return(result)
 }

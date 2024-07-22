@@ -4,7 +4,8 @@
 #'
 #' @param settings: Benchmark settings.
 #' @param params: Benchmark parameters.
-#' @param tables_list: Benchmark tables.
+#' @param tables: Benchmark tables. This will be rbind-ed and returned as
+#' result$tables.
 #'
 #' @name benchmark_bom_lai
 #' @rdname benchmark_bom_lai
@@ -16,9 +17,7 @@
 #' @return A DGVMTools::Field object containing the BoM LAI data.
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
-benchmark_bom_lai <- function(settings,
-                              params,
-                              tables_list) {
+benchmark_bom_lai <- function(settings, params, tables) {
 
     # Mean maximum annual LAI for each dataset.
     maps <- list()
@@ -62,8 +61,10 @@ benchmark_bom_lai <- function(settings,
     do_aggregation(bom_data)
 
     # Create benchmark object.
+    # The ID of this benchmark object is used as the quantity column in the
+    # metrics table.
     benchmark <- new("DaveBenchmark"
-                     , id = "bom_lai"
+                     , id = "LAI"
                      , name = "BoM Total LAI"
                      , description = "BoM Total LAI estimates"
                      , simulation = "tellaus"
@@ -98,6 +99,8 @@ benchmark_bom_lai <- function(settings,
                                            , first.year = benchmark@first.year
                                            , last.year = benchmark@last.year
                                            , verbose = verbose)
+        predictions@quant@units <- bom_data@quant@units
+        predictions@quant@name <- "LAI"
         do_aggregation(predictions)
     }
 
@@ -106,14 +109,19 @@ benchmark_bom_lai <- function(settings,
                                                          , params$new_name
                                                          , params$old_name)
 
-    names(summary) <- names(overall_tables[["totals"]])
-    overall_tables[["totals"]] <- rbind(overall_tables[["totals"]], summary)
+    for (i in seq_along(comparisons[["Seasonal"]])) {
+        comparisons[["Seasonal"]][[i]]@name <- sub("Seasonal comparison ", ""
+                                        , comparisons[["Seasonal"]][[i]]@name)
+    }
+
+    names(summary) <- names(tables[["totals"]])
+    tables[["totals"]] <- rbind(tables[["totals"]], summary)
 
     sims <- list()
     sims[["GUESS"]] <- settings$simulations
 
     metrics <- DGVMBenchmarks::makeMetricTable(benchmark, comparisons, sims)
-    overall_tables[["metrics"]] <- rbind(overall_tables[["metrics"]], metrics)
+    tables[["metrics"]] <- rbind(tables[["metrics"]], metrics)
 
     result <- list()
     result$maps <- maps
@@ -121,7 +129,7 @@ benchmark_bom_lai <- function(settings,
     result$seasonals <- seasonals
     result$areas <- areas
     result$comparisons <- comparisons
-    result$tables <- overall_tables
+    result$tables <- tables
     result$benchmark <- benchmark
     return(result)
 }
@@ -148,16 +156,26 @@ read_bom_lai <- function(data_path) {
     }
 
     # Create a DGVMTools::Source object.
-    source <- DGVMTools::defineSource("bom_lai", "BoM LAI"
+    # The name of this source object is used as the dataset column in the
+    # metrics table.
+    source <- DGVMTools::defineSource("bom_lai", "BoM"
                                       , format = DGVMTools::NetCDF
                                       , dir = dirname(data_file))
 
-    # Read data from the input file.
     verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
-    field <- DGVMTools::getField(source, layers = "Band1", quant = "Band1"
+
+    # Metadata for the quantity we want to read.
+    quant <- DGVMTools::defineQuantity("mlai", "LAI", "m^2~m^-2")
+
+    # Name of the variable in the NetCDF file.
+    lyr <- "Band1"
+
+    # Read data from the input file.
+    field <- DGVMTools::getField(source, layers = lyr, quant = quant
                                  , file.name = basename(data_file)
                                  , verbose = verbose)
-    DGVMTools::renameLayers(field, "Band1", "mlai")
+    # The BoM LAI data file has a long_name, so we need to manually override it.
+    field@quant@name <- quant@name
     return(field)
 }
 

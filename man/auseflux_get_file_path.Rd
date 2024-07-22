@@ -4,10 +4,12 @@
 \alias{auseflux_get_file_path}
 \title{Get the path to the AusEFlux data file for the specified variable.}
 \usage{
-auseflux_get_file_path(var)
+auseflux_get_file_path(var, data_path)
 }
 \arguments{
 \item{var}{The AusEFlux variable.}
+
+\item{data_path}{Path to directory containing data.}
 }
 \description{
 Get the path to the AusEFlux data file for the specified variable.

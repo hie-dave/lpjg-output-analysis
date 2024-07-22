@@ -28,7 +28,8 @@ Depends:
 	kableExtra(>= 1.4.0),
 	tictoc(>= 1.2.1),
 	showtext(>= 0.9-7),
-	data.table(>= 1.15.4)
+	data.table(>= 1.15.4),
+	ggplot2(>= 3.5.1)
 Imports:
 	DGVMTools,
 	DGVMBenchmarks,
@@ -38,7 +39,8 @@ Imports:
 	tidyr,
 	purrr,
 	knitr,
-	ggpubr
+	ggpubr,
+	ggplot2
 Suggests:
 	ncdf4,
 	rmarkdown,
@@ -69,3 +71,4 @@ Collate:
 	'benchmark-grasses.r'
 	'summary.r'
 	'classes.r'
+	'tellaus.r'

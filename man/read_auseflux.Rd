@@ -5,10 +5,12 @@
 \title{Read BoM LAI from the specified data file, or from the default location if
 no data file is provided.}
 \usage{
-read_auseflux(var)
+read_auseflux(var, data_path)
 }
 \arguments{
 \item{var}{The AusEFlux variable.}
+
+\item{data_path}{Data path.}
 }
 \value{
 A DGVMTools::Field object containing the requested AusEFlux data.

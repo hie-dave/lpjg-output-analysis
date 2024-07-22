@@ -5,7 +5,7 @@
 #' @param var Variable to be benchmarked. Should be one of: GPP, NEE, ER
 #' @param settings: Benchmark settings.
 #' @param params: Benchmark parameters.
-#' @param tables_list: Benchmark tables.
+#' @param tables: Benchmark tables.
 #'
 #' @name benchmark_bom_lai
 #' @rdname benchmark_bom_lai
@@ -20,7 +20,7 @@
 benchmark_auseflux <- function(var,
                                settings,
                                params,
-                               tables_list) {
+                               tables) {
     var <- auseflux_sanitise_var(var)
 
     auseflux <- read_auseflux(var, settings$data_path)
@@ -47,15 +47,18 @@ benchmark_auseflux <- function(var,
         year_sum <- DGVMTools::aggregateSubannual(field, "sum", "Year")
 
         # Mean maximum annual GPP (gC m-2 year-1)
-        maps[[name]] <- DGVMTools::aggregateYears(year_sum, "mean")
+        maps[[name]] <<- DGVMTools::aggregateYears(year_sum, "mean")
     }
 
     do_aggregation(auseflux)
 
     guess_layer <- paste0("m", tolower(var))
 
+    # The ID of this benchmark object is used as the quantity column in the
+    # metrics table.
+    log_diag("Defining new benchmark for AusEFlux ", var, "...")
     benchmark <- new("DaveBenchmark"
-                     , id = "auseflux"
+                     , id = var
                      , name = paste("AusEFlux", var)
                      , description = paste("AusEFlux", var, "estimates")
                      , simulation = "tellaus"
@@ -71,47 +74,87 @@ benchmark_auseflux <- function(var,
                      , dataset_source = "<AusEFlux reference should go here>")
 
     # Define summary lines.
-    summary <- make_summary_line(benchmark, settings$summary_col_names)
+    log_debug("Creating summary line for AusEFlux ", var, "...")
+    # summary <- make_summary_line(benchmark, settings$summary_col_names)
 
     # Determine verbosity to be used when reading data.
     verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
 
     for (simulation in settings$simulations) {
+        # To get ecosystem respiration, we must sum the outputs of autotrophic
+        # and heterotrophic respiration.
+        quant <- ifelse(var == "ER", "mra", guess_layer)
+
+        log_diag("Will read quantity: ", quant)
+
         # Check if file is present.
-        if (!has_output(simulation, guess_layer)) {
-            warning("No ", guess_layer, " data found for simulation "
-                    , simulation@name)
-            next
+        if (!has_output(simulation, quant)) {
+            sim <- simulation@name
+            stop("No ", quant, " data found for simulation ", sim)
         }
 
-        predictions <- DGVMTools::getField(source = simulation, guess_layer
+        log_diag("Reading ", quant, " from simulation ", simulation@name, "...")
+        predictions <- DGVMTools::getField(simulation, quant
                                            , first.year = benchmark@first.year
                                            , last.year = benchmark@last.year
                                            , verbose = verbose)
+
+        if (var == "ER") {
+            # Predictions contain autotrophic respiration, but we also need
+            # heterotrophic respiration.
+            log_diag("Reading mrh from simulation ", simulation@name, "...")
+            mrh <- DGVMTools::getField(simulation, "mrh"
+                                       , first.year = benchmark@first.year
+                                       , last.year = benchmark@last.year
+                                       , verbose = verbose)
+            log_diag("Copying mrh layer into mra field...")
+            DGVMTools::copyLayers(mrh, predictions, "mrh")
+            log_diag("Adding autotrophic and heterotrophic respiration...")
+            layerOp(predictions, "+", c("mra", "mrh"), guess_layer)
+            log_diag("Filtering out all layers except ", guess_layer, "...")
+            predictions <- DGVMTools::selectLayers(predictions, guess_layer)
+        }
+
+        log_diag("Converting predicted ", var, " from kgC/m2 to gC/m2...")
         layerOp(predictions, "mulc", guess_layer, guess_layer, constant = 1000)
+        predictions@quant@units <- "gC/m^2"
+
+        # Change quantity name to match observations.
+        predictions@quant@name <- auseflux@quant@name
+
+        log_diag("Aggregating ", simulation@name, " ", var, " data...")
         do_aggregation(predictions)
     }
 
+    log_diag("Performing full spatial comparison for AusEFlux ", var, "...")
     comparisons <- DGVMBenchmarks::fullSpatialComparison(benchmark, maps, trends
                                                          , seasonals
                                                          , params$new_name
                                                          , params$old_name)
 
-    names(summary) <- names(overall_tables[["totals"]])
-    overall_tables[["totals"]] <- rbind(overall_tables[["totals"]], summary)
+    for (i in seq_along(comparisons[["Seasonal"]])) {
+        comparisons[["Seasonal"]][[i]]@name <- sub("Seasonal comparison ", ""
+                                        , comparisons[["Seasonal"]][[i]]@name)
+    }
+
+    log_diag("Constructing output tables for AusEFlux ", var, "...")
+    # names(summary) <- names(tables[["totals"]])
+    # tables[["totals"]] <- rbind(tables[["totals"]], summary)
 
     sims <- list()
     sims[["GUESS"]] <- settings$simulations
 
     metrics <- DGVMBenchmarks::makeMetricTable(benchmark, comparisons, sims)
-    overall_tables[["metrics"]] <- rbind(overall_tables[["metrics"]], metrics)
+    tables[["metrics"]] <- rbind(tables[["metrics"]], metrics)
+
+    log_diag("Successfully read all AusEFlux ", var, " data...")
 
     result <- list()
     result$maps <- maps
     result$trends <- trends
     result$seasonals <- seasonals
     result$comparisons <- comparisons
-    result$tables <- overall_tables
+    result$tables <- tables
     result$benchmark <- benchmark
     return(result)
 }
@@ -136,15 +179,29 @@ read_auseflux <- function(var, data_path) {
     var <- auseflux_sanitise_var(var)
     path <- auseflux_get_file_path(var, data_path)
 
-    name <- paste("AusEFlux", var)
-    src <- defineSource("auseflux", name, format = DGVMTools::NetCDF
+    # Note: the name of this source object is used as the 'Dataset' column
+    # in the metrics table.
+    log_diag("Defining source auseflux with dir = ", dirname(path), "...")
+    src <- defineSource("auseflux", "AusEFlux", format = DGVMTools::NetCDF
                         , dir = dirname(path))
     verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
     lyr <- paste0(var, "_median")
-    field <- DGVMTools::getField(src, layers = lyr, quant = lyr
+    lyr_new <- paste0("m", tolower(var))
+    log_diag("Reading field ", lyr, " from file ", basename(path), "...")
+
+    # Explicitly define a quantity in order to ensure consistency with the
+    # quantity that's auto-generated when reading LPJ-Guess data. Normally, this
+    # would be overwritten when using a NetCDF source, but the AusEFlux files
+    # are not quite CF-conformant (e.g. they lack a variable-level units
+    # attribute).
+    quant <- DGVMTools::defineQuantity(lyr_new, var, "gC/m^2")
+
+    field <- DGVMTools::getField(src, layers = lyr, quant = quant
                                  , file.name = basename(path)
                                  , verbose = verbose)
-    DGVMTools::renameLayers(field, lyr, paste0("m", tolower(var)))
+    # log_diag("Renaming AusEFlux field ", lyr, " to ", lyr_new, "...")
+    # DGVMTools::renameLayers(field, lyr, lyr_new)
+    log_diag("Successfully read auseflux ", var, " data")
     return(field)
 }
 
