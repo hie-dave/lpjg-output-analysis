@@ -32,7 +32,8 @@ trim_dave <- function(text) {
 
 get_observed_source <- function() {
 	obs_dir <- system.file("extdata", package = get_global("dave_pkgname"))
-	log_debug("Loading observed source...")
+	obs_dir <- "~/code/lpj-guess/output-analysis/inst/extdata"
+	log_debug("Loading observed source from dir: '", obs_dir, "'...")
 	return(DGVMTools::defineSource("obs", "Ozflux", format = DGVMTools::NetCDF
 		, dir = obs_dir))
 }

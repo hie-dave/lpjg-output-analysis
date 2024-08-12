@@ -115,6 +115,7 @@ available_layers_ozflux <- function(source, quant, sites = NULL) {
 		out_file_name <- file.path(site_out, paste0(quant@id, ".out"))
 
 		if (file.exists(out_file_name)) {
+			log_debug("Reading file ", out_file_name, "...")
 			table <- read.table(out_file_name, header = TRUE, nrows = 1)
 			layers <- colnames(table)
 			ignored_layers <- c("Lon", "Lat", "Year", "Day", "patch")
@@ -200,7 +201,8 @@ get_field_ozflux <- function(
 	layers = NULL,
 	target_stainfo,
 	file_name,
-	sites,
+	verbose,
+	sites = NULL,
 	...) {
 	# Get path to the ozflux directory within the repository.
 	ozflux <- get_ozflux_path(source)

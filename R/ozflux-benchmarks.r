@@ -11,7 +11,7 @@ get_vars <- function() {
 	  DGVMTools::defineQuantity("dave_gpp", "GPP", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("dave_resp", "Respiration", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("dave_nee", "NEE", "gC m^-2 day^-1")
-	, DGVMTools::defineQuantity("dave_et", "ET", "mm day^-1")
+	, DGVMTools::defineQuantity("dave_transpiration", "ET", "mm day^-1")
 	, DGVMTools::defineQuantity("dave_lai", "LAI", "m^2 m^-2")
 	# , defineQuantity("cmass", "AboveGround Biomass", "kgC/m2")
 	))
@@ -71,6 +71,7 @@ ozflux_benchmarks <- function(
 	sites <- read_ozflux_sites()
 
 	write_progress <- is_installed("knitrProgressBar")
+	log_debug("Write_progress = ", write_progress)
 	if (write_progress) {
 		log_debug("Initialising progress bar...")
 		p <- knitrProgressBar::progress_estimated(nrow(sites) * length(vars))
@@ -104,6 +105,16 @@ ozflux_benchmarks <- function(
 		}
 	}
 
+	write_paragraph <- function(text) {
+		if (use_plotly) {
+			# html output
+			tag <- htmltools::p(text)
+			tags[[length(tags) + 1L]] <- tag
+		} else {
+			cat(text, "\n\n")
+		}
+	}
+
 	write_plot <- function(plt) {
 		if (use_plotly) {
 			tags[[length(tags) + 1L]] <<- plt
@@ -131,8 +142,8 @@ ozflux_benchmarks <- function(
 			# Filter data to this site.
 			gc <- get_gridcell(data, row$Lat, row$Lon, row$Name)
 
-			if (nrow(gc@data) == 0) {
-				warning("No", var@name, " data for site ", row$Name, "; skipping...")
+			if (nrow(gc@data) == 0 || !(get_global("obs_lyr") %in% names(gc@data))) {
+				warning("No ", var@name, " data for site ", row$Name, "; skipping...")
 				if (combined_graph) {
 					combined_plots[[length(combined_plots) + 1L]] <- NA
 				} else {
@@ -161,7 +172,7 @@ ozflux_benchmarks <- function(
 			if (combined_graph) {
 				ylab <- get_y_label(var, NULL)
 				plt <- create_panel(res$timeseries, res$pvo, res$subannual
-					, use_plotly, ylab = ylab)
+					, use_plotly = use_plotly, ylab = ylab)
 				combined_plots[[length(combined_plots) + 1L]] <- plt
 			} else {
 				timeseries_plots[[length(timeseries_plots) + 1L]] <- res$timeseries
@@ -176,17 +187,36 @@ ozflux_benchmarks <- function(
 		}
 	}
 
+	write_table <- function(tbl) {
+		print(knitr::kable(tbl, digits = 2))
+	}
+
+	r2_desc <- "The coefficient of determination (r<sup>2</sup>) is the proportion of the variation in the dependent variable that is predictable from the independent variable(s). This is unitless and ranges from 0-1."
+	nse_desc <- "The Nash–Sutcliffe efficiency is calculated as one minus the ratio of the error variance of the modeled time-series divided by the variance of the observed time-series. In the situation of a perfect model with an estimation error variance equal to zero, the resulting Nash–Sutcliffe Efficiency equals 1 (NSE = 1). Conversely, a model that produces an estimation error variance equal to the variance of the observed time series results in a Nash–Sutcliffe efficiency of 0.0 (NSE = 0). This is unitless."
+	rmse_desc <- "The root mean square error (RMSE) of a sample is the quadratic mean of the differences between the observed values and predicted ones. This is in the units of the variable."
+	rsr_desc <- "The root mean square error to standard deviation ratio is the RMSE normalised by the standard deviation of the observations. This is unitless"
+	bias_desc <- "The bias is the mean difference between the predictions and observations. This is in the units of the variable."
+
 	# Write tables.
-	write_title("r2", 1, force_print = TRUE)
-	print(knitr::kable(r2))
+	write_title("r<sup>2</sup>", 1, force_print = TRUE)
+	write_paragraph(r2_desc)
+	write_table(r2)
+
 	write_title("rmse", 1, force_print = TRUE)
-	print(knitr::kable(rmse))
+	write_paragraph(rmse_desc)
+	write_table(rmse)
+
 	write_title("nse", 1, force_print = TRUE)
-	print(knitr::kable(nse))
+	write_paragraph(nse_desc)
+	write_table(nse)
+
 	write_title("rsr", 1, force_print = TRUE)
-	print(knitr::kable(rsr))
+	write_paragraph(rsr_desc)
+	write_table(rsr)
+
 	write_title("bias", 1, force_print = TRUE)
-	print(knitr::kable(bias))
+	write_paragraph(bias_desc)
+	write_table(bias)
 
 	# Write graphs by site.
 	for (i in seq_len(nrow(sites))) {

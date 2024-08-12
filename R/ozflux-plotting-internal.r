@@ -35,7 +35,7 @@ to_plotly <- function(chart, lyr_name) {
 
 create_panel <- function(
         ...,
-        use_plotly,
+        use_plotly = FALSE,
         ncol = 2,
         xlab = NULL,
         ylab = NULL,
@@ -107,17 +107,30 @@ plot_timeseries <- function(
     colours <- get_colour_palette(ncolour)
     return(DGVMTools::plotTemporal(gc, layers = layers, cols = colours
         , text.multiplier = text_multiplier, text.expression = FALSE
-        , y.lim = ylim, x.label = xlab, y.label = ylab, subtitle = subtitle))
+        , y.lim = ylim, x.label = xlab, y.label = ylab, subtitle = NULL
+        , title = NULL))
 }
 
 plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
     colours <- get_colour_palette(length(names(gc)))
-    plt <- DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
-        , text.multiplier = text_multiplier, size = marker_size)
+    # predicted_name <- names(gc)[[length(names(gc))]]
+    log_debug("[plot_pvo] names(gc) = ", paste(names(gc), collapse = ", "))
+    # plt <- DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
+    #     , layer.y = predicted_name, text.multiplier = text_multiplier)
+    obs_name <- get_global("obs_lyr")
+    ynames <- setdiff(names(gc), obs_name)
+
+    # alpha <- 1
+    data <- gc@data
+    data <- data %>% tidyr::pivot_longer(cols = ynames, names_to = "layer", values_to = "value")
+
+    # Initialise the plot object.
+    plt <- ggplot2::ggplot(data, aes(x = .data[[obs_name]], y = value, color = layer))
+    plt <- plt + ggplot2::geom_point(size = marker_size) + ggplot2::theme_bw()
 
     # Set correct colours.
-    scale <- scale_color_manual(values = colours[2:length(colours)]
-        , labels = y.new, breaks = y.new, name = col.by)
+    scale <- ggplot2::scale_color_manual(values = colours[2:length(colours)]
+                                         , labels = ynames)
     plt <- plt + scale
 
     units <- DGVMTools:::standardiseUnitString(gc@quant@units)
@@ -127,21 +140,21 @@ plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
         x_label <- paste0(x_label, " (", units, ")")
         y_label <- paste0(y_label, " (", units, ")")
     }
+
     plt <- plt + ggplot2::labs(y = DGVMTools:::stringToExpression(y_label),
                                x = DGVMTools:::stringToExpression(x_label))
 
     # Plot 1:1 line.
     plt <- plt + geom_abline(slope = 1, intercept = 0)
 
-    # Marker size.
-    plt <- plt + geom_point(size = marker_size, alpha = alpha)
+    # plt <- plt + geom_point(, alpha = alpha)
 
     # scatter.plot <- scatter.plot + theme(legend.position = legend.position, legend.key.size = unit(2, 'lines'))
 
   # Apply x/y axis limits.
     if(!is.null(ylim)) {
-        plt <- plt + xlim(x.lim)
-        plt <- plt + scale_y_continuous(limits = y.lim)
+        plt <- plt + xlim(ylim)
+        plt <- plt + scale_y_continuous(limits = ylim)
     }
 
     return(plt)
@@ -161,6 +174,11 @@ plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
 
     blank <- ggplot2::element_blank()
     plt <- plt + theme(legend.position = "bottom", legend.title = blank)
+    # Manually disable markers by setting their size to NA.
+    # For some reason, calling geom_point with size = 0 has no effect.
+    for (i in seq_along(plt$layers)) {
+        plt$layers[[i]]$aes_params$size <- NA
+    }
 
     return(plt)
 }
@@ -171,7 +189,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
 
     # Compute (and store) statistics).
     obs_lyr <- get_global("obs_lyr")
-    obs <- gc@data[, obs_lyr]
+    obs <- gc@data[[obs_lyr]]
     names <- names(gc)
     if (length(names) == 0) {
         log_error("Unable to plot: data contains no layers")
@@ -186,7 +204,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         }
     }
     predicted_name <- names(gc)[[length(names(gc))]]
-    pred <- gc@data[, predicted_name]
+    pred <- gc@data[[predicted_name]]
 
     r2 <- compute_r2(obs, pred)
     rmse <- compute_rmse(obs, pred)
@@ -213,6 +231,8 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
 
     if (do_timeseries) {
         timeseries <- plot_timeseries(gc, ylim, text_multiplier)
+        timeseries <- timeseries + ggplot2::labs(title = NULL) + ggpubr::rremove("xlab")
+        
         if (use_plotly) {
             timeseries <- to_plotly(timeseries, ylab)
         }
@@ -220,6 +240,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     }
     if (do_pvo) {
         pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size)
+        pvo <- pvo + ggpubr::rremove("ylab")
         if (use_plotly) {
             pvo <- to_plotly(pvo, ylab)
         }
@@ -266,14 +287,30 @@ trim_ggplot <- function(
     ylab = FALSE) {
 
     result <- plt
-    result <- result + ggplot2::labs(
-        title = title,
-        subtitle = subtitle,
-        caption = caption)
+
+    if (!is.null(title)) {
+        log_debug("Adding title to plot: '", title, "'...")
+        result <- result + ggplot2::labs(title = title)
+    }
+    if (!is.null(subtitle)) {
+        log_debug("Adding subtitle to plot: '", subtitle, "'...")
+        result <- result + ggplot2::labs(subtitle = subtitle)
+    }
+    if (!is.null(caption)) {
+        log_debug("Adding caption to plot: '", caption, "'...")
+        result <- result + ggplot2::labs(caption = caption)
+    }
+
+    # log_debug("Annotating ggplot; title = '", title, "'; subtitle = '", subtitle, "'; caption = '", caption, "'.")
+    # result <- result + ggplot2::labs(title = title, subtitle = subtitle,
+    #                                  caption = caption)
+
     if (!xlab) {
+        log_debug("Removing x-axis label from plot...")
         result <- result + ggpubr::rremove("xlab")
     }
     if (!ylab) {
+        log_debug("Removing y-axis label from plot")
         result <- result + ggpubr::rremove("ylab")
     }
     return(result)

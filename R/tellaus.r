@@ -356,7 +356,7 @@ get_colour <- function(metric, value) {
 #'
 #' @return A kable table.
 #'
-#' @keywords internal
+#' @export
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @import knitr
 #' @import kableExtra

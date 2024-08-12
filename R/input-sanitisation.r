@@ -27,7 +27,9 @@ call_foreach <- function(x, fun, ignore_null = TRUE) {
 read_ozflux_sites <- function() {
 	if (is.null(get_global("ozflux_sites"))) {
 		pkg_name <- get_global("dave_pkgname")
-		gridlist <- system.file("extdata", "ozflux.grid", package = pkg_name)
+		# gridlist <- system.file("extdata", "ozflux.grid", package = pkg_name)
+		gridlist <- "~/code/lpj-guess/output-analysis/inst/extdata/ozflux.grid"
+		log_debug("Reading gridlist ", gridlist, "...")
 		gridcells <- read.csv(gridlist, sep = " ", header = FALSE)
 		names(gridcells) <- c("Lon", "Lat", "Name")
 		set_global("ozflux_sites", gridcells)
@@ -45,7 +47,9 @@ read_ozflux_sites <- function() {
 #' @author Drew Holzworth
 #'
 sanitise_ozflux_site <- function(site) {
+	log_debug("Sanitising ozflux site: ", site)
 	if (class(site) == "character") {
+		log_debug("Site is a character vector. Probably. ¿Maybe(?).")
 		sites <- read_ozflux_sites()
 		index <- which(sites$Name == site)
 		if (length(index) < 1) {
@@ -60,11 +64,13 @@ sanitise_ozflux_site <- function(site) {
 	} else if (class(site) == "numeric" && length(site) == 2) {
 		lon <- as.double(site[1])
 		lat <- as.double(site[2])
+		# exact coords printed below
+		log_debug("Site is numeric. Let's assume it's in lon, lat order")
 		name <- NULL
 	} else {
 		log_error("Unable to interprete site: ", site)
 	}
-	log_debug("Resolved ozflux site '", name, "': lon=", lon, ", lat=", lat)
+	log_diag("Resolved ozflux site '", name, "': lon=", lon, ", lat=", lat)
 	return(list(Lon = lon, Lat = lat, Name = name))
 }
 
@@ -81,14 +87,19 @@ sanitise_ozflux_site <- function(site) {
 #'
 sanitise_ozflux_sites <- function(sites) {
 	# Return a dataframe of all sites if sites is NULL.
+	log_debug("Sanitising ozflux sites...")
 	if (is.null(sites)) {
+		log_debug("No sites were provided, so all sites will be used")
 		return(read_ozflux_sites())
 	}
+
 	if (is.data.frame(sites) && ncol(sites) == 3 && "Name" %in% names(sites)
 			&& "Lon" %in% names(sites) && "Lat" %in% names(sites)) {
+		log_debug("Sites is a dataframe with Lat/Lon columns. This is fine")
 		return(sites)
 	}
 
+	log_debug("Not sure what sites is, so let's assume it's a list")
 	result <- call_foreach(sites, sanitise_ozflux_site)
 	if (length(result) < 1) {
 		log_error("No sites were specified. To plot all sites, use NULL")
