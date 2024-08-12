@@ -1,6 +1,8 @@
 
 #'
-#' Do BoM LAI benchmarks.
+#' Do LAI benchmarks.
+#'
+#' This benchmark considers subannual LAI and will do seasonal analysis.
 #'
 #' @param settings: Benchmark settings.
 #' @param params: Benchmark parameters.
@@ -17,7 +19,7 @@
 #' @return A DGVMTools::Field object containing the BoM LAI data.
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
-benchmark_bom_lai <- function(settings, params, tables) {
+benchmark_lai <- function(settings, params, tables) {
 
     # Mean maximum annual LAI for each dataset.
     maps <- list()
@@ -148,8 +150,8 @@ benchmark_bom_lai <- function(settings, params, tables) {
 #' @return A DGVMTools::Field object containing the BoM LAI data.
 #' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
-read_bom_lai <- function(data_path) {
-    data_file <- get_bom_understory_location(data_path)
+read_bom_lai <- function(data_path, type = "rec") {
+    data_file <- get_bom_data_path(data_path, type)
 
     if (!file.exists(data_file)) {
         stop("Unable to locate BoM LAI data. File not found: ", data_file)
@@ -165,7 +167,8 @@ read_bom_lai <- function(data_path) {
     verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
 
     # Metadata for the quantity we want to read.
-    quant <- DGVMTools::defineQuantity("mlai", "LAI", "m^2~m^-2")
+    lyr <- "mlai"
+    quant <- DGVMTools::defineQuantity(lyr, "LAI", "m^2~m^-2")
 
     # Name of the variable in the NetCDF file.
     lyr <- "Band1"
@@ -175,8 +178,29 @@ read_bom_lai <- function(data_path) {
                                  , file.name = basename(data_file)
                                  , verbose = verbose)
     # The BoM LAI data file has a long_name, so we need to manually override it.
+
+    # # Replace NA with 0
+    # if (any(is.na(field@data[[lyr]]))) {
+    #     field@data[which(is.na(field@data[[lyr]])), ][[lyr]] <- 0
+    # }
+
     field@quant@name <- quant@name
     return(field)
+}
+
+#'
+#' Get the location of the BoM LAI data.
+#'
+#' @param data_path Path to data.
+#' @param type Should be either "rec", "per", or "tot"
+#'
+#' @keywords internal
+#' @return Path to the NetCDF file containing BoM LAI data.
+#' @param author Drew Holzworth
+#'
+get_bom_data_path <- function(data_path, type) {
+    filename <- paste0("lai_", type, ".nc")
+    return(get_bom_location(data_path, filename))
 }
 
 #'
@@ -214,7 +238,7 @@ get_bom_overstory_location <- function(data_path) {
 #' @param author Drew Holzworth
 #'
 get_bom_total_location <- function(data_path) {
-    filename <- "lai_per.nc"
+    filename <- "lai_tot.nc"
     return(get_bom_location(data_path, filename))
 }
 

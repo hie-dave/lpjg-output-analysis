@@ -1,0 +1,681 @@
+---
+title: "TellAus-Trunk Benchmark Report for LPJ-GUESS DAVE"
+author: "Drew Holzworth"
+date: '`r strftime(Sys.time(), format = "%B %d, %Y")`'
+output:
+ html_document:
+  toc: true
+params:
+#   new_directory:
+#     value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/trunk/baseline"
+#   new_name:
+#     value: "BARRA2"
+  new_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/trunk/rootdist"
+  new_name:
+    value: "Trunk"
+  trunk_cru_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/trunk-cru"
+  trunk_cru_name:
+    value: "CRUJRA"
+  old_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/mingkai/old/merged/withoutfire"
+  old_name:
+    value: "Mingkai"
+  data_directory:
+    value: "/home/drew/code/lpj-guess/output-analysis/.data"
+---
+
+```{r settings, echo = FALSE}
+do_lai <- TRUE
+
+# GOSIF GPP
+do_gpp <- TRUE
+
+# Set this to true to enable verbose debugging output.
+debug <- FALSE
+
+# kable options
+opts <- options(knitr.kable.NA = "")
+
+# knitr options
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      out.width = "100%",
+                      fig.height = 7,
+                      warning = debug)
+
+# Global script parameters.
+settings <- list(
+    data_path = "/home/drew/code/lpj-guess/output-analysis/.data",
+
+    analysis_version = "tellme_dave  v0.1",
+
+    # True to enable plotting of gridded outputs (ie maps).
+    plot_maps = TRUE,
+
+    # True to render maps via plotly. This *does* work, but it results in large
+    # files, slow load times, slow rendering, and the plots are not really much
+    # more useful than static images.
+    render_plotly = FALSE,
+
+    # Spatial extent for which data will be plotted. This can be:
+    # - raster::extent
+    # - two-column data.frame of gridcells
+    # - NULL (to plot the entire spatial extent of the data)
+    spatial_extent = NULL,
+
+    # String used to describe the spatial subset.
+    spatial_extent_id = "Australia",
+
+    # Plot formatting arguments.
+    map_overlay = "coastlines",
+
+    # ME (Mean Error)
+    # NME (Normalised Mean Error)
+    # NMSE (Normalised Mean Square Error)
+    # RMSE (Root Mean Squared Error)
+    # NME_2 (NME with mean removed)
+    # NMSE_2 (NMSE with mean removed)
+    # NME_3 (NME with mean and variance removed)
+    # NMSE_3 (NMSE with mean and variance removed)
+    # r2_eff (Nash-Sutcliffe Model Efficiency)
+    # r2 (Coefficient of Determination)
+    # r (Pearson's PMCC)
+    # m (gradient of linear fit mod = m * obs + c)
+    # c (intercept of linear fit mod = m * obs + c)
+    metrics = c("RMSE", "r2_eff", "r2", "NMSE"),
+
+    text_multiplier = 2.5,
+
+    annotation_text_size = 7,
+
+    # Number of columns in which plots will be rendered.
+    num_cols = 2,
+
+    # Coordinates at which metrics/annotations will be rendered on maps.
+    stats_lon = 125,
+    stats_lat = -38,
+
+    # The two time periods used for comparison of C3/C4 grass distribution.
+    # The first time period is defined by the first two numbers.
+    # The second time period is defined by the third and fourth numbers.
+    grass_dist_years = c(1980, 1989, 2013, 2022)
+)
+```
+
+```{r setup, include = FALSE}
+library("DGVMTools")
+library("DGVMBenchmarks")
+library("daveanalysis")
+library("ggpubr")
+library("ggplot2")
+library("dplyr")
+
+if (settings$render_plotly) {
+    library("plotly")
+}
+
+# Set ggplot theme.
+theme_set(theme_bw())
+
+# Create DGVMTools source objects for the run directories.
+src_new <- defineSource(name = params$new_name,
+                        dir = params$new_directory,
+                        format = GUESS)
+src_old <- defineSource(name = params$trunk_cru_name,
+                        dir = params$trunk_cru_directory,
+                        format = GUESS)
+src_mingkai <- defineSource(name = params$old_name,
+                            dir = params$old_directory,
+                            format = GUESS)
+# src_shrub <- defineSource(name = params$shrub_name,
+#                           dir = params$shrub_directory,
+#                           format = GUESS)
+
+# src_new should ideally be first for best spatial aggregation of data.
+# (See below functions aggregate_to*())
+# settings$simulations <- list(src_new, src_old, src_mingkai, src_shrub)
+settings$simulations <- list(src_new, src_mingkai)
+
+# This helps RMarkdown locate fonts on some systems.
+library("showtext")
+showtext_auto()
+
+# In debug mode, use log level 4 (all messages). Otherwise, use log level 1
+# (warnings/errors only).
+log_level <- ifelse(debug, 4, 1)
+dave_config(log_level = log_level)
+
+# PFT names, used for calculation of tree/grass fraction, etc.
+grass_pfts <- c("C3G", "C4G")
+shrub_pfts <- c("BLSE", "BLSS")
+tree_pfts <- c("BNE", "BINE", "BNS", "TeNE", "TeBS", "IBS", "TeBE", "TrBE", "TrIBE", "TrBR")
+# Trees are implicitly everything else.
+
+version_label <- paste(settings$analysis_version, settings$spatial_extent_id
+                       , sep = "_")
+
+# Prepare empty summary table of global numbers.
+summary_col_names <- c("Quantity", "Unit")
+for (simulation in settings$simulations) {
+    summary_col_names <- append(summary_col_names, simulation@name)
+}
+summary_col_names <- append(summary_col_names
+                            , c("Data", "Dataset", "Dataset ref."))
+settings$summary_col_names <- summary_col_names
+
+summary_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+# This table is completely empty; it will by built benchmark by benchmark.
+metric_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+# This list contains tables that gets passed in and out of each benchmark.
+tables <- list(
+    totals = summary_table,
+    metrics = metric_table
+)
+
+# Fix overlapping x-axis labels by removing the overlapping labels.
+fix_xaxis_label_overlap <- function(plt) {
+    xlim <- layer_scales(plt)$x$get_limits()
+    guide <- guide_axis(check.overlap = TRUE)
+    return(plt + scale_x_continuous(guide = guide, limits = xlim))
+}
+print_plot <- function(plt) {
+    plt <- fix_xaxis_label_overlap(plt)
+    if (settings$render_plotly) {
+        plt <- ggplotly(plt)
+        htmltools::tagList(plt)
+    } else {
+        print(plt)
+    }
+}
+
+# Start timer.
+tic()
+```
+
+# LAI
+
+```{r read_trees}
+if (do_lai) {
+    lai <- benchmark_lai_dist(settings, params, tables)
+    subtitle <- paste(lai$benchmark@first.year, "-", lai$benchmark@last.year)
+    cols <- viridis::viridis(nrow(lai$maps[[1]]@data))
+    tables <- lai$tables
+}
+```
+
+## Spatial Patterns {.tabset}
+
+### Absolute Values
+
+```{r plot_lai}
+if (do_lai) {
+    plt <- plotSpatial(lai$maps,
+                       "total",
+                       ncol = settings$num_cols,
+                       cols = cols,
+                       legend.title = expression(m^{"2"}~m^{"-2"}),
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       title = "LAI",
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Differences
+
+```{r plot_lai_deltas}
+if (do_lai) {
+    plt <- plotSpatialComparison(lai$comparisons$lai,
+                          ncol = settings$num_cols,
+                          legend.title = expression(Delta~m^{"2"}~m^{"-2"}),
+                          map.overlay = settings$map_overlay,
+                          text.multiplier = settings$text_multiplier,
+                          override.cols = rev(RColorBrewer::brewer.pal(64, "RdBu")),
+                          title = "LAI Biases",
+                          subtitle = subtitle,
+                          panel.bg.col = "white",
+                          # fixme: these limits should not be necessary, and
+                          # should be removed once this PR is merged:
+                          # https://github.com/MagicForrest/DGVMTools/pull/92
+                          limits = c(-2, 2))
+    print_plot(plt)
+}
+```
+
+## Lifeform Distribution (Relative) {.tabset}
+
+### Tree Fraction
+
+```{r plot_tree_frac}
+if (do_lai) {
+    plt <- plotSpatial(lai$maps,
+                       "tree_frac",
+                       ncol = settings$num_cols,
+                       cols = cols,
+                       legend.title = expression(0 - 1),
+                       title = "Tree Fraction",
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Tree Fraction Differences
+
+```{r plot_tree_frac_deltas}
+if (do_lai) {
+    plt <- plotSpatialComparison(lai$comparisons$tree_frac,
+                                 ncol = settings$num_cols,
+                                 legend.title = expression(Delta~(0-1)),
+                                 map.overlay = settings$map_overlay,
+                                 text.multiplier = settings$text_multiplier,
+                                 override.cols = rev(RColorBrewer::brewer.pal(11, "RdBu")),
+                                 title = "Tree Fraction Biases",
+                                 subtitle = subtitle,
+                                 panel.bg.col = "white",
+                                # fixme: these limits should not be necessary, and
+                                # should be removed once this PR is merged:
+                                # https://github.com/MagicForrest/DGVMTools/pull/92
+                                 limits = c(-1, 1))
+    print_plot(plt)
+}
+```
+
+### Grass Fraction
+
+```{r plot_grass_frac}
+if (do_lai) {
+    plt <- plotSpatial(lai$maps,
+                       "grass_frac",
+                       ncol = settings$num_cols,
+                       cols = cols,
+                       legend.title = expression(0 - 1),
+                       title = "Grass Fraction",
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Grass Fraction Differences
+
+```{r plot_grass_frac_deltas}
+if (do_lai) {
+    plt <- plotSpatialComparison(lai$comparisons$grass_frac,
+                                 ncol = settings$num_cols,
+                                 legend.title = expression(Delta~(0 - 1)),
+                                 map.overlay = settings$map_overlay,
+                                 text.multiplier = settings$text_multiplier,
+                                 title = "Grass Fraction Biases",
+                                 subtitle = subtitle,
+                                 panel.bg.col = "white",
+                                 # fixme: these limits should not be necessary, and
+                                 # should be removed once this PR is merged:
+                                 # https://github.com/MagicForrest/DGVMTools/pull/92
+                                 limits = c(-1, 1))
+    print_plot(plt)
+}
+```
+
+## Lifeform Distribution (Absolute) {.tabset}
+
+### Tree LAI
+
+```{r plot_tree_lai}
+if (do_lai) {
+    plt <- plotSpatial(lai$maps,
+                       "tree_total",
+                       ncol = settings$num_cols,
+                       cols = cols,
+                       legend.title = expression(m^{"2"}~m^{"-2"}),
+                       title = "Tree LAI",
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Tree LAI Differences
+
+```{r plot_tree_lai_deltas}
+if (do_lai) {
+    plt <- plotSpatialComparison(lai$comparisons$tree_lai,
+                                 ncol = settings$num_cols,
+                                 legend.title = expression(Delta~m^{"2"}~m^{"-2"}),
+                                 map.overlay = settings$map_overlay,
+                                 text.multiplier = settings$text_multiplier,
+                                 override.cols = rev(RColorBrewer::brewer.pal(11, "RdBu")),
+                                 title = "Tree LAI Biases",
+                                 subtitle = subtitle,
+                                 panel.bg.col = "white",
+                                 # fixme: these limits should not be necessary, and
+                                 # should be removed once this PR is merged:
+                                 # https://github.com/MagicForrest/DGVMTools/pull/92
+                                 limits = c(-2, 2))
+    print_plot(plt)
+}
+```
+
+### Grass LAI
+
+```{r plot_grass_lai}
+if (do_lai) {
+    plt <- plotSpatial(lai$maps,
+                       "grass_total",
+                       ncol = settings$num_cols,
+                       cols = cols,
+                       legend.title = expression(m^{"2"}~m^{"-2"}),
+                       title = "Grass LAI",
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Grass LAI Differences
+
+```{r plot_grass_lai_deltas}
+if (do_lai) {
+    plt <- plotSpatialComparison(lai$comparisons$grass_lai,
+                                 ncol = settings$num_cols,
+                                 legend.title = expression(Delta~m^{"2"}~m^{"-2"}),
+                                 map.overlay = settings$map_overlay,
+                                 text.multiplier = settings$text_multiplier,
+                                 override.cols = rev(RColorBrewer::brewer.pal(11, "RdBu")),
+                                 title = "Grass LAI Biases",
+                                 subtitle = subtitle,
+                                 panel.bg.col = "white",
+                                 # fixme: these limits should not be necessary, and
+                                 # should be removed once this PR is merged:
+                                 # https://github.com/MagicForrest/DGVMTools/pull/92
+                                 limits = c(-2, 2))
+    print_plot(plt)
+}
+```
+
+## PFT Distribution {.tabset}
+
+```{r plot_lai_dist, results = "asis"}
+if (do_lai) {
+    for (pft in c(grass_pfts, tree_pfts)) {
+        m <- max(sapply(lai$maps, \(l) ifelse(pft %in% names(l@data),
+                                              max(l@data[[pft]]),
+                                              0)))
+        if (m == 0) {
+            # This species has 0 LAI in all runs.
+            next()
+        }
+
+        # Emit title for this plot.
+        cat(paste0("### ", pft, "\n\n"))
+
+        # Emit plot.
+        plt <- plotSpatial(lai$maps,
+                           pft,
+                           ncol = settings$num_cols,
+                           cols = cols,
+                           legend.title = expression(m^{"2"}~m^{"-2"}),
+                           title = paste(pft, "LAI"),
+                           map.overlay = settings$map_overlay,
+                           text.multiplier = settings$text_multiplier,
+                           subtitle = subtitle)
+        print_plot(plt)
+
+        # Ensure the plot goes in its own paragraph.
+        cat("\n\n")
+    }
+}
+```
+
+## Grass Distribution {.tabset}
+
+### C4 Fraction
+
+```{r plot_c4_frac}
+if (do_lai) {
+    plt <- plotSpatial(lai$maps,
+                       "c4_frac",
+                       ncol = settings$num_cols,
+                       cols = cols,
+                       legend.title = expression(0-1),
+                       title = "C4 Fraction",
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+## {.unlisted .unnumbered}
+
+<a href="#top">Back to top</a>
+
+# GOSIF GPP
+
+```{r benchmark_gosif_gpp}
+if (do_gpp) {
+    gpp <- benchmark_gpp(params, settings, tables)
+    subtitle <- paste0(gpp$benchmark@first.year, "-", gpp$benchmark@last.year)
+    tables <- gpp$tables
+}
+```
+
+## Spatial patterns {.tabset}
+
+### Absolute Values
+
+```{r plot_gpp_absolute_values}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatial(gpp$maps,
+                       ncol = settings$num_cols,
+                       legend.title = expression(kg~C~m^{"-2"}~year^{"-1"}),
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       title = "Absolute GPP Values",
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Differences
+
+```{r plot_gpp_absolute_differences}
+if (do_gpp && settings$plot_maps) {
+    plot_absolute_deltas(gpp, settings)
+}
+```
+
+## Temporal Trends {.tabset}
+
+### Trend Value
+
+TODO: convert this plot to gC/m2 (and check units: are we really month^-2???)
+
+```{r plot_gpp_trend_values}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatial(gpp$trends,
+                       layers = "Trend",
+                       ncol = settings$num_cols,
+                       cols = rev(RColorBrewer::brewer.pal(11, "RdBu")),
+                    #    limits = c(-0.2, 0.2),
+                       drop.cuts = FALSE,
+                       title = "Trend in GPP",
+                       legend.title = expression(kg~C~m^{"-2"}~month^{"-2"}),
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Trend Significance
+
+```{r plot_gpp_trend_significance}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatial(gpp$trends
+                       , layers = "p.value"
+                       , ncol = settings$num_cols
+                       , cols = viridis::turbo(6)
+                       , cuts = c(0, 0.001, 0.01, 0.05, 0.1, 0.5, 1.0)
+                       , drop.cuts = FALSE
+                       , title = "Significance in GPP Trends"
+                       , legend.title = "p value"
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Trend Differences
+
+```{r plot_gpp_trend_differences}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(gpp$comparisons[["Trend"]]
+                                 , ncol = settings$num_cols
+                                 , drop.cuts = NULL
+                                 , title = "Difference Trend in GPP"
+                                 , legend.title = expression(kg~C~m^{"-2"}~month^{"-2"})
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Significant Trends
+
+```{r plot_gpp_significant_trends}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatial(gpp$trends
+                       , layers = "Significant_Trend"
+                       , ncol = settings$num_cols
+                       , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+                       , limits = c(-0.2, 0.2)
+                       , drop.cuts = FALSE
+                       , title = "Significant Trend in GPP (p-value < 0.05)"
+                       , legend.title = expression(kg~C~m^{"-2"}~month^{"-2"})
+                       , map.overlay = settings$map_overlay
+                       , text.multiplier = settings$text_multiplier
+                       , subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+## Seasonal Analysis {.tabset}
+
+Definition of seasonal concentration and phase follow Kelley *et al.* 2013. **Seasonal concentration** equals one if the variable is concentrated all in one month, and is zero if it is spread evenly across all months.  The **seasonal phase** is a measure of the peak of the season - it is not strictly the maximum monthly, but rather the average of all months when considering months as an angle in the complex plane.
+
+### Seasonal Phase
+
+```{r plot_gpp_seasonal_phase}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(gpp$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , type = "values"
+                                 , cuts = 0:12
+                                 , override.cols = pals::ocean.phase(12)
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , title = "Seasonal Phase GPP"
+                                 , subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Phase Differences
+
+```{r plot_gpp_phase_differences}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(gpp$comparisons[["Seasonal"]]
+                                 , do.phase = TRUE
+                                 , cuts = seq(-6, 6)
+                                 , symmetric.scale = FALSE
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Seasonal Concentration
+
+```{r plot_gpp_seasonal_concentration}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(gpp$comparisons[["Seasonal"]]
+                                 , type = "values"
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Concentration Differences
+
+```{r plot_gpp_concentration_differences}
+if (do_gpp && settings$plot_maps) {
+    plt <- plotSpatialComparison(gpp$comparisons[["Seasonal"]]
+                                 , ncol = settings$num_cols
+                                 , map.overlay = settings$map_overlay
+                                 , text.multiplier = settings$text_multiplier
+                                 , subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+## {.unlisted .unnumbered}
+
+<a href="#top">Back to top</a>
+
+***
+
+# Global Summary Tables
+
+## Data Comparisons
+
+TODO
+
+```{r global_summary}
+summary_table <- tables[["totals"]]
+```
+
+## Model-Data Agreement Metrics
+
+The coefficient of determination (R<sup>2</sup>), is the proportion of the variation in the dependent variable that is predictable from the independent variable(s). R<sup>2</sup> is unitless and is always between 0 and 1. An R<sup>2</sup> of 1 indicates a perfect fit between the predictions and observations.
+
+The Nash–Sutcliffe efficiency (NSE) is calculated as one minus the ratio of the error variance of the modeled time-series divided by the variance of the observed time-series. In the situation of a perfect model with an estimation error variance equal to zero, the resulting Nash–Sutcliffe Efficiency is 1. Conversely, a model that produces an estimation error variance equal to the variance of the observed time series results in a Nash–Sutcliffe efficiency of 0.0. NSE is unitless.
+
+The root mean square error (RMSE) is the quadratic mean of the differences between the observed values and predicted ones. RMSE is always non-negative, and a value of 0 would indicate a perfect fit to the data. RMSE is in the units of the variable being predicted.
+
+The normalised mean square error (NMSE) is the sum of the squares of the differences between the predicted and observed values, divided by the sum of the squares of the differences between the observed values and the mean of the observations.
+
+```{r global_metrics}
+format_metric_table(settings$metrics, tables$metrics)
+
+# TODO: save the table in each model run directory?
+# filename <- paste0("summary_metric_", version_label, ".RData")
+# for (simulation in settings$simulations) {
+#     saveRDS(metric_table, file.path(simulation@dir, filename))
+# }
+
+```
+
+# Timing
+Total run time:
+``` {r time}
+# report total run time
+toc()
+```

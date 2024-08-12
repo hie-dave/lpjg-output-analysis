@@ -5,7 +5,12 @@
 \title{Create an absolute values differenes plot panel for use in the tellaus
 benchmarks.}
 \usage{
-plot_absolute_deltas(comparisons, settings)
+plot_absolute_deltas(benchmark, settings)
+}
+\arguments{
+\item{benchmark}{Output of one of the benchmark_* functions.}
+
+\item{settings}{Benchmark settings as defined in tellaus.rmd.}
 }
 \value{
 A list of tags

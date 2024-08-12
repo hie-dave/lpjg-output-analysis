@@ -230,3 +230,157 @@ plot_absolute_values <- function(benchmark, settings, limits = NULL) {
     plt <- fix_xaxis_label_overlap(plt)
     return(plt)
 }
+
+#'
+#' Create a table of metrics.
+#'
+#' The table will have the following columns:
+#' - Dataset
+#' - Quantity
+#' - Simulation
+#'
+#' The table will have one column per metric and one row per simulation.
+#'
+#' @param benchmark A DGVMTools::Benchmark object containing metadata.
+#' @param comparison A list of DGVMTools::Comparison objects, typically the
+#' output of fullSpatialComparison()[["Values"]], or the output of sequential
+#' calls to CompareLayers(), concatenated into a single list.
+#' @param simulations A list of DGVMTools::Source objects.
+#' @param ndigit The number of decimal digits in the output table.
+#'
+#' @keywords internal
+#' @return A data table.
+#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+make_metric_table <- function(benchmark, comparisons, simulations, ndigit = 3) {
+
+    # Prepare the (empty) table of benchmarking metrics.
+    col_names <- c("Dataset", "Quantity", "Simulation", benchmark@metrics)
+
+    # Create one empty line.
+    empty_line <- as.list(rep("-", length(col_names)))
+    names(empty_line) <- col_names
+
+    # Create the output table.
+    metric_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+    for (dataset in benchmark@datasets) {
+        for (sim in simulations) {
+            # Get comparison name.
+            # FIXME: fragile
+            name <- paste(sim@name, "-", dataset@source@name)
+            if (!(name %in% names(comparisons))) {
+                warning("Comparison not found: ", name)
+                next()
+            }
+
+            line <- copy(empty_line)
+            # dataset is a Field object.
+            line$Dataset <- dataset@source@name
+
+            # benchmark is a Benchmark object.
+            line$Quantity <- benchmark@id
+
+            # sim is a Source object
+            line$Simulation <- sim@name
+
+            for (metric in benchmark@metrics) {
+                value <- comparisons[[name]]@stats[[metric]]
+                line[[metric]] <- signif(value, ndigit)
+            }
+
+            # Append row to table.
+            metric_table <- rbind(metric_table, data.frame(line))
+        }
+    }
+
+    names(metric_table) <- col_names
+    return(metric_table)
+}
+
+#'
+#' Get a colour representing the goodness of a metric value.
+#'
+#' @param metric Metric name (e.g. NSE, RMSE, etc).
+#' @param value Metric value.
+#'
+#' @return A colour representing the goodness of a particular value.
+#'
+#' @keywords internal
+#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#'
+get_colour <- function(metric, value) {
+    colour_good <- "green"
+    colour_avg <- "orange"
+    colour_bad <- "red"
+    if (is.na(value)) {
+        return("")
+    }
+    if (metric == "NSE") {
+        if (value > 0) {
+            return(colour_good)
+        }
+        return(colour_bad)
+    }
+    if (metric == "R^2^") {
+        if (value > 0.66) {
+            return(colour_good)
+        } else if (value > 0.33) {
+            return(colour_avg)
+        } else {
+            return(colour_bad)
+        }
+    }
+    if (metric == "RMSE") {
+        return("")
+    }
+    if (metric == "NMSE") {
+        if (value < 0.5) {
+            return(colour_good)
+        } else if (value < 1) {
+            return(colour_avg)
+        } else {
+            return(colour_bad)
+        }
+    }
+    stop("Unknown metric: ", metric)
+}
+
+#'
+#' Format a metric table.
+#'
+#' Colour code the metric values according to their goodess, add links to plots,
+#' etc.
+#'
+#' @param metrics Names of enabled metrics.
+#' @param metric_table The metric table.
+#'
+#' @return A kable table.
+#'
+#' @keywords internal
+#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @import knitr
+#' @import kableExtra
+#'
+format_metric_table <- function(metrics, metric_table) {
+    # TODO: refactor out the metrics argument. This could be determined by
+    # setdiff() with names(metric_table).
+    tbl <- kable(metric_table) %>% kable_styling(full_width = TRUE)
+    if (nrow(metric_table) > 0) {
+        names(metric_table) <- gsub("r2_eff", "NSE", names(metric_table))
+        names(metric_table) <- gsub("r2", "R^2^", names(metric_table))
+
+        # TODO: make use of these columns?
+        to_remove <- c("Data bootstrap", "Data mean", "Dataset ref.")
+        metric_table <- metric_table[, setdiff(names(metric_table), to_remove)]
+
+        for (metric in c(metrics, "NSE", "R^2^")) {
+            if (!metric %in% names(metric_table)) {
+                next()
+            }
+            i <- which(names(metric_table) == metric)
+            cols <- sapply(metric_table[[metric]], \(x) get_colour(metric, x))
+            tbl <- tbl %>% column_spec(i, color = cols)
+        }
+    }
+    return(tbl)
+}

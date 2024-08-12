@@ -11,9 +11,9 @@ params:
   new_name:
     value: "DAVE"
   old_directory:
-    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/trunk/grass"
+    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/dave/rootdist"
   old_name:
-    value: "GrassTrunk"
+    value: "DaveRootDist"
   data_directory:
     value: "/home/drew/code/lpj-guess/output-analysis/.data"
 ---
@@ -474,7 +474,7 @@ if (do_grass_dist && settings$plot_maps) {
 }
 ```
 
-### Trend Significances
+### Trend Significance
 
 ```{r grass_dist_plots_trend_significances}
 if (do_grass_dist && settings$plot_maps) {
