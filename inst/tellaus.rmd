@@ -22,7 +22,7 @@ params:
 
 ### Select which benchmarks to do
 do_bom_lai <- TRUE
-do_grass_dist <- TRUE
+do_grass_dist <- FALSE # TODO: download dave_lai.out.gz from gadi when it's back online; also backup all outputs onto hie-storage
 do_auseflux_gpp <- TRUE
 do_auseflux_nee <- TRUE
 do_auseflux_er <- TRUE
