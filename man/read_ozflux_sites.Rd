@@ -15,4 +15,3 @@ Get a list of all known ozflux sites.
 \author{
 Drew Holzworth
 }
-\keyword{internal}

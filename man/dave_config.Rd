@@ -4,13 +4,15 @@
 \alias{dave_config}
 \title{Configure ozflux versions.}
 \usage{
-dave_config(versions, log_level, warning_as_error)
+dave_config(versions, log_level, warning_as_error, log_file)
 }
 \arguments{
 \item{versions:}{A list of DGVMTools::version objects.}
 
 \item{log_level:}{Optional log level (0-4, default 2)
 (\seealso{\link{set_log_level}})}
+
+\item{log_file:}{Log file to be used. Empty string or NULL means stdout.}
 
 \item{warning_as_error:}{Treat warnings as errors (FALSE by default)}
 }

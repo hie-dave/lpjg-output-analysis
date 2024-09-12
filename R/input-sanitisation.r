@@ -22,7 +22,7 @@ call_foreach <- function(x, fun, ignore_null = TRUE) {
 #'
 #' @return Data table containing three columns: Lon, lat, Name.
 #' @author Drew Holzworth
-#' @keywords internal
+#' @export
 #'
 read_ozflux_sites <- function() {
 	if (is.null(get_global("ozflux_sites"))) {
