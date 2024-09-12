@@ -9,9 +9,9 @@ output:
 
 ```{r settings, echo = FALSE}
 
-new_repo <- "/home/drew/code/lpj-guess/dave"
+new_directory <- "/home/drew/code/lpj-guess/dave"
 new_name <- "DAVE"
-old_directory <- "/home/drew/code/lpj-guess/dave3"
+old_directory <- "/home/drew/code/lpj-guess/dave2"
 old_name <- "Trunk"
 data_directory <- "/home/drew/code/lpj-guess/output-analysis/.data"
 
@@ -114,8 +114,8 @@ theme_set(theme_bw())
 src_new <- defineSource(name = new_name,
                         dir = new_directory,
                         format = GUESS)
-src_old <- defineSource(name = params$old_name,
-                        dir = params$old_directory,
+src_old <- defineSource(name = old_name,
+                        dir = old_directory,
                         format = GUESS)
 
 # src_new should ideally be first for best spatial aggregation of data.
