@@ -167,7 +167,7 @@ read_data <- function(
 	# }
 
 	data <- NULL
-	verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
+	verbose <- FALSE
 	nvar <- length(vars)
 	original_layer <- layers
 
