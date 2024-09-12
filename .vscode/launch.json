@@ -86,7 +86,8 @@
 			"includePackageScopes": true,
 			"loadPackages": [
 				".",
-				"../../dgvmtools"
+				"../../dgvmtools",
+				"../../ncdf4"
 			]
 		},
 		{
