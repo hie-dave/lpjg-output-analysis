@@ -135,7 +135,9 @@ ozflux_benchmarks <- function(
 		bias[[lyr_name]] <- rep(NA, nrow(sites))
 
 		data <- read_data(list(var), sources)
+		iter <- 0
 		for (i in seq_len(nrow(sites))) {
+			iter <- iter + 1
 			row <- sites[i, ]
 			log_debug("[", var@name, "] Processing site ", row$Name, "...")
 
