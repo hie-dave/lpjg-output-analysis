@@ -75,7 +75,7 @@ ozflux_benchmarks <- function(
 	write_progress <- is_installed("knitrProgressBar")
 	log_debug("Write_progress = ", write_progress)
 	if (write_progress) {
-		log_debug("Initialising progress bar...")
+		log_debug("Initialising progress bar with num ticks = ", nrow(sites) * length(vars), "...")
 		p <- knitrProgressBar::progress_estimated(nrow(sites) * length(vars))
 		knitrProgressBar::update_progress(p)
 	}
@@ -124,7 +124,7 @@ ozflux_benchmarks <- function(
 			print(plt)
 		}
 	}
-
+	tick <- 0
 	for (var in vars) {
 		lyr_name <- gsub("dave_", "", var@id)
 
@@ -155,6 +155,8 @@ ozflux_benchmarks <- function(
 					pvo_plots[[length(pvo_plots) + 1L]] <- NA
 					subannual_plots[[length(subannual_plots) + 1L]] <- NA
 				}
+				tick <- tick + 1
+				log_debug("tick = ", tick)
 				p$tick()
 				next
 			}
@@ -188,8 +190,8 @@ ozflux_benchmarks <- function(
 				if (iter >= 350) {
 					stop("Error: iter=", iter, ". This should not exceed max iter of ", nrow(sites) * length(vars))
 				}
-				p$tick()
-				knitrProgressBar::update_progress(p)
+				# p$tick()
+				# knitrProgressBar::update_progress(p)
 			}
 		}
 	}
