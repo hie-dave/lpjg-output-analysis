@@ -9,10 +9,10 @@
 get_vars <- function() {
 	return(list(
 	  DGVMTools::defineQuantity("dave_gpp", "GPP", "gC m^-2 day^-1")
-	, DGVMTools::defineQuantity("dave_resp", "Respiration", "gC m^-2 day^-1")
-	, DGVMTools::defineQuantity("dave_nee", "NEE", "gC m^-2 day^-1")
-	, DGVMTools::defineQuantity("dave_transpiration", "ET", "mm day^-1")
-	, DGVMTools::defineQuantity("dave_lai", "LAI", "m^2 m^-2")
+	# , DGVMTools::defineQuantity("dave_resp", "Respiration", "gC m^-2 day^-1")
+	# , DGVMTools::defineQuantity("dave_nee", "NEE", "gC m^-2 day^-1")
+	# , DGVMTools::defineQuantity("dave_transpiration", "ET", "mm day^-1")
+	# , DGVMTools::defineQuantity("dave_lai", "LAI", "m^2 m^-2")
 	# , defineQuantity("cmass", "AboveGround Biomass", "kgC/m2")
 	))
 }

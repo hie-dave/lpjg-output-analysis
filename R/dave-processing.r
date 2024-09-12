@@ -312,7 +312,7 @@ get_observed_vars <- function() {
 	  DGVMTools::defineQuantity("gpp", "GPP", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("resp", "Respiration", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("nee", "NEE", "gC m^-2 day^-1")
-	, DGVMTools::defineQuantity("et", "ET", "mm day^-1")
+	, DGVMTools::defineQuantity("transpiration", "ET", "mm day^-1")
 	, DGVMTools::defineQuantity("lai", "LAI", "m^2 m^-2")
 	# , defineQuantity("cmass", "AboveGround Biomass", "kgC/m2")
 	))
