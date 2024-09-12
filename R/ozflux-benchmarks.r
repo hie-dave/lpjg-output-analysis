@@ -219,25 +219,25 @@ ozflux_benchmarks <- function(
 	bias_desc <- "The bias is the mean difference between the predictions and observations. This is in the units of the variable."
 
 	# Write tables.
-	# write_title("r<sup>2</sup>", 1, force_print = TRUE)
-	# write_paragraph(r2_desc)
-	# write_table(r2, "R^2^")
+	write_title("r<sup>2</sup>", 1, force_print = TRUE)
+	write_paragraph(r2_desc)
+	write_table(r2, "R^2^")
 
-	# write_title("rmse", 1, force_print = TRUE)
-	# write_paragraph(rmse_desc)
-	# write_table(rmse)
+	write_title("rmse", 1, force_print = TRUE)
+	write_paragraph(rmse_desc)
+	write_table(rmse)
 
-	# write_title("nse", 1, force_print = TRUE)
-	# write_paragraph(nse_desc)
-	# write_table(nse, "NSE")
+	write_title("nse", 1, force_print = TRUE)
+	write_paragraph(nse_desc)
+	write_table(nse, "NSE")
 
-	# write_title("rsr", 1, force_print = TRUE)
-	# write_paragraph(rsr_desc)
-	# write_table(rsr, "NMSE")
+	write_title("rsr", 1, force_print = TRUE)
+	write_paragraph(rsr_desc)
+	write_table(rsr, "NMSE")
 
-	# write_title("bias", 1, force_print = TRUE)
-	# write_paragraph(bias_desc)
-	# write_table(bias)
+	write_title("bias", 1, force_print = TRUE)
+	write_paragraph(bias_desc)
+	write_table(bias)
 
 	# Write graphs by site.
 	for (i in seq_len(nrow(sites))) {
