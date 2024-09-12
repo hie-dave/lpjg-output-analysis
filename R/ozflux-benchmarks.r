@@ -181,14 +181,29 @@ ozflux_benchmarks <- function(
 			}
 
 			if (write_progress) {
+				if (iter >= 350) {
+					stop("Error: iter=", iter, ". This should not exceed max iter of ", nrow(sites) * length(vars))
+				}
 				p$tick()
 				knitrProgressBar::update_progress(p)
 			}
 		}
 	}
 
-	write_table <- function(tbl) {
-		print(knitr::kable(tbl, digits = 2))
+	write_table <- function(tbl, metric = NULL) {
+		result <- knitr::kable(tbl, digits = 2)
+		if (!is.null(metric)) {
+			cols <- setdiff(names(tbl), "Site")
+			for (i in seq_len(ncol(tbl))) {
+				column <- names(tbl)[i]
+				if (column == "Site") {
+					next()
+				}
+				colours <- sapply(tbl[[column]], \(x) get_colour(metric, x))
+				result <- result %>% column_spec(i, color = colours)
+			}
+		}
+		print(result)
 	}
 
 	r2_desc <- "The coefficient of determination (r<sup>2</sup>) is the proportion of the variation in the dependent variable that is predictable from the independent variable(s). This is unitless and ranges from 0-1."
@@ -198,25 +213,25 @@ ozflux_benchmarks <- function(
 	bias_desc <- "The bias is the mean difference between the predictions and observations. This is in the units of the variable."
 
 	# Write tables.
-	write_title("r<sup>2</sup>", 1, force_print = TRUE)
-	write_paragraph(r2_desc)
-	write_table(r2)
+	# write_title("r<sup>2</sup>", 1, force_print = TRUE)
+	# write_paragraph(r2_desc)
+	# write_table(r2, "R^2^")
 
-	write_title("rmse", 1, force_print = TRUE)
-	write_paragraph(rmse_desc)
-	write_table(rmse)
+	# write_title("rmse", 1, force_print = TRUE)
+	# write_paragraph(rmse_desc)
+	# write_table(rmse)
 
-	write_title("nse", 1, force_print = TRUE)
-	write_paragraph(nse_desc)
-	write_table(nse)
+	# write_title("nse", 1, force_print = TRUE)
+	# write_paragraph(nse_desc)
+	# write_table(nse, "NSE")
 
-	write_title("rsr", 1, force_print = TRUE)
-	write_paragraph(rsr_desc)
-	write_table(rsr)
+	# write_title("rsr", 1, force_print = TRUE)
+	# write_paragraph(rsr_desc)
+	# write_table(rsr, "NMSE")
 
-	write_title("bias", 1, force_print = TRUE)
-	write_paragraph(bias_desc)
-	write_table(bias)
+	# write_title("bias", 1, force_print = TRUE)
+	# write_paragraph(bias_desc)
+	# write_table(bias)
 
 	# Write graphs by site.
 	for (i in seq_len(nrow(sites))) {

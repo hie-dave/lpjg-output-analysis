@@ -10,7 +10,8 @@ get_field_ozflux(
   layers = NULL,
   target_stainfo,
   file_name,
-  sites,
+  verbose,
+  sites = NULL,
   ...
 )
 }

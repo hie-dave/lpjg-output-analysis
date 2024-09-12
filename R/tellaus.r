@@ -313,7 +313,7 @@ get_colour <- function(metric, value) {
     colour_avg <- "orange"
     colour_bad <- "red"
     if (is.na(value)) {
-        return("")
+        return("black")
     }
     if (metric == "NSE") {
         if (value > 0) {

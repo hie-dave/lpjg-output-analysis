@@ -231,8 +231,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
 
     if (do_timeseries) {
         timeseries <- plot_timeseries(gc, ylim, text_multiplier)
-        timeseries <- timeseries + ggplot2::labs(title = NULL) + ggpubr::rremove("xlab")
-        
+        timeseries <- trim_ggplot(timeseries, xlab = TRUE)
         if (use_plotly) {
             timeseries <- to_plotly(timeseries, ylab)
         }
@@ -240,7 +239,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     }
     if (do_pvo) {
         pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size)
-        pvo <- pvo + ggpubr::rremove("ylab")
+        pvo <- trim_ggplot(pvo, xlab = TRUE)
         if (use_plotly) {
             pvo <- to_plotly(pvo, ylab)
         }
@@ -248,6 +247,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     }
     if (do_subannual) {
         subannual <- plot_subannual(gc, ylim, text_multiplier)
+        subannual <- trim_ggplot(subannual, xlab = TRUE)
         if (use_plotly) {
             subannual <- to_plotly(subannual, ylab)
         }

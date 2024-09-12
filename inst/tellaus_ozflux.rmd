@@ -1,0 +1,188 @@
+---
+title: "TellAus-Trunk Benchmark Report for LPJ-GUESS DAVE"
+author: "Drew Holzworth"
+date: '`r strftime(Sys.time(), format = "%B %d, %Y")`'
+output:
+ html_document:
+  toc: true
+---
+
+```{r settings, echo = FALSE}
+
+new_repo <- "/home/drew/code/lpj-guess/dave"
+new_name <- "DAVE"
+old_directory <- "/home/drew/code/lpj-guess/dave3"
+old_name <- "Trunk"
+data_directory <- "/home/drew/code/lpj-guess/output-analysis/.data"
+
+do_lai <- TRUE
+
+# GOSIF GPP
+do_gpp <- TRUE
+
+# Set this to true to enable verbose debugging output.
+debug <- FALSE
+
+# kable options
+opts <- options(knitr.kable.NA = "")
+
+# knitr options
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      out.width = "100%",
+                      fig.height = 7,
+                      warning = debug)
+
+# Global script parameters.
+settings <- list(
+    data_path = "/home/drew/code/lpj-guess/output-analysis/.data",
+
+    analysis_version = "tellme_dave  v0.1",
+
+    # True to enable plotting of gridded outputs (ie maps).
+    plot_maps = TRUE,
+
+    # True to render maps via plotly. This *does* work, but it results in large
+    # files, slow load times, slow rendering, and the plots are not really much
+    # more useful than static images.
+    render_plotly = FALSE,
+
+    # Spatial extent for which data will be plotted. This can be:
+    # - raster::extent
+    # - two-column data.frame of gridcells
+    # - NULL (to plot the entire spatial extent of the data)
+    spatial_extent = NULL,
+
+    # String used to describe the spatial subset.
+    spatial_extent_id = "Australia",
+
+    # Plot formatting arguments.
+    map_overlay = "coastlines",
+
+    # ME (Mean Error)
+    # NME (Normalised Mean Error)
+    # NMSE (Normalised Mean Square Error)
+    # RMSE (Root Mean Squared Error)
+    # NME_2 (NME with mean removed)
+    # NMSE_2 (NMSE with mean removed)
+    # NME_3 (NME with mean and variance removed)
+    # NMSE_3 (NMSE with mean and variance removed)
+    # r2_eff (Nash-Sutcliffe Model Efficiency)
+    # r2 (Coefficient of Determination)
+    # r (Pearson's PMCC)
+    # m (gradient of linear fit mod = m * obs + c)
+    # c (intercept of linear fit mod = m * obs + c)
+    metrics = c("RMSE", "r2_eff", "r2", "NMSE"),
+
+    text_multiplier = 2.5,
+
+    annotation_text_size = 7,
+
+    # Number of columns in which plots will be rendered.
+    num_cols = 2,
+
+    # Coordinates at which metrics/annotations will be rendered on maps.
+    stats_lon = 125,
+    stats_lat = -38,
+
+    # The two time periods used for comparison of C3/C4 grass distribution.
+    # The first time period is defined by the first two numbers.
+    # The second time period is defined by the third and fourth numbers.
+    grass_dist_years = c(1980, 1989, 2013, 2022),
+
+    # The sites to be benchmarked. NULL means all sites.
+    sites = NULL
+)
+```
+
+```{r setup, include = FALSE}
+library("DGVMTools")
+library("DGVMBenchmarks")
+library("daveanalysis")
+library("ggpubr")
+library("ggplot2")
+library("dplyr")
+
+if (settings$render_plotly) {
+    library("plotly")
+}
+
+# Set ggplot theme.
+theme_set(theme_bw())
+
+# Create DGVMTools source objects for the run directories.
+src_new <- defineSource(name = new_name,
+                        dir = new_directory,
+                        format = GUESS)
+src_old <- defineSource(name = params$old_name,
+                        dir = params$old_directory,
+                        format = GUESS)
+
+# src_new should ideally be first for best spatial aggregation of data.
+# (See below functions aggregate_to*())
+# settings$simulations <- list(src_new, src_old, src_mingkai, src_shrub)
+settings$simulations <- list(src_new, src_old)
+
+if (is.null(settings$sites)) {
+    settings$sites <- read_ozflux_sites()$Name
+}
+
+# This helps RMarkdown locate fonts on some systems.
+library("showtext")
+showtext_auto()
+
+# In debug mode, use log level 4 (all messages). Otherwise, use log level 1
+# (warnings/errors only).
+log_level <- ifelse(debug, 4, 1)
+dave_config(log_level = log_level)
+
+# PFT names, used for calculation of tree/grass fraction, etc.
+c3_grasses <- c("C3G_perennial", "C3G_annual")
+c4_grasses <- c("C4G_perennial", "C4G_annual")
+grass_pfts <- c(c3_grasses, c4_grasses)
+shrub_pfts <- c("BLSE", "BLSS")
+tree_pfts <- c("BNE", "BINE", "BNS", "TeNE", "TeBS", "IBS", "TeBE", "TrBE", "TrIBE", "TrBR")
+# Trees are implicitly everything else.
+
+version_label <- paste(settings$analysis_version, settings$spatial_extent_id
+                       , sep = "_")
+
+# Prepare empty summary table of global numbers.
+summary_col_names <- c("Quantity", "Unit")
+for (simulation in settings$simulations) {
+    summary_col_names <- append(summary_col_names, simulation@name)
+}
+summary_col_names <- append(summary_col_names
+                            , c("Data", "Dataset", "Dataset ref."))
+settings$summary_col_names <- summary_col_names
+
+summary_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+# This table is completely empty; it will by built benchmark by benchmark.
+metric_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+# This list contains tables that gets passed in and out of each benchmark.
+tables <- list(
+    totals = summary_table,
+    metrics = metric_table
+)
+
+# Fix overlapping x-axis labels by removing the overlapping labels.
+fix_xaxis_label_overlap <- function(plt) {
+    xlim <- layer_scales(plt)$x$get_limits()
+    guide <- guide_axis(check.overlap = TRUE)
+    return(plt + scale_x_continuous(guide = guide, limits = xlim))
+}
+print_plot <- function(plt) {
+    plt <- fix_xaxis_label_overlap(plt)
+    if (settings$render_plotly) {
+        plt <- ggplotly(plt)
+        htmltools::tagList(plt)
+    } else {
+        print(plt)
+    }
+}
+
+# Start timer.
+tic()
+```
