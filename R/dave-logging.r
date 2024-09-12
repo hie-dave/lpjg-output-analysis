@@ -6,6 +6,7 @@ set_global("LOG_LEVEL_DIAGNOSTIC", 3)
 set_global("LOG_LEVEL_DEBUG", 4)
 
 set_global("log_level", get_global("LOG_LEVEL_INFORMATION"))
+set_global("log_file", "")
 set_global("warning_as_error", FALSE)
 
 #'
@@ -60,7 +61,8 @@ write_log_message <- function(..., level) {
 		pfx <- paste0("[", timestr, " ", l, "] ")
 		msg <- paste0(...)
 		msg <- gsub("\n", paste0("\n", pfx), msg)
-		cat(paste0(pfx, msg, "\n"))
+		file = get_global("log_file")
+		cat(paste0(pfx, msg, "\n"), file = file, append = TRUE)
 	}
 }
 
