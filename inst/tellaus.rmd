@@ -117,7 +117,7 @@ showtext_auto()
 # In debug mode, use log level 4 (all messages). Otherwise, use log level 1
 # (warnings/errors only).
 log_level <- ifelse(debug, 4, 1)
-dave_config(log_level = log_level)
+dave_config(log_level = log_level, log_file = "daveanalysis.log")
 
 # Start timer.
 tic()
