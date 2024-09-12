@@ -20,10 +20,7 @@ dave_config <- function(versions, log_level, warning_as_error, log_file) {
 	}
 
 	if (!missing(log_file)) {
-		if (is.null(log_file)) {
-			log_file <- ""
-		}
-		set_global("log_file", log_file)
+		set_log_file(log_file)
 	}
 
 	# Set whether warnings should be treated as errors.

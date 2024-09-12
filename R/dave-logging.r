@@ -30,6 +30,26 @@ set_log_level <- function(level) {
 	log_debug("Successfully set log level to ", level)
 }
 
+#'
+#' Set the log file used by daveanalysis logging functions.
+#'
+#' If this includes a directory component, the parent directory must exist.
+#' The log file will not be truncated.
+#'
+#' @param file The file to which log messages will be written.
+#' @author Drew Holzworth
+#' @export
+#'
+set_log_file <- function(file) {
+	if (is.null(file)) {
+		log_debug("Was provided a NULL log file")
+		file <- ""
+	}
+	log_debug("Setting log_file to '", file, "'")
+	set_global("log_file", file)
+	log_debug("Successfully set log file to '", get_global("log_file"), "'")
+}
+
 set_warning_as_error <- function(value) {
 	if (value == TRUE) {
 		set_global("warning_as_error", TRUE)
