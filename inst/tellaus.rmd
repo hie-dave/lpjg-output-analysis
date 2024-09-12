@@ -190,7 +190,7 @@ data, what to look for in the benchmark, etc.
 
 ```{r luigi_lai}
 if (do_bom_lai) {
-    bom_lai <- benchmark_bom_lai(settings, params, tables)
+    bom_lai <- benchmark_lai(settings, params, tables)
     tables <- bom_lai$tables
 
     first_year <- bom_lai$benchmark@first.year
