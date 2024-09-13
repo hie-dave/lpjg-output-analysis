@@ -11,7 +11,7 @@ get_vars <- function() {
 	  DGVMTools::defineQuantity("dave_gpp", "GPP", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("dave_resp", "Respiration", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("dave_nee", "NEE", "gC m^-2 day^-1")
-	, DGVMTools::defineQuantity("dave_transpiration", "ET", "mm day^-1")
+	, DGVMTools::defineQuantity("dave_transpiration", "Transpiration", "mm day^-1")
 	, DGVMTools::defineQuantity("dave_lai", "LAI", "m^2 m^-2")
 	# Note: cmass.out currently doesn't work due to some pfts' names being
 	# longer than the amount of space allocated to the pft columns.
@@ -51,6 +51,7 @@ is_installed <- function(pkg) {
 #'
 ozflux_benchmarks <- function(
 	sources,
+	source_descriptions,
 	use_plotly = FALSE,
 	text_multiplier = 1.5,
 	combined_graph = TRUE,
@@ -250,6 +251,23 @@ ozflux_benchmarks <- function(
 	rmse_desc <- "The root mean square error (RMSE) of a sample is the quadratic mean of the differences between the observed values and predicted ones. This is in the units of the variable."
 	rsr_desc <- "The root mean square error to standard deviation ratio is the RMSE normalised by the standard deviation of the observations. This is unitless"
 	bias_desc <- "The bias is the mean difference between the predictions and observations. This is in the units of the variable."
+
+	# Write source descriptions.
+	if (length(sources) != length(source_descriptions)) {
+		stop("Number of sources (", length(sources), ") does not match number of source descriptions (", length(source_descriptions), ")")
+	}
+	write_title("Description", 1)
+	write_paragraph("The predictions used to generate these benchmarks come from the following sources:")
+	for (i in seq_along(sources)) {
+		src <- sources[[i]]
+		desc <- source_descriptions[[i]]
+		text <- paste0("**", src@name, "**: ", desc)
+		write_paragraph(text)
+	}
+
+	write_paragraph("**TODO**: Add description of observed data sources!!")
+	write_paragraph("**TODO**: Observed ET is evapotranspiration, observations are dave_transpiration.out which is just transpiration.")
+	write_paragraph("**TODO**: What is going on with CumberlandPlain?")
 
 	# Write tables.
 	write_title("Metrics", 1, tabset = TRUE, force_print = TRUE)
