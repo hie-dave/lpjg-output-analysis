@@ -1,0 +1,170 @@
+\contentsline {section}{r2}{7}{section*.2}%
+\contentsline {section}{rmse}{8}{section*.3}%
+\contentsline {section}{nse}{9}{section*.4}%
+\contentsline {section}{rsr}{10}{section*.5}%
+\contentsline {section}{bias}{11}{section*.6}%
+\contentsline {section}{AdelaideRiver}{13}{section*.7}%
+\contentsline {subsection}{AdelaideRiver GPP}{13}{section*.8}%
+\contentsline {subsection}{AdelaideRiver Respiration}{14}{section*.9}%
+\contentsline {subsection}{AdelaideRiver NEE}{15}{section*.10}%
+\contentsline {subsection}{AdelaideRiver ET}{16}{section*.11}%
+\contentsline {subsection}{AdelaideRiver LAI}{17}{section*.12}%
+\contentsline {section}{AliceSpringsMulga}{18}{section*.13}%
+\contentsline {subsection}{AliceSpringsMulga GPP}{18}{section*.14}%
+\contentsline {subsection}{AliceSpringsMulga Respiration}{19}{section*.15}%
+\contentsline {subsection}{AliceSpringsMulga NEE}{20}{section*.16}%
+\contentsline {subsection}{AliceSpringsMulga ET}{21}{section*.17}%
+\contentsline {subsection}{AliceSpringsMulga LAI}{22}{section*.18}%
+\contentsline {section}{Boyagin}{23}{section*.19}%
+\contentsline {subsection}{Boyagin GPP}{23}{section*.20}%
+\contentsline {subsection}{Boyagin Respiration}{24}{section*.21}%
+\contentsline {subsection}{Boyagin NEE}{25}{section*.22}%
+\contentsline {subsection}{Boyagin LAI}{26}{section*.23}%
+\contentsline {section}{Calperum}{27}{section*.24}%
+\contentsline {subsection}{Calperum GPP}{27}{section*.25}%
+\contentsline {subsection}{Calperum Respiration}{28}{section*.26}%
+\contentsline {subsection}{Calperum NEE}{29}{section*.27}%
+\contentsline {subsection}{Calperum LAI}{30}{section*.28}%
+\contentsline {section}{CapeTribulation}{31}{section*.29}%
+\contentsline {subsection}{CapeTribulation GPP}{31}{section*.30}%
+\contentsline {subsection}{CapeTribulation Respiration}{32}{section*.31}%
+\contentsline {subsection}{CapeTribulation NEE}{33}{section*.32}%
+\contentsline {subsection}{CapeTribulation LAI}{34}{section*.33}%
+\contentsline {section}{Collie}{35}{section*.34}%
+\contentsline {subsection}{Collie GPP}{35}{section*.35}%
+\contentsline {subsection}{Collie Respiration}{36}{section*.36}%
+\contentsline {subsection}{Collie NEE}{37}{section*.37}%
+\contentsline {subsection}{Collie LAI}{38}{section*.38}%
+\contentsline {section}{CowBay}{39}{section*.39}%
+\contentsline {subsection}{CowBay GPP}{39}{section*.40}%
+\contentsline {subsection}{CowBay Respiration}{40}{section*.41}%
+\contentsline {subsection}{CowBay NEE}{41}{section*.42}%
+\contentsline {subsection}{CowBay LAI}{42}{section*.43}%
+\contentsline {section}{CumberlandPlain}{43}{section*.44}%
+\contentsline {subsection}{CumberlandPlain LAI}{43}{section*.45}%
+\contentsline {section}{DalyPasture}{44}{section*.46}%
+\contentsline {subsection}{DalyPasture GPP}{44}{section*.47}%
+\contentsline {subsection}{DalyPasture Respiration}{45}{section*.48}%
+\contentsline {subsection}{DalyPasture NEE}{46}{section*.49}%
+\contentsline {subsection}{DalyPasture LAI}{47}{section*.50}%
+\contentsline {section}{DalyUncleared}{48}{section*.51}%
+\contentsline {subsection}{DalyUncleared GPP}{48}{section*.52}%
+\contentsline {subsection}{DalyUncleared Respiration}{49}{section*.53}%
+\contentsline {subsection}{DalyUncleared NEE}{50}{section*.54}%
+\contentsline {subsection}{DalyUncleared LAI}{51}{section*.55}%
+\contentsline {section}{DryRiver}{52}{section*.56}%
+\contentsline {subsection}{DryRiver GPP}{52}{section*.57}%
+\contentsline {subsection}{DryRiver Respiration}{53}{section*.58}%
+\contentsline {subsection}{DryRiver NEE}{54}{section*.59}%
+\contentsline {subsection}{DryRiver LAI}{55}{section*.60}%
+\contentsline {section}{Emerald}{56}{section*.61}%
+\contentsline {subsection}{Emerald GPP}{56}{section*.62}%
+\contentsline {subsection}{Emerald Respiration}{57}{section*.63}%
+\contentsline {subsection}{Emerald NEE}{58}{section*.64}%
+\contentsline {subsection}{Emerald LAI}{59}{section*.65}%
+\contentsline {section}{FoggDam}{60}{section*.66}%
+\contentsline {subsection}{FoggDam GPP}{60}{section*.67}%
+\contentsline {subsection}{FoggDam Respiration}{61}{section*.68}%
+\contentsline {subsection}{FoggDam NEE}{62}{section*.69}%
+\contentsline {subsection}{FoggDam LAI}{63}{section*.70}%
+\contentsline {section}{Gingin}{64}{section*.71}%
+\contentsline {subsection}{Gingin GPP}{64}{section*.72}%
+\contentsline {subsection}{Gingin Respiration}{65}{section*.73}%
+\contentsline {subsection}{Gingin NEE}{66}{section*.74}%
+\contentsline {subsection}{Gingin LAI}{67}{section*.75}%
+\contentsline {section}{GreatWesternWoodlands}{68}{section*.76}%
+\contentsline {subsection}{GreatWesternWoodlands GPP}{68}{section*.77}%
+\contentsline {subsection}{GreatWesternWoodlands Respiration}{69}{section*.78}%
+\contentsline {subsection}{GreatWesternWoodlands NEE}{70}{section*.79}%
+\contentsline {subsection}{GreatWesternWoodlands LAI}{71}{section*.80}%
+\contentsline {section}{HowardSprings}{72}{section*.81}%
+\contentsline {subsection}{HowardSprings GPP}{72}{section*.82}%
+\contentsline {subsection}{HowardSprings Respiration}{73}{section*.83}%
+\contentsline {subsection}{HowardSprings NEE}{74}{section*.84}%
+\contentsline {subsection}{HowardSprings LAI}{75}{section*.85}%
+\contentsline {section}{Litchfield}{76}{section*.86}%
+\contentsline {subsection}{Litchfield GPP}{76}{section*.87}%
+\contentsline {subsection}{Litchfield Respiration}{77}{section*.88}%
+\contentsline {subsection}{Litchfield NEE}{78}{section*.89}%
+\contentsline {subsection}{Litchfield LAI}{79}{section*.90}%
+\contentsline {section}{Longreach}{80}{section*.91}%
+\contentsline {subsection}{Longreach GPP}{80}{section*.92}%
+\contentsline {subsection}{Longreach Respiration}{81}{section*.93}%
+\contentsline {subsection}{Longreach NEE}{82}{section*.94}%
+\contentsline {subsection}{Longreach LAI}{83}{section*.95}%
+\contentsline {section}{Otway}{84}{section*.96}%
+\contentsline {subsection}{Otway GPP}{84}{section*.97}%
+\contentsline {subsection}{Otway Respiration}{85}{section*.98}%
+\contentsline {subsection}{Otway NEE}{86}{section*.99}%
+\contentsline {subsection}{Otway LAI}{87}{section*.100}%
+\contentsline {section}{RedDirtMelonFarm}{88}{section*.101}%
+\contentsline {subsection}{RedDirtMelonFarm GPP}{88}{section*.102}%
+\contentsline {subsection}{RedDirtMelonFarm Respiration}{89}{section*.103}%
+\contentsline {subsection}{RedDirtMelonFarm NEE}{90}{section*.104}%
+\contentsline {subsection}{RedDirtMelonFarm LAI}{91}{section*.105}%
+\contentsline {section}{Ridgefield}{92}{section*.106}%
+\contentsline {subsection}{Ridgefield GPP}{92}{section*.107}%
+\contentsline {subsection}{Ridgefield Respiration}{93}{section*.108}%
+\contentsline {subsection}{Ridgefield NEE}{94}{section*.109}%
+\contentsline {subsection}{Ridgefield LAI}{95}{section*.110}%
+\contentsline {section}{RiggsCreek}{96}{section*.111}%
+\contentsline {subsection}{RiggsCreek GPP}{96}{section*.112}%
+\contentsline {subsection}{RiggsCreek Respiration}{97}{section*.113}%
+\contentsline {subsection}{RiggsCreek NEE}{98}{section*.114}%
+\contentsline {subsection}{RiggsCreek LAI}{99}{section*.115}%
+\contentsline {section}{RobsonCreek}{100}{section*.116}%
+\contentsline {subsection}{RobsonCreek GPP}{100}{section*.117}%
+\contentsline {subsection}{RobsonCreek Respiration}{101}{section*.118}%
+\contentsline {subsection}{RobsonCreek NEE}{102}{section*.119}%
+\contentsline {subsection}{RobsonCreek LAI}{103}{section*.120}%
+\contentsline {section}{Samford}{104}{section*.121}%
+\contentsline {subsection}{Samford GPP}{104}{section*.122}%
+\contentsline {subsection}{Samford Respiration}{105}{section*.123}%
+\contentsline {subsection}{Samford NEE}{106}{section*.124}%
+\contentsline {subsection}{Samford LAI}{107}{section*.125}%
+\contentsline {section}{SilverPlains}{108}{section*.126}%
+\contentsline {subsection}{SilverPlains GPP}{108}{section*.127}%
+\contentsline {subsection}{SilverPlains Respiration}{109}{section*.128}%
+\contentsline {subsection}{SilverPlains NEE}{110}{section*.129}%
+\contentsline {subsection}{SilverPlains LAI}{111}{section*.130}%
+\contentsline {section}{SturtPlains}{112}{section*.131}%
+\contentsline {subsection}{SturtPlains GPP}{112}{section*.132}%
+\contentsline {subsection}{SturtPlains Respiration}{113}{section*.133}%
+\contentsline {subsection}{SturtPlains NEE}{114}{section*.134}%
+\contentsline {subsection}{SturtPlains LAI}{115}{section*.135}%
+\contentsline {section}{TiTreeEast}{116}{section*.136}%
+\contentsline {subsection}{TiTreeEast GPP}{116}{section*.137}%
+\contentsline {subsection}{TiTreeEast Respiration}{117}{section*.138}%
+\contentsline {subsection}{TiTreeEast NEE}{118}{section*.139}%
+\contentsline {subsection}{TiTreeEast ET}{119}{section*.140}%
+\contentsline {subsection}{TiTreeEast LAI}{120}{section*.141}%
+\contentsline {section}{Tumbarumba}{121}{section*.142}%
+\contentsline {subsection}{Tumbarumba GPP}{121}{section*.143}%
+\contentsline {subsection}{Tumbarumba Respiration}{122}{section*.144}%
+\contentsline {subsection}{Tumbarumba NEE}{123}{section*.145}%
+\contentsline {subsection}{Tumbarumba LAI}{124}{section*.146}%
+\contentsline {section}{WallabyCreek}{125}{section*.147}%
+\contentsline {subsection}{WallabyCreek GPP}{125}{section*.148}%
+\contentsline {subsection}{WallabyCreek Respiration}{126}{section*.149}%
+\contentsline {subsection}{WallabyCreek NEE}{127}{section*.150}%
+\contentsline {subsection}{WallabyCreek LAI}{128}{section*.151}%
+\contentsline {section}{Warra}{129}{section*.152}%
+\contentsline {subsection}{Warra GPP}{129}{section*.153}%
+\contentsline {subsection}{Warra Respiration}{130}{section*.154}%
+\contentsline {subsection}{Warra NEE}{131}{section*.155}%
+\contentsline {subsection}{Warra LAI}{132}{section*.156}%
+\contentsline {section}{Whroo}{133}{section*.157}%
+\contentsline {subsection}{Whroo GPP}{133}{section*.158}%
+\contentsline {subsection}{Whroo Respiration}{134}{section*.159}%
+\contentsline {subsection}{Whroo NEE}{135}{section*.160}%
+\contentsline {subsection}{Whroo LAI}{136}{section*.161}%
+\contentsline {section}{WombatStateForest}{137}{section*.162}%
+\contentsline {subsection}{WombatStateForest GPP}{137}{section*.163}%
+\contentsline {subsection}{WombatStateForest Respiration}{138}{section*.164}%
+\contentsline {subsection}{WombatStateForest NEE}{139}{section*.165}%
+\contentsline {subsection}{WombatStateForest LAI}{140}{section*.166}%
+\contentsline {section}{Yanco}{141}{section*.167}%
+\contentsline {subsection}{Yanco GPP}{141}{section*.168}%
+\contentsline {subsection}{Yanco Respiration}{142}{section*.169}%
+\contentsline {subsection}{Yanco NEE}{143}{section*.170}%
+\contentsline {subsection}{Yanco LAI}{144}{section*.171}%

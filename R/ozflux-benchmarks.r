@@ -94,7 +94,7 @@ ozflux_benchmarks <- function(
 
 	tags <- list()
 
-	write_title <- function(title, level, force_print = FALSE) {
+	write_title <- function(title, level, tabset = FALSE, force_print = FALSE) {
 		if (level == 1 || level <= max_title) {
 			if (use_plotly && !force_print) {
 				fname <- paste0("h", level)
@@ -102,7 +102,8 @@ ozflux_benchmarks <- function(
 				tags[[length(tags) + 1L]] <<- tag
 			} else {
 				hashes <- paste0(rep("#", level), collapse = "")
-				cat(paste0("\n\n", hashes, " ", title, "\n\n"))
+				cls <- ifelse(tabset, " {.tabset}", "")
+				cat(paste0("\n\n", hashes, " ", title, cls, "\n\n"))
 			}
 		}
 	}
@@ -124,17 +125,20 @@ ozflux_benchmarks <- function(
 			print(plt)
 		}
 	}
+
 	tick <- 0
 	for (var in vars) {
-		lyr_name <- gsub("dave_", "", var@id)
 
 		log_diag("Processing variable ", var@name, "...")
 
-		r2[[lyr_name]] <- rep(NA, nrow(sites))
-		rmse[[lyr_name]] <- rep(NA, nrow(sites))
-		nse[[lyr_name]] <- rep(NA, nrow(sites))
-		rsr[[lyr_name]] <- rep(NA, nrow(sites))
-		bias[[lyr_name]] <- rep(NA, nrow(sites))
+		for (source in sources) {
+			lyr_name <- get_stats_lyr(var, source)
+			r2[[lyr_name]] <- rep(NA, nrow(sites))
+			rmse[[lyr_name]] <- rep(NA, nrow(sites))
+			nse[[lyr_name]] <- rep(NA, nrow(sites))
+			rsr[[lyr_name]] <- rep(NA, nrow(sites))
+			bias[[lyr_name]] <- rep(NA, nrow(sites))
+		}
 
 		data <- read_data(list(var), sources)
 		iter <- 0
@@ -166,11 +170,14 @@ ozflux_benchmarks <- function(
 			, marker_size = marker_size, do_timeseries = TRUE, do_pvo = TRUE
 			, do_subannual = TRUE)
 
-			r2[i, ncol(r2)] <- res$r2
-			rmse[i, ncol(rmse)] <- res$rmse
-			nse[i, ncol(nse)] <- res$nse
-			rsr[i, ncol(rsr)] <- res$rsr
-			bias[i, ncol(bias)] <- res$bias
+			for (source in sources) {
+				lyr_name <- get_stats_lyr(var, source)
+				r2[[lyr_name]][i] <- res$r2[[lyr_name]]
+				rmse[[lyr_name]][i] <- res$rmse[[lyr_name]]
+				nse[[lyr_name]][i] <- res$nse[[lyr_name]]
+				rsr[[lyr_name]][i] <- res$rsr[[lyr_name]]
+				bias[[lyr_name]][i] <- res$bias[[lyr_name]]
+			}
 
 			# Save plots (we're looping over variables first, because it's faster to
 			# read/process the data this way, but we want to group plots by site, rather
@@ -196,8 +203,16 @@ ozflux_benchmarks <- function(
 		}
 	}
 
-	write_table <- function(tbl, metric = NULL) {
-		result <- knitr::kable(tbl, digits = 2)
+	write_table <- function(tbl, metric = NULL, var_headers = TRUE) {
+		# gpp dave, gpp trunk, resp dave, resp trunk, nee dave, nee trunk, ...
+		#     dave,     trunk,      dave,      trunk,     dave,     trunk, ...
+		col_names <- c(" ")
+		for (var in vars) {
+			for (source in sources) {
+				col_names <- c(col_names, source@name)
+			}
+		}
+		result <- knitr::kable(tbl, digits = 2, col.names = col_names)
 		if (!is.null(metric)) {
 			cols <- setdiff(names(tbl), "Site")
 			for (i in seq_len(ncol(tbl))) {
@@ -209,6 +224,24 @@ ozflux_benchmarks <- function(
 				result <- result %>% column_spec(i, color = colours)
 			}
 		}
+		result <- result %>% kable_styling(htmltable_class = c("table", "table-condensed"))
+		if (var_headers) {
+			colspans <- c("Site" = 1)
+			i <- 2
+			for (var in vars) {
+				colspans[[var@name]] = length(sources)
+				# Ensure column names are in the same order as the colspans.
+				for (src in sources) {
+					lyr_expected <- get_stats_lyr(var, src)
+					lyr_actual <- names(tbl)[[i]]
+					if (lyr_expected != lyr_actual) {
+						stop(i, "-th column name in table is incorrect. Expected '", lyr_expected, "', but was: '", lyr_actual, "'")
+					}
+					i <- i + 1
+				}
+			}
+			result <- result %>% add_header_above(colspans)
+		}
 		print(result)
 	}
 
@@ -219,23 +252,24 @@ ozflux_benchmarks <- function(
 	bias_desc <- "The bias is the mean difference between the predictions and observations. This is in the units of the variable."
 
 	# Write tables.
-	write_title("r<sup>2</sup>", 1, force_print = TRUE)
+	write_title("Metrics", 1, tabset = TRUE, force_print = TRUE)
+	write_title("r<sup>2</sup>", 2, force_print = TRUE)
 	write_paragraph(r2_desc)
 	write_table(r2, "R^2^")
 
-	write_title("rmse", 1, force_print = TRUE)
+	write_title("rmse", 2, force_print = TRUE)
 	write_paragraph(rmse_desc)
 	write_table(rmse)
 
-	write_title("nse", 1, force_print = TRUE)
+	write_title("nse", 2, force_print = TRUE)
 	write_paragraph(nse_desc)
 	write_table(nse, "NSE")
 
-	write_title("rsr", 1, force_print = TRUE)
+	write_title("rsr", 2, force_print = TRUE)
 	write_paragraph(rsr_desc)
 	write_table(rsr, "NMSE")
 
-	write_title("bias", 1, force_print = TRUE)
+	write_title("bias", 2, force_print = TRUE)
 	write_paragraph(bias_desc)
 	write_table(bias)
 

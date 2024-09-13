@@ -183,6 +183,14 @@ plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
     return(plt)
 }
 
+get_stats_lyr_name <- function(var_name, src_name) {
+    return(paste0(gsub("dave_", "", var_name), "_", tolower(src_name)))
+}
+
+get_stats_lyr <- function(var, src) {
+    return(get_stats_lyr_name(var@id, src@name))
+}
+
 create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         , text_multiplier = NULL, do_timeseries = TRUE, do_pvo = TRUE
         , do_subannual = TRUE, marker_size = 3, ylim = NULL) {
@@ -194,23 +202,25 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     if (length(names) == 0) {
         log_error("Unable to plot: data contains no layers")
     }
-    if (length(names) == 1) {
-        predicted_name <- names[1]
-    } else {
-        if (names[1] == obs_lyr) {
-            predicted_name <- names[2]
-        } else {
-            predicted_name <- names[1]
+
+    r2 <- list()
+    rmse <- list()
+    nse <- list()
+    rsr <- list()
+    bias <- list()
+    # Compute stats for each source.
+    for (name in names(gc)) {
+        if (name != obs_lyr) {
+            pred <- gc@data[[name]]
+            lyr_name <- get_stats_lyr_name(gc@quant@id, name)
+
+            r2[[lyr_name]] <- compute_r2(obs, pred)
+            rmse[[lyr_name]] <- compute_rmse(obs, pred)
+            nse[[lyr_name]] <- compute_nse(obs, pred)
+            rsr[[lyr_name]] <- compute_rsr(obs, pred)
+            bias[[lyr_name]] <- compute_bias(obs, pred)
         }
     }
-    predicted_name <- names(gc)[[length(names(gc))]]
-    pred <- gc@data[[predicted_name]]
-
-    r2 <- compute_r2(obs, pred)
-    rmse <- compute_rmse(obs, pred)
-    nse <- compute_nse(obs, pred)
-    rsr <- compute_rsr(obs, pred)
-    bias <- compute_bias(obs, pred)
 
     # Apparently a variable name in the j value will be interpreted literally
     # rather than dereferencing the value stored in the variable. What an

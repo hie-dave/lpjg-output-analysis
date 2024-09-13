@@ -233,6 +233,7 @@ read_data <- function(
 			args$layers <- layers
 			args$quant <- var@id
 			args$decimal.places <- num_decimal_places
+			args$verbose <- FALSE
 			if (!is.null(site)) {
 				if (is.data.frame(site)) {
 					args$sites <- site

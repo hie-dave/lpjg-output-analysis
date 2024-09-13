@@ -224,7 +224,7 @@ get_field_ozflux <- function(
 
 	# Get the name of the output directory, as specified in the .ins file.
 	out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
-	verbose <- get_global("log_level") > get_global("LOG_LEVEL_DIAGNOSTIC")
+	verbose <- get_global("log_level") > get_global("LOG_LEVEL_DIAGNOSTIC") && get_global("log_file") == ""
 	quant_id <- quant@id
 	base_name <- paste0(quant_id, ".out")
 	if (is.null(file_name)) {
