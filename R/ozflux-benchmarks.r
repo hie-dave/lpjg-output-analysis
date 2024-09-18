@@ -257,14 +257,14 @@ ozflux_benchmarks <- function(
 		stop("Number of sources (", length(sources), ") does not match number of source descriptions (", length(source_descriptions), ")")
 	}
 	write_title("Description", 1)
+	write_title("Predictions", 2)
 	write_paragraph("The predictions used to generate these benchmarks come from the following sources:")
 	for (i in seq_along(sources)) {
-		src <- sources[[i]]
-		desc <- source_descriptions[[i]]
-		text <- paste0("**", src@name, "**: ", desc)
-		write_paragraph(text)
+		write_title(sources[[i]]@name, 3)
+		write_paragraph(source_descriptions[[i]])
 	}
 
+	write_title("Observations", 2)
 	write_paragraph("**TODO**: Add description of observed data sources!!")
 	write_paragraph("**TODO**: Observed ET is evapotranspiration, observations are dave_transpiration.out which is just transpiration.")
 	write_paragraph("**TODO**: What is going on with CumberlandPlain?")
