@@ -296,7 +296,7 @@ ozflux_benchmarks <- function(
 		gridcell <- sites[i, ]
 		site <- gridcell$Name
 
-		write_title(site, 1)
+		write_title(site, 1, tabset = TRUE)
 
 		for (j in seq_len(length(vars))) {
 			var <- vars[[j]]
