@@ -296,7 +296,7 @@ get_gridcell <- function(data, lat, lon, site_name = NULL) {
   	, paste0(" ", site_name), ""), " (", lon, ", ", lat, ")")
   gc <- DGVMTools::selectGridcells(data, c(lon, lat)
   	, spatial.extent.id = site_name, decimal.places = get_global("merge_ndp"))
-  log_debug("Successfully extracted gridcell data")
+  log_debug("Successfully extracted ", nrow(gc@data), " rows of data for gridcell ", site_name, ")")
   return(gc)
 }
 

@@ -152,7 +152,9 @@ ozflux_benchmarks <- function(
 			gc <- get_gridcell(data, row$Lat, row$Lon, row$Name)
 
 			if (nrow(gc@data) == 0 || !(get_global("obs_lyr") %in% names(gc@data))) {
-				warning("No ", var@name, " data for site ", row$Name, "; skipping...")
+				msg <- paste0("No ", var@name, " data for site ", row$Name, "; skipping...")
+				log_warning(msg)
+				warning(msg)
 				if (combined_graph) {
 					combined_plots[[length(combined_plots) + 1L]] <- NA
 				} else {
