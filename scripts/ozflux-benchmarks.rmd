@@ -48,9 +48,9 @@ define_source <- function(name, path, description) {
         dir = path,
         format = OZFLUX))
 }
-define_source("DAVE", "/home/drew/code/lpj-guess/dave", "Latest daily grass + daily tree + dave photosynthesis, all pfts except shrubs running in competition. Unlimited number of tree cohorts. rootdist water uptake method. Run on lpjguess_dave_assaf branch (88c7a49daadf708f788b53f4da41b8eff353f1f5)")
-define_source("Trunk", "/home/drew/code/lpj-guess/dave2", "Trunk with global pfts and rootdist water uptake method, run on the lpjguess_dave_baseline branch (22b5f71d0263dded3cca0bcad8d101b1e6cb1c38)")
- 
+define_source("DAVE", "/home/drew/code/lpj-guess/dave", "Latest dave photosynthesis with trunk allocation, all pfts except shrubs running in competition. Unlimited number of tree cohorts. rootdist water uptake method. Run on lpjguess_dave branch (cc12d82b5b17249eb87dd93af6036f689fa2fe69)")
+define_source("Trunk", "/home/drew/code/lpj-guess/dave3", "Trunk with global pfts and rootdist water uptake method, run on the lpjguess_dave_baseline branch (22b5f71d0263dded3cca0bcad8d101b1e6cb1c38)")
+
 # Set to true to use plotly for graph rendering. Note: requires rendering to
 # HTML; see document header.
 plotly <- FALSE
