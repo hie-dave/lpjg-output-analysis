@@ -42,6 +42,7 @@ create_panel <- function(
         title = NULL) {
 
     plots <- list(...)
+    log_diag("Creating panel with ", length(plots), " plots")
     nplot <- length(plots)
     nrow <- as.integer(ceiling(nplot / ncol))
     if (use_plotly) {
@@ -94,6 +95,14 @@ create_square_panel <- function(
         , ylab = ylab, title = title))
 }
 
+set_text_multiplier <- function(plt, text_multiplier = NULL) {
+    if (!is.null(text_multiplier)) {
+        size <- ggplot2::theme_get()$text$size * text_multiplier
+        plt <- plt + ggplot2::theme(text = ggplot2::element_text(size = size))
+    }
+    return(plt)
+}
+
 plot_timeseries <- function(
     gc,
     ylim = NULL,
@@ -133,6 +142,9 @@ plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
                                          , labels = ynames)
     plt <- plt + scale
 
+    # Set text size.
+    plt <- set_text_multiplier(plt, text_multiplier)
+
     units <- DGVMTools:::standardiseUnitString(gc@quant@units)
     x_label <- "Observed"
     y_label <- "Predicted"
@@ -162,23 +174,34 @@ plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
 
 plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
     colours <- get_colour_palette(length(names(gc)))
-    plt <- DGVMTools::plotSubannual(gc, col.by = "Layer"
-        , summary.function = mean
-        , title = NULL, subtitle = NULL, point.size = 0, cols = colours
-        , text.multiplier = text_multiplier, summary.only = TRUE
-        , summary.as.points = FALSE)
+    colours <- setNames(colours, names(gc))
+    agg <- DGVMTools::aggregateYears(gc)
+    # plt <- DGVMTools::plotSubannual(gc, col.by = "Layer"
+    #     , summary.function = mean
+    #     , title = NULL, subtitle = NULL, point.size = 0, cols = colours
+    #     , text.multiplier = text_multiplier, summary.only = TRUE
+    #     , summary.as.points = FALSE)
+    df_long <- tidyr::pivot_longer(agg@data, cols = names(gc)
+                                   , names_to = "variable"
+                                   , values_to = "value")
+    plt <- ggplot2::ggplot(df_long, aes(x = Day, y = value, color = variable)) +
+                    ggplot2::geom_line() +
+                    ggplot2::scale_color_manual(values = colours) +
+                    ggplot2::labs(x = "Day") +
+                    ggplot2::theme_bw()
 
-    if(!is.null(ylim)) {
+    # plt <- DGVMTools::plotTemporal(agg, title = NULL, subtitle = NULL
+    #                                , point.size = 0,cols = colours
+    #                                , text.multiplier = text_multiplier)
+
+    if (!is.null(ylim)) {
         plt <- plt + ggplot2::scale_y_continuous(limits = ylim)
     }
 
+    plt <- set_text_multiplier(plt, text_multiplier)
+
     blank <- ggplot2::element_blank()
     plt <- plt + theme(legend.position = "bottom", legend.title = blank)
-    # Manually disable markers by setting their size to NA.
-    # For some reason, calling geom_point with size = 0 has no effect.
-    for (i in seq_along(plt$layers)) {
-        plt$layers[[i]]$aes_params$size <- NA
-    }
 
     return(plt)
 }
@@ -240,6 +263,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     result <- list()
 
     if (do_timeseries) {
+        log_diag("Creating timeseries plot...")
         timeseries <- plot_timeseries(gc, ylim, text_multiplier)
         timeseries <- trim_ggplot(timeseries, xlab = TRUE)
         if (use_plotly) {
@@ -248,6 +272,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         result$timeseries <- timeseries
     }
     if (do_pvo) {
+        log_diag("Creating predicted vs. observed scatter plot...")
         pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size)
         pvo <- trim_ggplot(pvo, xlab = TRUE)
         if (use_plotly) {
@@ -256,6 +281,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         result$pvo <- pvo
     }
     if (do_subannual) {
+        log_diag("Creating subannual plot...")
         subannual <- plot_subannual(gc, ylim, text_multiplier)
         subannual <- trim_ggplot(subannual, xlab = TRUE)
         if (use_plotly) {

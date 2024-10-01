@@ -43,6 +43,8 @@ is_installed <- function(pkg) {
 #' each variable for each site.
 #' @param max_title: Maximum number of nested titles.
 #' @param marker_size: Marker size. Decrease for smaller markers.
+#' @param sites: List of names of ozflux sites to be plotted. If NULL, all ozflux sites will be processed.
+#' @param vars: List of names of output variables to be plotted. If NULL, a standard set of outputs will be plotted. This should be, for example, `c("dave_lai", "dave_resp")`.
 #'
 #' @return Returns a list of HTML tags if use_plotly is TRUE. Otherwise all
 #' content will be printed, for use in R markdown.
@@ -56,7 +58,9 @@ ozflux_benchmarks <- function(
 	text_multiplier = 1.5,
 	combined_graph = TRUE,
 	max_title = 4,
-	marker_size = 1
+	marker_size = 1,
+	sites = NULL,
+	vars = NULL
 ) {
 	# Sanitise input sources.
 	log_debug("Sanitising input sources...")
@@ -68,12 +72,29 @@ ozflux_benchmarks <- function(
 
 	# Variables to be plotted.
 	log_debug("Getting default variables to plot...")
-	vars <- get_vars()
+	all_vars <- get_vars()
+
+	if (is.null(vars)) {
+		log_debug("Variables list not specified. All ", length(all_vars), " default variables will be plotted.")
+		vars <- all_vars
+	} else {
+		log_debug("User specified ", length(vars), " variables to be plotted.")
+		vars <- Filter(function(v) v@id %in% vars, all_vars)
+		log_debug("Variable list filtered down to ", length(vars), " variables based on user input.")
+	}
 
 	log_debug("Getting sites to plot...")
-	sites <- read_ozflux_sites()
+	all_sites <- read_ozflux_sites()
+	if (is.null(sites)) {
+		log_debug("Sites list not specified. All ", nrow(all_sites), " sites will be plotted.")
+		sites <- all_sites
+	} else {
+		log_debug("User specified ", length(sites), " sites to be plotted.")
+		sites <- all_sites[which(all_sites$Name %in% sites), ]
+		log_debug("Site list filtered down to ", nrow(sites), " sites based on user input.")
+	}
 
-	write_progress <- is_installed("knitrProgressBar")
+	write_progress <- is_installed("knitrProgressBar") && nrow(sites) * length(vars) > 1
 	log_debug("Write_progress = ", write_progress)
 	if (write_progress) {
 		log_debug("Initialising progress bar with num ticks = ", nrow(sites) * length(vars), "...")
@@ -164,7 +185,9 @@ ozflux_benchmarks <- function(
 				}
 				tick <- tick + 1
 				log_debug("tick = ", tick)
-				p$tick()
+				if (write_progress) {
+					p$tick()
+				}
 				next
 			}
 
@@ -190,6 +213,7 @@ ozflux_benchmarks <- function(
 				plt <- create_panel(res$timeseries, res$pvo, res$subannual
 					, use_plotly = use_plotly, ylab = ylab)
 				combined_plots[[length(combined_plots) + 1L]] <- plt
+				name <- paste(row$Name, var@name, sep = "_")
 			} else {
 				timeseries_plots[[length(timeseries_plots) + 1L]] <- res$timeseries
 				pvo_plots[[length(pvo_plots) + 1L]] <- res$pvo

@@ -55,7 +55,14 @@ define_source("Trunk", "/home/drew/code/lpj-guess/dave3", "Trunk with global pft
 # HTML; see document header.
 plotly <- FALSE
 
-ozflux_benchmarks(sources, source_descriptions, use_plotly = plotly)
+sites <- NULL # Plot all sites
+# sites <- c("CumberlandPlain") # Plot a subset of sites
+
+vars <- NULL # Plot all standard variables
+# vars <- c("dave_transpiration") # Plot of a subset of variables
+
+ozflux_benchmarks(sources, source_descriptions, use_plotly = plotly
+                  , sites = sites, vars = vars)
 if (plotly) {
     tagList(tags)
 }
