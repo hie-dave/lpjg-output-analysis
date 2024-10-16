@@ -133,6 +133,10 @@ get_layers <- function(
 	return(setdiff(available, ignored_layers))
 }
 
+is_leap <- function(year) {
+    (year %% 4 == 0 & year %% 100 != 0) | (year %% 400 == 0)
+}
+
 #'
 #' Read data for the specified variable.
 #'
@@ -243,9 +247,20 @@ read_data <- function(
 				}
 			}
 			predictions <- do.call(DGVMTools::getField, args)
+			if (nrow(predictions@data) == 0) {
+				stop("Failed to read data for source ", source@id)
+			}
 
 			log_debug("Successfully read   data from source ", source@name
 				, " for variable ", var@name)
+
+			pn <- names(predictions@data)
+			if ("Year" %in% pn && "Day" %in% pn) {
+				log_diag("Fixing day of year to account for leap days...")
+				predictions@data[is_leap(Year) & Day > 59, Day := Day + 1]
+				log_debug("Successfully performed leap year conversion")
+			}
+
 			layer_names <- get_layer_names(var, nvar, layers, source@name)
 			if (is.null(data)) {
 				# IE no observations
