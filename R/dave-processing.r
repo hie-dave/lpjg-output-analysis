@@ -161,6 +161,8 @@ read_data <- function(
 	sources <- sanitise_sources(sources)
 	log_debug("[read_data] Sanitising input quantities...")
 	vars <- sanitise_variables(vars)
+	log_debug("[read_data] Sanitising input sites...")
+	site <- sanitise_ozflux_sites(site)
 
 	# if (is.data.frame(site)) {
 	# 	if (nrow(site) == 1) {
