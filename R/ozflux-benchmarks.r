@@ -45,6 +45,8 @@ is_installed <- function(pkg) {
 #' @param marker_size: Marker size. Decrease for smaller markers.
 #' @param sites: List of names of ozflux sites to be plotted. If NULL, all ozflux sites will be processed.
 #' @param vars: List of names of output variables to be plotted. If NULL, a standard set of outputs will be plotted. This should be, for example, `c("dave_lai", "dave_resp")`.
+#' @param widget_dir: Directory to which plotly plots will be saved.
+#' @param aspect_ratio: Aspect ratio (width:height) used for plotly plots.
 #'
 #' @return Returns a list of HTML tags if use_plotly is TRUE. Otherwise all
 #' content will be printed, for use in R markdown.
@@ -60,7 +62,9 @@ ozflux_benchmarks <- function(
 	max_title = 4,
 	marker_size = 1,
 	sites = NULL,
-	vars = NULL
+	vars = NULL,
+	widget_dir = "plots",
+	aspect_ratio = 16 / 9
 ) {
 	# Sanitise input sources.
 	log_debug("Sanitising input sources...")
@@ -118,9 +122,9 @@ ozflux_benchmarks <- function(
 
 	write_title <- function(title, level, tabset = FALSE, force_print = FALSE) {
 		if (level == 1 || level <= max_title) {
-			if (use_plotly && !force_print) {
+			if (FALSE) {
 				fname <- paste0("h", level)
-				tag <- do.call(fname, list(title))
+				tag <- do.call(fname, list(title, class = "tabset"))
 				tags[[length(tags) + 1L]] <<- tag
 			} else {
 				hashes <- paste0(rep("#", level), collapse = "")
@@ -131,7 +135,7 @@ ozflux_benchmarks <- function(
 	}
 
 	write_paragraph <- function(text) {
-		if (use_plotly) {
+		if (FALSE) {
 			# html output
 			tag <- htmltools::p(text)
 			tags[[length(tags) + 1L]] <- tag
@@ -140,9 +144,46 @@ ozflux_benchmarks <- function(
 		}
 	}
 
+	widget_id <- 0
+	widget_dir <- normalizePath(widget_dir)
+	lib_dir <- file.path(widget_dir, "libs")
+	if (dir.exists(widget_dir)) {
+		unlink(widget_dir, recursive = TRUE)
+	}
+	if (!dir.exists(lib_dir)) {
+		dir.create(lib_dir, recursive = TRUE)
+	}
+	log_info("widget_dir = '", widget_dir, "'")
+	log_info("lib_dir    = '", lib_dir, "'")
+	save_widget <- function(widget) {
+		file_name <- paste0("widget-", widget_id, ".html")
+		widget_id <<- widget_id + 1
+		file_path <- file.path(widget_dir, file_name)
+		log_diag("Saving plot to ", file_path, "...")
+		htmlwidgets::saveWidget(widget, file_path,
+							    selfcontained = FALSE,
+								libdir = lib_dir)
+		return(file_path)
+	}
+
+	# 16:9 aspect ratio
+	padding_bottom <- 100 / (aspect_ratio)
+	div_style <- paste0("position: relative; width: 100%; height: 0; padding-bottom: ", padding_bottom, "%;")
 	write_plot <- function(plt) {
 		if (use_plotly) {
-			tags[[length(tags) + 1L]] <<- plt
+			src <- save_widget(plt)
+			iframe <- htmltools::tags$iframe(
+				src = src,
+				scrolling = "no",
+				seamless = "seamless",
+				frameBorder = "0",
+				style = "position: absolute; top: 0; left: 0; width: 100%; height: 100%;",
+			)
+			div <- htmltools::tags$div(
+				style = div_style,
+				iframe
+			)
+			cat(paste0(div, collapse = ""), "\n")
 		} else {
 			print(plt)
 		}
@@ -269,7 +310,11 @@ ozflux_benchmarks <- function(
 			}
 			result <- result %>% add_header_above(colspans)
 		}
-		print(result)
+		if (FALSE) {
+			tags[[length(tags) + 1L]] <<- result
+		} else {
+			print(result)
+		}
 	}
 
 	r2_desc <- "The coefficient of determination (r<sup>2</sup>) is the proportion of the variation in the dependent variable that is predictable from the independent variable(s). This is unitless and ranges from 0-1."
@@ -293,7 +338,6 @@ ozflux_benchmarks <- function(
 	write_title("Observations", 2)
 	write_paragraph("**TODO**: Add description of observed data sources!!")
 	write_paragraph("**TODO**: Observed ET is evapotranspiration, observations are dave_transpiration.out which is just transpiration.")
-	write_paragraph("**TODO**: What is going on with CumberlandPlain?")
 
 	# Write tables.
 	write_title("Metrics", 1, tabset = TRUE, force_print = TRUE)
@@ -361,7 +405,7 @@ ozflux_benchmarks <- function(
 			}
 		}
 	}
-	if (use_plotly) {
-		return(tags)
-	}
+	# if (use_plotly) {
+	# 	return(tags)
+	# }
 }
