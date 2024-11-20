@@ -155,7 +155,8 @@ read_data <- function(
 	vars,
 	sources,
 	site = NULL,
-	layers = NULL) {
+	layers = NULL,
+	correct_leaps = FALSE) {
 
 	log_debug("[read_data] Sanitising input sources...")
 	sources <- sanitise_sources(sources)
@@ -257,7 +258,7 @@ read_data <- function(
 				, " for variable ", var@name)
 
 			pn <- names(predictions@data)
-			if ("Year" %in% pn && "Day" %in% pn) {
+			if ("Year" %in% pn && "Day" %in% pn && correct_leaps) {
 				log_diag("Fixing day of year to account for leap days...")
 				predictions@data[is_leap(Year) & Day > 59, Day := Day + 1]
 				log_debug("Successfully performed leap year conversion")
