@@ -297,7 +297,7 @@ ozflux_benchmarks <- function(
 			colspans <- c("Site" = 1)
 			i <- 2
 			for (var in vars) {
-				colspans[[var@name]] = length(sources)
+				colspans[[var@name]] <- length(sources)
 				# Ensure column names are in the same order as the colspans.
 				for (src in sources) {
 					lyr_expected <- get_stats_lyr(var, src)
