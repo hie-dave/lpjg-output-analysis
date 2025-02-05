@@ -102,6 +102,7 @@ get_default_layers <- function(source, var, sites = NULL) {
 	to_try <- get_aggregate_layers()
 	for (l in to_try) {
 		if (l %in% available) {
+			# Note: get_field_ozflux() previously normalised Total -> total.
 			return(l)
 		}
 	}

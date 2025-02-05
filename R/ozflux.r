@@ -207,51 +207,44 @@ get_field_ozflux <- function(
 	# Get path to the ozflux directory within the repository.
 	ozflux <- get_ozflux_path(source)
 
-	# Get a list of site names.
-	all_sites <- get_sites_ozflux(source)
-
 	quant <- sanitise_variable(quant)
 
-	if (!is.null(sites)) {
-		sites <- sanitise_ozflux_sites(sites)
-	}
+	# Get a list of site names.
+	if (is.null(sites)) {
+		# No site list provided - check which sites are available.
+		sites <- get_sites_ozflux(source)
 
-	if (length(all_sites) < 1) {
-		# No sites. This shouldn't really happen, but if it does, there's
-		# nothing more to be done.
-		return(list())
+		if (length(sites) < 1) {
+			# No sites. This shouldn't really happen, but if it does, there's
+			# nothing more to be done.
+			return(list())
+		}
+	} else {
+		# Site list was provided.
+		sites <- sanitise_ozflux_sites(sites)
 	}
 
 	# Get the name of the output directory, as specified in the .ins file.
 	out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
 	verbose <- get_global("log_level") > get_global("LOG_LEVEL_DIAGNOSTIC") && get_global("log_file") == ""
 	quant_id <- quant@id
-	base_name <- paste0(quant_id, ".out")
 	if (is.null(file_name)) {
-		davebase <- paste0("dave_", base_name)
-		site <- all_sites[[1]]
-		dave_file_name <- file.path(ozflux, site, out_dir_name, davebase)
-		if (file.exists(dave_file_name)) {
-			file_name <- davebase
-			quant_id <- paste0("dave_", base_name)
-			if (length(layers) == 1 && layers[[1]] == "Total") {
-				layers[[1]] <- "total"
-			}
-		} else {
-			file_name <- base_name
-		}
+		base_name <- paste0(quant_id, ".out")
+		file_name <- base_name
 	}
 
 	site <- NULL
-	if (!is.null(target_stainfo)) {
+	if (nrow(sites) == 1) {
+		site <- sites[1, "Name"]
+	} else if (!is.null(target_stainfo)) {
 		spatial_extent_id <- target_stainfo@spatial.extent.id
 		spatial_extent <- target_stainfo@spatial.extent
 		if (!is.null(spatial_extent_id) && length(spatial_extent_id) > 0) {
-			site <- sanitise_spatial_extent_id(spatial_extent_id, all_sites)
+			site <- sanitise_spatial_extent_id(spatial_extent_id, sites)
 		} else if (!is.null(spatial_extent) && spatial_extent != FALSE) {
 			# For some reason, FALSE gets passed in for spatial.extent if no value
 			# is given.
-			site <- sanitise_spatial_extent(spatial_extent, all_sites)
+			site <- sanitise_spatial_extent(spatial_extent, sites)
 		} else {
 			log_debug("spatial.extent and spatial.extent.id not specified.")
 		}
@@ -268,6 +261,7 @@ get_field_ozflux <- function(
 			, source@name, "', format=GUESS")
 		site_source <- DGVMTools::defineSource(source@id, source@name, site_path
 			, DGVMTools::GUESS)
+		log_debug("file.name = ", file_name)
 		log_debug("Reading ", site, " ", quant_id, " data...")
 		field <- DGVMTools::getField(site_source, quant_id, layers
 			, file.name = file_name, verbose = verbose)
@@ -284,11 +278,12 @@ get_field_ozflux <- function(
 	if (file.exists(working_file))
 		file.remove(working_file)
 
+	log_debug("data will be read for ", nrow(sites), "sites")
 	expected_cols <- NULL
-	for (site in all_sites) {
-		if (!is.null(sites) && is.data.frame(sites) && !(site %in% sites$Name)) {
-			next
-		}
+	# for (site in sites) {
+	for (i in 1:nrow(sites)) {
+		row <- sites[i, ]
+		site <- row$Name
 		log_debug("Concatenating ", quant@name, " for site ", site, "...")
 
 		# Get path to this site's output directory.
@@ -330,7 +325,7 @@ get_field_ozflux <- function(
 	log_debug("Successfully concatenated data from all sites")
 
 	# Construct a Source object which will interrogate the output directory.
-	log_debug("Constructing a temporary source object...")
+	log_debug("Constructing a temporary source object with ID '", site, "', name '", site, "'...")
 	src <- DGVMTools::defineSource(site, site, working_directory
 		, DGVMTools::GUESS)
 	log_debug("Calling getField() on temporary source object with quant='"
