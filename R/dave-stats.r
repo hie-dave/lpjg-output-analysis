@@ -15,7 +15,18 @@ compute_r2 <- function(x, y) {
   if (length(x) == 0) {
     stop("Cannot compute r2: input data contains no elements")
   }
+
+  # Square of Pearson correlation coefficient.
   r2 <- cor(x, y)^2
+
+  # # Total sum of squares.
+  # ss_tot <- sum((x - mean(x)) ^ 2)
+
+  # # Residual sum of squares.
+  # ss_res <- sum((x - y) ^ 2)
+
+  # r2 <- 1 - (ss_res / ss_tot)
+
   if (is.na(r2)) {
     return(0)
   }
