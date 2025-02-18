@@ -1,4 +1,4 @@
-# Name of the ozflux observed data file included this package's extdata.
+# Name of the ozflux observed data file included this package's inst/data dir.
 set_global("obs_file", "ozflux-obs.nc")
 
 # Name of the observed data layer.
@@ -31,7 +31,7 @@ trim_dave <- function(text) {
 }
 
 get_observed_source <- function() {
-	obs_dir <- system.file("extdata", package = get_global("dave_pkgname"))
+	obs_dir <- system.file("data", package = get_global("dave_pkgname"))
 	log_debug("Loading observed source from dir: '", obs_dir, "'...")
 	return(DGVMTools::defineSource("obs", "Ozflux", format = DGVMTools::NetCDF
 		, dir = obs_dir))
