@@ -13,9 +13,9 @@ get_vars <- function() {
 	, DGVMTools::defineQuantity("dave_nee", "NEE", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("dave_transpiration", "Transpiration", "mm day^-1")
 	, DGVMTools::defineQuantity("dave_lai", "LAI", "m^2 m^-2")
-	# Note: cmass.out currently doesn't work due to some pfts' names being
-	# longer than the amount of space allocated to the pft columns.
-	, DGVMTools::defineQuantity("cmass", "Above-Ground Biomass", "kgC/m2")
+	, DGVMTools::defineQuantity("dave_live_biomass", "Above-Ground Biomass", "kg/m2")
+	, DGVMTools::defineQuantity("dave_height", "Mean Canopy Height", "m")
+	, DGVMTools::defineQuantity("dave_diameter", "Mean Stem Diameter", "m")
 	))
 }
 

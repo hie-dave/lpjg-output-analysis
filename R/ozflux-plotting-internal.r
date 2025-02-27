@@ -479,6 +479,12 @@ get_title <- function(title) {
     if (title == "live_biomass") {
         return("Live Biomass")
     }
+    if (title == "height") {
+        return("Mean Vegetation Height")
+    }
+    if (title == "diameter") {
+        return("Mean Stem Diameter")
+    }
     return(title)
 }
 

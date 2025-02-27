@@ -28,7 +28,7 @@ read_ozflux_sites <- function() {
 	if (is.null(get_global("ozflux_sites"))) {
 		pkg_name <- get_global("dave_pkgname")
 		gridlist <- system.file("data", "ozflux.grid", package = pkg_name)
-		log_debug("Reading gridlist ", gridlist, "...")
+		log_debug("Reading gridlist '", gridlist, "''...")
 		gridcells <- read.csv(gridlist, sep = " ", header = FALSE)
 		names(gridcells) <- c("Lon", "Lat", "Name")
 		set_global("ozflux_sites", gridcells)
