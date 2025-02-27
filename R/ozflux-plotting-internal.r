@@ -114,10 +114,20 @@ plot_timeseries <- function(
 
     ncolour <- ifelse(is.null(layers), length(names(gc)), length(layers))
     colours <- get_colour_palette(ncolour)
+    points <- FALSE
+    lyrs <- ifelse(is.null(layers), names(gc), layers)
+    POINTS_THRESHOLD <- 30
+    for (lyr in lyrs) {
+        data <- gc@data[[lyr]]
+        data <- data[which(!is.na(data))]
+        if (length(data) < POINTS_THRESHOLD) {
+            points <- TRUE
+        }
+    }
     return(DGVMTools::plotTemporal(gc, layers = layers, cols = colours
         , text.multiplier = text_multiplier, text.expression = FALSE
         , y.lim = ylim, x.label = xlab, y.label = ylab, subtitle = NULL
-        , title = NULL))
+        , title = NULL, points = points))
 }
 
 plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
@@ -465,6 +475,13 @@ convert_plot <- function(plt, to_plotly) {
     }
 }
 
+get_title <- function(title) {
+    if (title == "live_biomass") {
+        return("Live Biomass")
+    }
+    return(title)
+}
+
 ozflux_plot_site <- function(
         data,
         ylim,
@@ -493,6 +510,7 @@ ozflux_plot_site <- function(
     title <- site$Name
     if (length(vars) == 1 && nsite == 1) {
         name <- trim_dave(vars[[1]]@name)
+        name <- get_title(name)
         title <- paste(title, name)
     }
 

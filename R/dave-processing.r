@@ -137,6 +137,20 @@ is_leap <- function(year) {
     (year %% 4 == 0 & year %% 100 != 0) | (year %% 400 == 0)
 }
 
+get_obs_layer <- function(quant) {
+	# The ozflux output file names from lpj-guess DAVE are prefixed with
+	# "dave_" but the variable names in the observed data file don't have
+	# this prefix.
+	name <- tolower(trim_dave(quant@id))
+	if (name == "live_biomass") {
+		return("live_biomass")
+	}
+	if (name == "dead_biomass") {
+		return("dead_biomass")
+	}
+	return(name)
+}
+
 #'
 #' Read data for the specified variable.
 #'
@@ -180,10 +194,7 @@ read_data <- function(
 
 	for (var in vars) {
 
-		# The ozflux output file names from lpj-guess DAVE are prefixed with
-		# "dave_" but the variable names in the observed data file don't have
-		# this prefix.
-		obs_lyr <- trim_dave(var@id)
+		obs_lyr <- get_obs_layer(var)
 
 		layers <- original_layer
 		if (is.null(layers)) {
@@ -327,13 +338,17 @@ get_gridcell <- function(data, lat, lon, site_name = NULL) {
 #'
 get_observed_vars <- function() {
 	# fixme - should get this from the observed .nc file.
+
 	return(list(
 	  DGVMTools::defineQuantity("gpp", "GPP", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("resp", "Respiration", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("nee", "NEE", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("transpiration", "ET", "mm day^-1")
 	, DGVMTools::defineQuantity("lai", "LAI", "m^2 m^-2")
-	# , defineQuantity("cmass", "AboveGround Biomass", "kgC/m2")
+	, DGVMTools::defineQuantity("live_biomass", "Live Biomass", "kg/m2")
+	, DGVMTools::defineQuantity("dead_biomass", "Live Biomass", "kg/m2")
+	, DGVMTools::defineQuantity("height", "Height", "m")
+	, DGVMTools::defineQuantity("diameter", "Diameter", "m")
 	))
 }
 
