@@ -417,13 +417,26 @@ plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
 plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
     colours <- get_colour_palette(length(names(gc)))
     colours <- setNames(colours, names(gc))
-    agg <- DGVMTools::aggregateYears(gc)
-    # plt <- DGVMTools::plotSubannual(gc, col.by = "Layer"
-    #     , summary.function = mean
-    #     , title = NULL, subtitle = NULL, point.size = 0, cols = colours
-    #     , text.multiplier = text_multiplier, summary.only = TRUE
-    #     , summary.as.points = FALSE)
-    df_long <- tidyr::pivot_longer(agg@data, cols = names(gc)
+
+    # Process each layer separately to handle NAs correctly
+    agg_data <- NULL
+    for (layer_name in names(gc)) {
+        # Create a temporary gc with just this layer
+        temp_gc <- DGVMTools::selectLayers(gc, layer_name)
+        temp_gc@data <- temp_gc@data[!is.na(temp_gc@data[[layer_name]]), ]
+        # Aggregate this layer
+        agg_result <- DGVMTools::aggregateYears(temp_gc)
+        # layer_results[[layer_name]] <- agg_result@data[[layer_name]]
+        if (is.null(agg_data)) {
+            agg_data <- agg_result
+        } else {
+            agg_data <- DGVMTools::copyLayers(agg_result, agg_data, layer_name)
+        }
+    }
+
+    # Combine results into a data frame
+    # Create the plot using the combined data
+    df_long <- tidyr::pivot_longer(agg_data@data, cols = names(gc)
                                    , names_to = "variable"
                                    , values_to = "value")
     plt <- ggplot2::ggplot(df_long, aes(x = Day, y = value, color = variable)) +
