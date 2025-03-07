@@ -15,7 +15,7 @@ aggregate_to(df, lons, lats)
 \item{lats}{List of latitude values on the target grid.}
 }
 \value{
-A data-frame on a the target grid.
+Returns a data frame on a the target grid.
 }
 \description{
 Aggregate the given data frame to the grid specified by the given set of

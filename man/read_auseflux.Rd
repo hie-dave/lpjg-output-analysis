@@ -2,20 +2,20 @@
 % Please edit documentation in R/benchmark-auseflux.r
 \name{read_auseflux}
 \alias{read_auseflux}
-\title{Read BoM LAI from the specified data file, or from the default location if
+\title{Read AusEFlux data from the specified data file, or from the default location if
 no data file is provided.}
 \usage{
 read_auseflux(var, data_path)
 }
 \arguments{
-\item{var}{The AusEFlux variable.}
+\item{var}{Variable to read (see: \link{auseflux_sanitise_var})}
 
-\item{data_path}{Data path.}
+\item{data_path}{Path to the data directory}
 }
 \value{
-A \link[DGVMTools:Field]{DGVMTools::Field} object containing the requested AusEFlux data.
+Returns a \link[DGVMTools:Field]{DGVMTools::Field} object containing the requested AusEFlux data
 }
 \description{
-Read BoM LAI from the specified data file, or from the default location if
+Read AusEFlux data from the specified data file, or from the default location if
 no data file is provided.
 }

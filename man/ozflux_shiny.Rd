@@ -7,6 +7,16 @@ simulations against predictions.}
 \usage{
 ozflux_shiny(sources)
 }
+\arguments{
+\item{sources}{List of \link[DGVMTools:Source]{DGVMTools::Source} objects to plot}
+
+\item{vars}{Variables to plot (see: \link{get_observed_vars})}
+
+\item{sites}{Sites to plot (see: \link{read_ozflux_sites})}
+}
+\value{
+Returns a \link[shiny:shinyApp]{shiny::shinyApp} object
+}
 \description{
 Run a shiny app which generates interactive plots of site-level ozflux
 simulations against predictions.

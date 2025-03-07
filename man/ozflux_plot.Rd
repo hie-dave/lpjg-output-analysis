@@ -14,23 +14,25 @@ ozflux_plot(
 )
 }
 \arguments{
-\item{sources:}{Sources to be plotted (see: \link{sanitise_source}).}
+\item{sources}{Sources to be plotted (see: \link{sanitise_source})}
 
-\item{vars:}{Variables to be plotted (see: \link{sanitise_variable}).}
+\item{vars}{Variables to be plotted (see: \link{sanitise_variable})}
 
-\item{sites:}{Sites to be plotted (see: \link{sanitise_ozflux_sites}).}
+\item{sites}{Sites to be plotted (see: \link{sanitise_ozflux_sites})}
 
-\item{separate:}{Iff TRUE, a list of the site-level plots will be returned.
+\item{separate}{iff TRUE, a list of the site-level plots will be returned.
 If FALSE, all plots will be rendered to a single panel. This has no effect
 if a single site is to be plotted.}
 
-\item{use_plotly:}{Iff true, graphs will be plotted using plotly.}
+\item{use_plotly}{iff TRUE, graphs will be plotted using \link{plotly}}
 
-\item{common_yaxis:}{Iff true, all plots in the panel will have the same y-
-axis range. No effect if only 1 site is being plotted.}
+\item{common_yaxis}{iff TRUE, all plots in the panel will have the same y-axis
+range. No effect if only 1 site is being plotted.}
 }
 \value{
-Can return a single, or vector of, ggplot or plotly objects.
+Returns either a single \link[ggplot2:ggplot]{ggplot2::ggplot} object (if separate is FALSE),
+or a list of \link[ggplot2:ggplot]{ggplot2::ggplot} objects (if separate is TRUE). If use_plotly
+is TRUE, returns \link{plotly} objects instead.
 }
 \description{
 Plots a single variable across predictions at each specified ozflux site,

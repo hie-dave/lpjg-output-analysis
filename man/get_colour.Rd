@@ -12,7 +12,7 @@ get_colour(metric, value)
 \item{value}{Metric value.}
 }
 \value{
-A colour representing the goodness of a particular value.
+\link{character} A colour representing the goodness of a particular value.
 }
 \description{
 Get a colour representing the goodness of a metric value.

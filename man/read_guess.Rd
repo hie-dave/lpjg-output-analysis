@@ -7,7 +7,7 @@
 read_guess(src, fields)
 }
 \arguments{
-\item{src}{A \link[DGVMTools:Source]{DGVMTools::Source} object.}
+\item{src}{A \link[DGVMTools:Source]{DGVMTools::Source} object}
 }
 \description{
 This function reads LPJ-GUESS outputs and post-processes them to calculate

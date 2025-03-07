@@ -13,7 +13,7 @@ functions included in this package. Should be a list.}
 \item{settings}{A list of benchmarking settings as in tellaus.rmd.}
 }
 \value{
-A ggplot object.
+\link{ggplot} A ggplot object.
 }
 \description{
 Create a spatial plot of the absolute values of the given dataset.

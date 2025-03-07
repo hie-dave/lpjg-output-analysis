@@ -1,8 +1,7 @@
-
 #'
 #' Convert the coordinate to the closest coordinate on a 1-degree grid.
 #'
-#' @param coord: The coordinate value.
+#' @param coord The coordinate value.
 #'
 #' @keywords internal
 #'
@@ -46,8 +45,7 @@ get_grouping_names <- function(df) {
 #'
 #' @param df A data frame.
 #'
-#' @return A data-frame on a 1-degree grid.
-#'
+#' @return Returns a data frame on a 1-degree grid.
 #' @import dplyr
 #' @export
 #'
@@ -74,8 +72,7 @@ aggregate_to_1deg <- function(df) {
 #' @param lons List of longitude values on the target grid.
 #' @param lats List of latitude values on the target grid.
 #'
-#' @return A data-frame on a the target grid.
-#'
+#' @return Returns a data frame on a the target grid.
 #' @import dplyr
 #' @export
 #'

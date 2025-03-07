@@ -7,10 +7,10 @@
 read_gosif(data_path)
 }
 \arguments{
-\item{data_path}{Path to data files.}
+\item{data_path}{Path to data files}
 }
 \value{
-A \link[DGVMTools:Field]{DGVMTools::Field} object containing GOSIF global monthly GPP.
+Returns a \link[DGVMTools:Field]{DGVMTools::Field} object containing GOSIF global monthly GPP
 }
 \description{
 Read GOSIF GPP from the specified data path.

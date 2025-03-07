@@ -7,9 +7,12 @@
 compare_all(fields, lyr)
 }
 \arguments{
-\item{fields}{The fields to be compared.}
+\item{fields}{The fields to be compared \link[DGVMTools:Field]{DGVMTools::Field}}
 
-\item{lyr}{The layer to be compared in the fields. Must exist in all fields.}
+\item{lyr}{The layer to be compared in the fields. Must exist in all fields}
+}
+\value{
+\link{list} Returns a list of field comparisons, named by the field pairs compared
 }
 \description{
 E.g. for 3 fields: compare fields 1&2, 1&3, 2&3.

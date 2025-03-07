@@ -7,7 +7,7 @@
 convert_to_1degree(coord)
 }
 \arguments{
-\item{coord:}{The coordinate value.}
+\item{coord}{The coordinate value.}
 }
 \description{
 Convert the coordinate to the closest coordinate on a 1-degree grid.

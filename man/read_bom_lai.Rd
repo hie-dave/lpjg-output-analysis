@@ -8,10 +8,10 @@ no data file is provided.}
 read_bom_lai(data_path, type = "rec")
 }
 \arguments{
-\item{data_path:}{Path to the directory containing data.}
+\item{data_path}{Path to the data directory}
 }
 \value{
-A \link[DGVMTools:Field]{DGVMTools::Field} object containing the BoM LAI data.
+Returns a \link[DGVMTools:Field]{DGVMTools::Field} object containing the BoM LAI data
 }
 \description{
 Read BoM LAI from the specified data file, or from the default location if

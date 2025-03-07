@@ -9,7 +9,7 @@ if the variable is invalid.}
 auseflux_sanitise_var(var)
 }
 \arguments{
-\item{var}{The AusEFlux variable.}
+\item{var}{Variable to read}
 }
 \description{
 Attempt to interpret the specified variable as a valid AusEFlux variable, and

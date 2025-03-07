@@ -12,7 +12,7 @@ format_metric_table(metrics, metric_table)
 \item{metric_table}{The metric table.}
 }
 \value{
-A kable table.
+\link{kable} A kable table.
 }
 \description{
 Colour code the metric values according to their goodess, add links to plots,

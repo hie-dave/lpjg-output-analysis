@@ -7,11 +7,13 @@
 compare(fields, i, j, lyr)
 }
 \arguments{
-\item{fields}{List of fields.}
+\item{fields}{List of fields \link[DGVMTools:Field]{DGVMTools::Field}}
 
-\item{i}{index of the first field to be compared (1-indexed)}
+\item{i}{Index of the first field to be compared (1-indexed)}
 
-\item{j}{index of the second field to be compared (1-indexed)}
+\item{j}{Index of the second field to be compared (1-indexed)}
+
+\item{lyr}{Layer to compare between fields}
 }
 \description{
 Compare a layer between the specified fields.

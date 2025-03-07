@@ -7,11 +7,14 @@
 benchmark_lai_dist(settings, params, tables)
 }
 \arguments{
-\item{settings}{Benchmark settings.}
+\item{settings}{Benchmark settings}
 
-\item{params}{Benchmark parameters.}
+\item{params}{Benchmark parameters}
 
-\item{tables}{Benchmark tables (rbind-ed and outputted as result$tables).}
+\item{tables}{Benchmark tables (rbind-ed and outputted as result$tables)}
+}
+\value{
+\link{list} Returns a list containing the benchmark results
 }
 \description{
 Note that the subannual (monthly) LAI output does not distinguish between

@@ -18,7 +18,7 @@ output of fullSpatialComparison()[\link{"Values"}], or the output of sequential
 calls to CompareLayers(), concatenated into a single list.}
 }
 \value{
-A data table.
+\link{data.frame} A data table.
 }
 \description{
 The table will have the following columns:

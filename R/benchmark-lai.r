@@ -1,22 +1,26 @@
-
 #'
 #' Do LAI benchmarks.
 #'
 #' This benchmark considers subannual LAI and will do seasonal analysis.
 #'
-#' @param settings: Benchmark settings.
-#' @param params: Benchmark parameters.
-#' @param tables: Benchmark tables. This will be rbind-ed and returned as
+#' @param settings Benchmark settings
+#' @param params Benchmark parameters
+#' @param tables Benchmark tables. This will be rbind-ed and returned as
 #' result$tables.
 #'
-#' @name benchmark_bom_lai
-#' @rdname benchmark_bom_lai
+#' @return Returns a list containing the following named items:
+#' - maps: Mean maximum annual LAI for each dataset.
+#' - trends: Trend in LAI for each dataset.
+#' - seasonals: Mean LAI for each month of the year, for each dataset.
+#' - areas: Mean maximum annual LAI for each dataset.
+#' - comparisons: Spatial comparisons between datasets.
+#' - tables: Benchmark tables.
+#' - benchmark: Benchmark object.
 #' @import DGVMTools
 #' @import DGVMBenchmarks
 #' @import data.table
 #' @import dplyr
 #' @export
-#' @return A [DGVMTools::Field] object containing the BoM LAI data.
 #'
 benchmark_lai <- function(settings, params, tables) {
 
@@ -139,14 +143,13 @@ benchmark_lai <- function(settings, params, tables) {
 #' Read BoM LAI from the specified data file, or from the default location if
 #' no data file is provided.
 #'
-#' @param data_path: Path to the directory containing data.
-#' @name read_bom_lai
-#' @rdname read_bom_lai
+#' @param data_path Path to the data directory
+#'
+#' @return Returns a [DGVMTools::Field] object containing the BoM LAI data
 #' @import DGVMTools
 #' @import data.table
 #' @import ncdf4
 #' @export
-#' @return A [DGVMTools::Field] object containing the BoM LAI data.
 #'
 read_bom_lai <- function(data_path, type = "rec") {
     data_file <- get_bom_data_path(data_path, type)
@@ -189,12 +192,11 @@ read_bom_lai <- function(data_path, type = "rec") {
 #'
 #' Get the location of the BoM LAI data.
 #'
-#' @param data_path Path to data.
+#' @param data_path Path to data
 #' @param type Should be either "rec", "per", or "tot"
 #'
 #' @keywords internal
-#' @return Path to the NetCDF file containing BoM LAI data.
-#' @param author Drew Holzworth
+#' @return Path to the NetCDF file containing BoM LAI data
 #'
 get_bom_data_path <- function(data_path, type) {
     filename <- paste0("lai_", type, ".nc")
@@ -206,8 +208,7 @@ get_bom_data_path <- function(data_path, type) {
 #' package.
 #'
 #' @keywords internal
-#' @return Path to the NetCDF file containing BoM LAI data.
-#' @param author Drew Holzworth
+#' @return Path to the NetCDF file containing BoM LAI data
 #'
 get_bom_understory_location <- function(data_path) {
     filename <- "lai_rec.nc"
@@ -219,8 +220,7 @@ get_bom_understory_location <- function(data_path) {
 #' package.
 #'
 #' @keywords internal
-#' @return Path to the NetCDF file containing BoM LAI data.
-#' @param author Drew Holzworth
+#' @return Path to the NetCDF file containing BoM LAI data
 #'
 get_bom_overstory_location <- function(data_path) {
     filename <- "lai_per.nc"
@@ -232,8 +232,7 @@ get_bom_overstory_location <- function(data_path) {
 #' package.
 #'
 #' @keywords internal
-#' @return Path to the NetCDF file containing BoM LAI data.
-#' @param author Drew Holzworth
+#' @return Path to the NetCDF file containing BoM LAI data
 #'
 get_bom_total_location <- function(data_path) {
     filename <- "lai_tot.nc"
@@ -243,13 +242,12 @@ get_bom_total_location <- function(data_path) {
 #'
 #' Get the location of the BoM LAI data.
 #'
-#' @param data_path: Path to the data directory provided alongside this package.
-#' @param filename: Filename, which depends on whether we want understory,
+#' @param data_path Path to the data directory provided alongside this package.
+#' @param filename Filename, which depends on whether we want understory,
 #' overstory, or total LAI.
 #'
 #' @keywords internal
-#' @return Path to the NetCDF file containing BoM LAI data.
-#' @param author Drew Holzworth
+#' @return Path to the NetCDF file containing BoM LAI data
 #'
 get_bom_location <- function(data_path, filename) {
     dir <- file.path(data_path, "bom_lai")

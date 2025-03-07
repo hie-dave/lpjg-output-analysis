@@ -17,28 +17,26 @@ ozflux_plot_layerwise(
 )
 }
 \arguments{
-\item{sources:}{Data sources to be plotted (see: \link{sanitise_source}).}
+\item{sources}{Data sources to be plotted (see: \link{sanitise_source})}
 
-\item{vars:}{The single variable to be plotted (see: \link{sanitise_variable}).}
+\item{sites}{Sites to be plotted (see: \link{sanitise_ozflux_sites})}
 
-\item{sites:}{Sites to be plotted (see: \link{sanitise_ozflux_sites}).}
+\item{layers}{The layers to be plotted. E.g. \code{paste0("sw_", 0:14)}}
 
-\item{layers:}{The layers to be plotted. E.g. \code{paste0("sw_", 0:14)}.}
+\item{title}{The desired panel titles}
 
-\item{title:}{The desired panel titles.}
+\item{separate_plots}{iff TRUE, draw each layer in a separate plot. FALSE to
+draw all layers in a single plot}
 
-\item{separate_plots:}{TRUE to draw each layer in a separate plot. FALSE to
-draw all layers on the same plot.}
+\item{use_plotly}{iff TRUE, generate \link{plotly} outputs, FALSE to use \link[ggplot2:ggplot]{ggplot2::ggplot}}
 
-\item{combine_sites:}{TRUE to combine plots for each site into a single
-panel. Requires separate_plots = FALSE.}
+\item{common_yaxis}{iff TRUE, use a common y-axis for all plots. False otherwise}
 
-\item{use_plotly:}{TRUE to draw plots with plotly. FALSE to use ggplot2.}
-
-\item{common_yaxis:}{TRUE to use a common y-axis for all plots. False otherwise.}
+\item{vars}{The single variable to be plotted (see: \link{sanitise_variable})}
 }
 \value{
-Returns a list of ggplot objects.
+Returns a list of \link[ggplot2:ggplot]{ggplot2::ggplot} objects. If use_plotly is TRUE,
+returns \link{plotly} objects instead.
 }
 \description{
 Create a panel of plots, where each plot in the panel contains one of the

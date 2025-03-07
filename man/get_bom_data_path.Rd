@@ -7,14 +7,12 @@
 get_bom_data_path(data_path, type)
 }
 \arguments{
-\item{data_path}{Path to data.}
+\item{data_path}{Path to data}
 
 \item{type}{Should be either "rec", "per", or "tot"}
-
-\item{author}{Drew Holzworth}
 }
 \value{
-Path to the NetCDF file containing BoM LAI data.
+Path to the NetCDF file containing BoM LAI data
 }
 \description{
 Get the location of the BoM LAI data.

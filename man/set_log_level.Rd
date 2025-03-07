@@ -6,6 +6,9 @@
 \usage{
 set_log_level(level)
 }
+\arguments{
+\item{level}{Log level (0-4). Higher numbers mean more verbose output}
+}
 \description{
 This should be in range 0-4. Higher values will result in more log messages
 being written.

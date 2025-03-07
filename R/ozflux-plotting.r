@@ -8,17 +8,19 @@
 #'
 #' If data is missing for any of the sites to be plotted, an error will occur.
 #'
-#' @param sources: Sources to be plotted (see: [sanitise_source]).
-#' @param vars: Variables to be plotted (see: [sanitise_variable]).
-#' @param sites: Sites to be plotted (see: [sanitise_ozflux_sites]).
-#' @param separate: Iff TRUE, a list of the site-level plots will be returned.
+#' @param sources Sources to be plotted (see: [sanitise_source])
+#' @param vars Variables to be plotted (see: [sanitise_variable])
+#' @param sites Sites to be plotted (see: [sanitise_ozflux_sites])
+#' @param separate iff TRUE, a list of the site-level plots will be returned.
 #' If FALSE, all plots will be rendered to a single panel. This has no effect
 #' if a single site is to be plotted.
-#' @param use_plotly: Iff true, graphs will be plotted using plotly.
-#' @param common_yaxis: Iff true, all plots in the panel will have the same y-
-#' axis range. No effect if only 1 site is being plotted.
+#' @param use_plotly iff TRUE, graphs will be plotted using [plotly]
+#' @param common_yaxis iff TRUE, all plots in the panel will have the same y-axis
+#' range. No effect if only 1 site is being plotted.
 #'
-#' @return Can return a single, or vector of, ggplot or plotly objects.
+#' @return Returns either a single [ggplot2::ggplot] object (if separate is FALSE),
+#' or a list of [ggplot2::ggplot] objects (if separate is TRUE). If use_plotly
+#' is TRUE, returns [plotly] objects instead.
 #' @export
 #'
 ozflux_plot <- function(
@@ -88,16 +90,16 @@ ozflux_plot <- function(
 #' One series will be plotted on each graph for each source. One
 #' panel will be created for each site.
 #'
-#' @param sources: Source or list of data sources to be plotted (see: [sanitise_source]).
-#' @param var: The variable to be plotted (see: [sanitise_variable]).
-#' @param sites: Ozflux sites to be plotted (see: [sanitise_ozflux_sites]).
-#' @param use_plotly: TRUE to generate plotly outputs, FALSE to use ggplot.
-#' @param common_yaxis: TRUE to use the same y-axis scales for all sites. FALSE
-#' otherwise.
+#' @param sources Source or list of data sources to be plotted (see: [sanitise_source])
+#' @param var The variable to be plotted (see: [sanitise_variable])
+#' @param sites Ozflux sites to be plotted (see: [sanitise_ozflux_sites])
+#' @param use_plotly iff TRUE, generate [plotly] outputs, FALSE to use [ggplot2::ggplot]
+#' @param common_yaxis iff TRUE, use the same y-axis scales for all sites. FALSE
+#' otherwise
 #'
-#' @return Returns a single plot object if plotting one site, otherwise returns
-#' a list of plot objects of the same length as the number of sites to be
-#' plotted.
+#' @return Returns a single [ggplot2::ggplot] object if plotting one site, otherwise returns
+#' a list of [ggplot2::ggplot] objects of the same length as the number of sites to be
+#' plotted. If use_plotly is TRUE, returns [plotly] objects instead.
 #' @export
 #'
 ozflux_panel <- function(
@@ -159,19 +161,18 @@ ozflux_panel <- function(
 #' (In this nomenclature, a "layer" technically refers to a column in the output
 #' file).
 #'
-#' @param sources: Data sources to be plotted (see: [sanitise_source]).
-#' @param vars: The single variable to be plotted (see: [sanitise_variable]).
-#' @param sites: Sites to be plotted (see: [sanitise_ozflux_sites]).
-#' @param layers: The layers to be plotted. E.g. `paste0("sw_", 0:14)`.
-#' @param title: The desired panel titles.
-#' @param separate_plots: TRUE to draw each layer in a separate plot. FALSE to
-#' draw all layers on the same plot.
-#' @param combine_sites: TRUE to combine plots for each site into a single
-#' panel. Requires separate_plots = FALSE.
-#' @param use_plotly: TRUE to draw plots with plotly. FALSE to use ggplot2.
-#' @param common_yaxis: TRUE to use a common y-axis for all plots. False otherwise.
+#' @param sources Data sources to be plotted (see: [sanitise_source])
+#' @param vars The single variable to be plotted (see: [sanitise_variable])
+#' @param sites Sites to be plotted (see: [sanitise_ozflux_sites])
+#' @param layers The layers to be plotted. E.g. `paste0("sw_", 0:14)`
+#' @param title The desired panel titles
+#' @param separate_plots iff TRUE, draw each layer in a separate plot. FALSE to
+#' draw all layers in a single plot
+#' @param use_plotly iff TRUE, generate [plotly] outputs, FALSE to use [ggplot2::ggplot]
+#' @param common_yaxis iff TRUE, use a common y-axis for all plots. False otherwise
 #'
-#' @return Returns a list of ggplot objects.
+#' @return Returns a list of [ggplot2::ggplot] objects. If use_plotly is TRUE,
+#' returns [plotly] objects instead.
 #' @export
 #'
 ozflux_plot_layerwise <- function(

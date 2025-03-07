@@ -7,9 +7,9 @@
 sum_pfts(df, pfts)
 }
 \arguments{
-\item{df}{A data frame.}
+\item{df}{A data frame}
 
-\item{pfts}{Names of columns to be summed.}
+\item{pfts}{Names of columns to be summed}
 }
 \description{
 Calculate the sum of the specified columns.

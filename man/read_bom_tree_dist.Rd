@@ -7,7 +7,7 @@
 read_bom_tree_dist(data_path)
 }
 \arguments{
-\item{data_path}{Path to data directory.}
+\item{data_path}{Path to data directory}
 }
 \description{
 Read BoM LAI estimates and post-process them to calculate species

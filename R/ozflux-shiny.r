@@ -2,6 +2,13 @@
 #' Run a shiny app which generates interactive plots of site-level ozflux
 #' simulations against predictions.
 #'
+#' @param sources List of [DGVMTools::Source] objects to plot
+#' @param vars Variables to plot (see: [get_observed_vars])
+#' @param sites Sites to plot (see: [read_ozflux_sites])
+#'
+#' @return Returns a [shiny::shinyApp] object
+#' @import shiny
+#' @import shinydashboard
 #' @export
 #'
 ozflux_shiny <- function(sources) {

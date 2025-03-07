@@ -1,20 +1,17 @@
-
 #'
 #' Do AusEFlux benchmarks for a particular variable.
 #'
 #' @param var Variable to be benchmarked. Should be one of: GPP, NEE, ER
-#' @param settings: Benchmark settings.
-#' @param params: Benchmark parameters.
-#' @param tables: Benchmark tables.
+#' @param settings Benchmark settings
+#' @param params Benchmark parameters
+#' @param tables Benchmark tables
 #'
-#' @name benchmark_bom_lai
-#' @rdname benchmark_bom_lai
+#' @return Returns a list containing the benchmark results
 #' @import DGVMTools
 #' @import DGVMBenchmarks
 #' @import data.table
 #' @import dplyr
 #' @export
-#' @return A [DGVMTools::Field] object containing the BoM LAI data.
 #'
 benchmark_auseflux <- function(var,
                                settings,
@@ -159,19 +156,16 @@ benchmark_auseflux <- function(var,
 }
 
 #'
-#' Read BoM LAI from the specified data file, or from the default location if
+#' Read AusEFlux data from the specified data file, or from the default location if
 #' no data file is provided.
 #'
-#' @param var The AusEFlux variable.
-#' @param data_path Data path.
+#' @param var Variable to read (see: [auseflux_sanitise_var])
+#' @param data_path Path to the data directory
 #'
-#' @name read_auseflux
-#' @rdname read_auseflux
-#' @import DGVMTools
+#' @return Returns a [DGVMTools::Field] object containing the requested AusEFlux data
 #' @import data.table
 #' @import ncdf4
 #' @export
-#' @return A [DGVMTools::Field] object containing the requested AusEFlux data.
 #'
 read_auseflux <- function(var, data_path) {
     var <- auseflux_sanitise_var(var)
@@ -206,8 +200,8 @@ read_auseflux <- function(var, data_path) {
 #'
 #' Get the path to the AusEFlux data file for the specified variable.
 #'
-#' @param var The AusEFlux variable.
-#' @param data_path Path to directory containing data.
+#' @param var Variable to read
+#' @param data_path Path to directory containing data
 #'
 #' @keywords internal
 #'
@@ -227,7 +221,7 @@ auseflux_get_file_path <- function(var, data_path) {
 #' return the name of the corresponding AusEFlux variable. stop() will be called
 #' if the variable is invalid.
 #'
-#' @param var The AusEFlux variable.
+#' @param var Variable to read
 #'
 #' @keywords internal
 #'

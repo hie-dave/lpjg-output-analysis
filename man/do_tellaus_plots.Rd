@@ -15,7 +15,7 @@ do_tellaus_plots(benchmark, settings, params, overall_tables, title)
 \item seasonals: Seasonally-aggregated values (one value per month per gridcell)
 \item comparisons: Output of \code{\link[DGVMTools:fullSpatialComparison]{DGVMTools::fullSpatialComparison()}}
 \item tables: List with two named data frames: "totals" and "metrics"
-\item benchmark: A DaveBenchmark instance
+\item benchmark: A \link[DGVMBenchmarks:DaveBenchmark]{DGVMBenchmarks::DaveBenchmark} instance
 }}
 
 \item{settings}{Benchmarking settings as specified by the user}
@@ -23,9 +23,11 @@ do_tellaus_plots(benchmark, settings, params, overall_tables, title)
 \item{params}{Benchmarking parameters as specified by the user}
 
 \item{overall_tables}{List of all tables}
+
+\item{title}{Title for the plots}
 }
 \value{
-A list of tags
+\link{list} A list of HTML tags for rendering
 }
 \description{
 Produce a standard set of plots for the tellaus report from the given

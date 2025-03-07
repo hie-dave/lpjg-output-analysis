@@ -2,12 +2,12 @@
 % Please edit documentation in R/dave-logging.r
 \name{set_log_file}
 \alias{set_log_file}
-\title{Set the log file used by daveanalysis logging functions.}
+\title{Set the log file used by dave_analysis logging functions.}
 \usage{
 set_log_file(file)
 }
 \arguments{
-\item{file}{The file to which log messages will be written.}
+\item{file}{Path to log file. Empty string or NULL means stdout}
 }
 \description{
 If this includes a directory component, the parent directory must exist.

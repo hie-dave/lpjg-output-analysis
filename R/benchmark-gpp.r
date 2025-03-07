@@ -1,11 +1,10 @@
-
 #'
 #' Do GPP benchmark, using Auseflux and GOSIF GPP products. The GOSIF GPP will
 #' be cropped to only contain Australia.
 #'
-#' @param params: Benchmark parameters.
-#' @param settings: Benchmark settings.
-#' @param tables: Benchmark tables.
+#' @param params Benchmark parameters
+#' @param settings Benchmark settings
+#' @param tables Benchmark tables
 #'
 #' @name benchmark_bom_lai
 #' @rdname benchmark_bom_lai
@@ -14,7 +13,7 @@
 #' @import data.table
 #' @import dplyr
 #' @export
-#' @return A list containing the following named items:
+#' @return Returns a list containing the following named items:
 #' - maps: Mean of yearly total GPP for each gridcell
 #' - trends: Temporal trend in GPP for each gridcell
 #' - seasonals: Gridded mean monthly GPP for each month over the time period
@@ -167,13 +166,13 @@ benchmark_gpp <- function(params, settings, tables) {
 #'
 #' Read GOSIF GPP from the specified data path.
 #'
-#' @param data_path Path to data files.
+#' @param data_path Path to data files
 #'
 #' @name read_gosif
 #' @rdname read_gosif
 #' @import DGVMTools
 #' @keywords internal
-#' @return A [DGVMTools::Field] object containing GOSIF global monthly GPP.
+#' @return Returns a [DGVMTools::Field] object containing GOSIF global monthly GPP
 #'
 read_gosif <- function(data_path) {
     gosif_file_name <- "GOSIF_GPP.txt.gz"

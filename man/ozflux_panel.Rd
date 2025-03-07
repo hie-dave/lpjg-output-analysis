@@ -14,21 +14,21 @@ ozflux_panel(
 )
 }
 \arguments{
-\item{sources:}{Source or list of data sources to be plotted (see: \link{sanitise_source}).}
+\item{sources}{Source or list of data sources to be plotted (see: \link{sanitise_source})}
 
-\item{var:}{The variable to be plotted (see: \link{sanitise_variable}).}
+\item{var}{The variable to be plotted (see: \link{sanitise_variable})}
 
-\item{sites:}{Ozflux sites to be plotted (see: \link{sanitise_ozflux_sites}).}
+\item{sites}{Ozflux sites to be plotted (see: \link{sanitise_ozflux_sites})}
 
-\item{use_plotly:}{TRUE to generate plotly outputs, FALSE to use ggplot.}
+\item{use_plotly}{iff TRUE, generate \link{plotly} outputs, FALSE to use \link[ggplot2:ggplot]{ggplot2::ggplot}}
 
-\item{common_yaxis:}{TRUE to use the same y-axis scales for all sites. FALSE
-otherwise.}
+\item{common_yaxis}{iff TRUE, use the same y-axis scales for all sites. FALSE
+otherwise}
 }
 \value{
-Returns a single plot object if plotting one site, otherwise returns
-a list of plot objects of the same length as the number of sites to be
-plotted.
+Returns a single \link[ggplot2:ggplot]{ggplot2::ggplot} object if plotting one site, otherwise returns
+a list of \link[ggplot2:ggplot]{ggplot2::ggplot} objects of the same length as the number of sites to be
+plotted. If use_plotly is TRUE, returns \link{plotly} objects instead.
 }
 \description{
 One series will be plotted on each graph for each source. One

@@ -13,7 +13,7 @@ plot_absolute_deltas(benchmark, settings)
 \item{settings}{Benchmark settings as defined in tellaus.rmd.}
 }
 \value{
-A list of tags
+\link{ggplot} A list of tags
 }
 \description{
 Create an absolute values differenes plot panel for use in the tellaus

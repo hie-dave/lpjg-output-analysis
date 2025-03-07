@@ -1,10 +1,10 @@
-
 #'
 #' Compare a layer between the specified fields.
 #'
-#' @param fields List of fields.
-#' @param i index of the first field to be compared (1-indexed)
-#' @param j index of the second field to be compared (1-indexed)
+#' @param fields List of fields [DGVMTools::Field]
+#' @param i Index of the first field to be compared (1-indexed)
+#' @param j Index of the second field to be compared (1-indexed)
+#' @param lyr Layer to compare between fields
 #'
 #' @keywords internal
 #'
@@ -17,9 +17,10 @@ compare <- function(fields, i, j, lyr) {
 #'
 #' E.g. for 3 fields: compare fields 1&2, 1&3, 2&3.
 #'
-#' @param fields The fields to be compared.
-#' @param lyr The layer to be compared in the fields. Must exist in all fields.
+#' @param fields The fields to be compared [DGVMTools::Field]
+#' @param lyr The layer to be compared in the fields. Must exist in all fields
 #'
+#' @return [list] Returns a list of field comparisons, named by the field pairs compared
 #' @export
 #'
 compare_all <- function(fields, lyr) {
@@ -41,10 +42,11 @@ compare_all <- function(fields, lyr) {
 #' Note that the subannual (monthly) LAI output does not distinguish between
 #' PFTs, so this benchmark only considers annual LAI.
 #'
-#' @param settings Benchmark settings.
-#' @param params Benchmark parameters.
-#' @param tables Benchmark tables (rbind-ed and outputted as result$tables).
+#' @param settings Benchmark settings
+#' @param params Benchmark parameters
+#' @param tables Benchmark tables (rbind-ed and outputted as result$tables)
 #'
+#' @return [list] Returns a list containing the benchmark results
 #' @export
 #'
 benchmark_lai_dist <- function(settings, params, tables) {
@@ -110,8 +112,8 @@ benchmark_lai_dist <- function(settings, params, tables) {
 #'
 #' Calculate the sum of the specified columns.
 #'
-#' @param df A data frame.
-#' @param pfts Names of columns to be summed.
+#' @param df A data frame
+#' @param pfts Names of columns to be summed
 #'
 #' @keywords internal
 #'
@@ -129,7 +131,7 @@ sum_pfts <- function(df, pfts) {
 #' This function reads LPJ-GUESS outputs and post-processes them to calculate
 #' species distribution.
 #'
-#' @param src A [DGVMTools::Source] object.
+#' @param src A [DGVMTools::Source] object
 #'
 #' @keywords internal
 #'
@@ -187,7 +189,7 @@ read_guess <- function(src, fields) {
 #' Read BoM LAI estimates and post-process them to calculate species
 #' distribution.
 #'
-#' @param data_path Path to data directory.
+#' @param data_path Path to data directory
 #'
 #' @keywords internal
 #'

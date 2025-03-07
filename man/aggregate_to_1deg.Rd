@@ -11,7 +11,7 @@ aggregate_to_1deg(df)
 \item{df}{A data frame.}
 }
 \value{
-A data-frame on a 1-degree grid.
+Returns a data frame on a 1-degree grid.
 }
 \description{
 Aggregate the given data frame to 1-degree by taking the mean of the closest

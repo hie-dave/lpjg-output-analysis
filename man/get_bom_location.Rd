@@ -7,15 +7,13 @@
 get_bom_location(data_path, filename)
 }
 \arguments{
-\item{data_path:}{Path to the data directory provided alongside this package.}
+\item{data_path}{Path to the data directory provided alongside this package.}
 
-\item{filename:}{Filename, which depends on whether we want understory,
+\item{filename}{Filename, which depends on whether we want understory,
 overstory, or total LAI.}
-
-\item{author}{Drew Holzworth}
 }
 \value{
-Path to the NetCDF file containing BoM LAI data.
+Path to the NetCDF file containing BoM LAI data
 }
 \description{
 Get the location of the BoM LAI data.

@@ -7,9 +7,9 @@
 auseflux_get_file_path(var, data_path)
 }
 \arguments{
-\item{var}{The AusEFlux variable.}
+\item{var}{Variable to read}
 
-\item{data_path}{Path to directory containing data.}
+\item{data_path}{Path to directory containing data}
 }
 \description{
 Get the path to the AusEFlux data file for the specified variable.

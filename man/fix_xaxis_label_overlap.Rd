@@ -10,7 +10,7 @@ fix_xaxis_label_overlap(plt)
 \item{plt}{A plot}
 }
 \value{
-A plot with fixed x-axis labels.
+\link{ggplot} A plot with fixed x-axis labels.
 }
 \description{
 Fix overlapping longitude values on the x-axis of a spatial plot.

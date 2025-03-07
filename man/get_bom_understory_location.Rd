@@ -7,11 +7,8 @@ package.}
 \usage{
 get_bom_understory_location(data_path)
 }
-\arguments{
-\item{author}{Drew Holzworth}
-}
 \value{
-Path to the NetCDF file containing BoM LAI data.
+Path to the NetCDF file containing BoM LAI data
 }
 \description{
 Get the location of the BoM understory LAI data that is shipped with this

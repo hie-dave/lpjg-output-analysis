@@ -1,4 +1,3 @@
-
 set_global("LOG_LEVEL_ERROR", 0)
 set_global("LOG_LEVEL_WARNING", 1)
 set_global("LOG_LEVEL_INFORMATION", 2)
@@ -15,6 +14,7 @@ set_global("warning_as_error", FALSE)
 #' This should be in range 0-4. Higher values will result in more log messages
 #' being written.
 #'
+#' @param level Log level (0-4). Higher numbers mean more verbose output
 #' @export
 #'
 set_log_level <- function(level) {
@@ -30,12 +30,12 @@ set_log_level <- function(level) {
 }
 
 #'
-#' Set the log file used by daveanalysis logging functions.
+#' Set the log file used by dave_analysis logging functions.
 #'
 #' If this includes a directory component, the parent directory must exist.
 #' The log file will not be truncated.
 #'
-#' @param file The file to which log messages will be written.
+#' @param file Path to log file. Empty string or NULL means stdout
 #' @export
 #'
 set_log_file <- function(file) {
