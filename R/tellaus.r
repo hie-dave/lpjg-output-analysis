@@ -6,7 +6,7 @@
 #' - maps: Temporally-aggregated dataset (one value per grid cell)
 #' - trends: Temporal trends (one value per grid cell)
 #' - seasonals: Seasonally-aggregated values (one value per month per gridcell)
-#' - comparisons: Output of [DGVMTools::fullSpatialComparison()]
+#' - comparisons: Output of [DGVMTools::fullSpatialComparison]
 #' - tables: List with two named data frames: "totals" and "metrics"
 #' - benchmark: A [DGVMBenchmarks::DaveBenchmark] instance
 #' @param settings Benchmarking settings as specified by the user
@@ -14,17 +14,17 @@
 #' @param overall_tables List of all tables
 #' @param title Title for the plots
 #'
-#' @return [list] A list of HTML tags for rendering
+#' @return Returns a list of HTML tags for rendering, or NULL if DGVMBenchmarks is not available
 #' @import DGVMTools
-#' @import DGVMBenchmarks
 #' @import ggplot2
 #' @export
 #'
-do_tellaus_plots <- function(benchmark,
-                             settings,
-                             params,
-                             overall_tables,
-                             title) {
+do_tellaus_plots <- function(benchmark, settings, params, overall_tables, title) {
+    if (!requireNamespace("DGVMBenchmarks", quietly = TRUE)) {
+        warning("DGVMBenchmarks package is required for TellAus plot generation")
+        return(NULL)
+    }
+
     tags <- list()
 
     write_title <- function(title, level) {
@@ -144,7 +144,6 @@ add_metrics <- function(benchmark, comparisons, settings, plt) {
 #'
 #' @export
 #' @import DGVMTools
-#' @import DGVMBenchmarks
 #' @import ggplot2
 #' @return [ggplot] A list of tags
 #'

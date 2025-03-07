@@ -6,10 +6,9 @@
 #' @param settings Benchmark settings
 #' @param tables Benchmark tables
 #'
-#' @name benchmark_bom_lai
-#' @rdname benchmark_bom_lai
+#' @name benchmark_gpp
+#' @rdname benchmark_gpp
 #' @import DGVMTools
-#' @import DGVMBenchmarks
 #' @import data.table
 #' @import dplyr
 #' @export
@@ -22,6 +21,11 @@
 #' - benchmark: The benchmark object containing standard metadata
 #'
 benchmark_gpp <- function(params, settings, tables) {
+    if (!requireNamespace("DGVMBenchmarks", quietly = TRUE)) {
+        warning("DGVMBenchmarks package is required for GPP benchmarking")
+        return(NULL)
+    }
+
     # Note: auseflux and gosif gpp are both in gC/m2/month.
     gosif <- read_gosif(params$data_directory)
     auseflux_gpp <- read_auseflux("GPP", params$data_directory)
@@ -66,13 +70,13 @@ benchmark_gpp <- function(params, settings, tables) {
         name <- field@source@name
 
         # Calculate slope.
-        trends[[name]] <<- calcLinearTrend(field)
+        trends[[name]] <<- DGVMBenchmarks::calcLinearTrend(field)
 
         # Get mean of yearly totals.
-        maps[[name]] <<- aggregateYears(aggregateSubannual(field, "sum"))
+        maps[[name]] <<- DGVMTools::aggregateYears(DGVMTools::aggregateSubannual(field, "sum"))
 
         # Get mean of each monthly value across the time period.
-        seasonal[[name]] <<- aggregateYears(field)
+        seasonal[[name]] <<- DGVMTools::aggregateYears(field)
 
         # Get total GPP over the time period.
         # Note: disabling due to bug in DGVMTools.

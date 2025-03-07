@@ -16,7 +16,7 @@ benchmark_auseflux(var, settings, params, tables)
 \item{tables}{Benchmark tables}
 }
 \value{
-Returns a list containing the benchmark results
+Returns a list containing the benchmark results, or NULL if DGVMBenchmarks is not available
 }
 \description{
 Do AusEFlux benchmarks for a particular variable.

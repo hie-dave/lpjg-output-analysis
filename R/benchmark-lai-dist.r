@@ -50,6 +50,10 @@ compare_all <- function(fields, lyr) {
 #' @export
 #'
 benchmark_lai_dist <- function(settings, params, tables) {
+    if (!requireNamespace("DGVMBenchmarks", quietly = TRUE)) {
+        warning("DGVMBenchmarks package is required for LAI distribution benchmarking")
+        return(NULL)
+    }
     fields <- list()
 
     add_field <- function(field) {

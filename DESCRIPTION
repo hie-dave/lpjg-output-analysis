@@ -32,7 +32,6 @@ Depends:
 	ggplot2(>= 3.5.1)
 Imports:
 	DGVMTools,
-	DGVMBenchmarks,
 	plotly,
 	shiny,
 	dplyr,
@@ -40,15 +39,18 @@ Imports:
 	purrr,
 	knitr,
 	ggpubr,
-	ggplot2
+	ggplot2,
+	ncdf4
 Suggests:
-	ncdf4,
 	rmarkdown,
 	ggpubr,
-	knitrProgressBar
+	knitrProgressBar,
+	DGVMBenchmarks
 License: GPL | file LICENSE
 URL: https://github.com/hie-dave
 BugReports: https://github.com/hie-dave/output-analysis/issues
+Remotes:
+	MagicForrest/DGVMTools
 NeedsCompilation: no
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1

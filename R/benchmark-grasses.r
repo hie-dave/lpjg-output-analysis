@@ -1,16 +1,22 @@
 #'
-#' Do c3/c4 grass distribution benchmarks.
+#' Do C3/C4 grass distribution benchmarks.
 #'
-#' @param settings: Benchmark settings.
-#' @param params: Benchmark parameters.
-#' @param tables: Benchmark tables.
+#' @param settings Benchmark settings
+#' @param params Benchmark parameters
+#' @param tables Benchmark tables
 #'
-#' @name benchmark_grass_dist
-#' @rdname benchmark_grass_dist
+#' @return Returns a list containing the benchmark results, or NULL if DGVMBenchmarks is not available
 #' @import DGVMTools
+#' @import data.table
+#' @import dplyr
 #' @export
-#' @return A list.
-benchmark_grass_dist <- function(settings, params, tables) {
+#'
+benchmark_grasses <- function(settings, params, tables) {
+    if (!requireNamespace("DGVMBenchmarks", quietly = TRUE)) {
+        warning("DGVMBenchmarks package is required for grass distribution benchmarking")
+        return(NULL)
+    }
+
     var <- "dave_lai"
     verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
     years <- settings$grass_dist_years

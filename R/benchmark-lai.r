@@ -17,12 +17,15 @@
 #' - tables: Benchmark tables.
 #' - benchmark: Benchmark object.
 #' @import DGVMTools
-#' @import DGVMBenchmarks
 #' @import data.table
 #' @import dplyr
 #' @export
 #'
 benchmark_lai <- function(settings, params, tables) {
+    if (!requireNamespace("DGVMBenchmarks", quietly = TRUE)) {
+        warning("DGVMBenchmarks package is required for LAI benchmarking")
+        return(NULL)
+    }
 
     # Mean maximum annual LAI for each dataset.
     maps <- list()

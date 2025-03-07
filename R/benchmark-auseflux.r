@@ -6,9 +6,8 @@
 #' @param params Benchmark parameters
 #' @param tables Benchmark tables
 #'
-#' @return Returns a list containing the benchmark results
+#' @return Returns a list containing the benchmark results, or NULL if DGVMBenchmarks is not available
 #' @import DGVMTools
-#' @import DGVMBenchmarks
 #' @import data.table
 #' @import dplyr
 #' @export
@@ -17,6 +16,11 @@ benchmark_auseflux <- function(var,
                                settings,
                                params,
                                tables) {
+    if (!requireNamespace("DGVMBenchmarks", quietly = TRUE)) {
+        warning("DGVMBenchmarks package is required for benchmarking functionality")
+        return(NULL)
+    }
+
     var <- auseflux_sanitise_var(var)
 
     auseflux <- read_auseflux(var, settings$data_path)
