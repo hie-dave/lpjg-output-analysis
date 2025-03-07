@@ -7,6 +7,7 @@ output:
         toc: true
         theme: united
         css: ozflux-benchmarks.css
+        self_contained: true
 classoption: 
   landscape
 ---
@@ -24,8 +25,10 @@ classoption:
 
 library("tidyr")
 library("htmltools")
+library("htmlwidgets")
 library("DGVMTools")
 library("daveanalysis")
+library("plotly")
 dave_config(log_level = 4, log_file = "ozflux-benchmarks.log")
 ```
 
@@ -48,22 +51,28 @@ define_source <- function(name, path, description) {
         dir = path,
         format = OZFLUX))
 }
-define_source("DAVE", "/home/drew/code/lpj-guess/dave", "Latest dave photosynthesis with trunk allocation, all pfts except shrubs running in competition. Unlimited number of tree cohorts. rootdist water uptake method. Run on lpjguess_dave branch (cc12d82b5b17249eb87dd93af6036f689fa2fe69)")
-define_source("Trunk", "/home/drew/code/lpj-guess/dave3", "Trunk with global pfts and rootdist water uptake method, run on the lpjguess_dave_baseline branch (22b5f71d0263dded3cca0bcad8d101b1e6cb1c38)")
+define_source("DAVE", "/home/drew/code/lpj-guess/dave", "Latest Dave branch with all dave switches enabled except for hydraulics. Max 1 tree cohort per PFT. rootdist water uptake method. Measured fluxes used for climate data. Run on lpjguess_dave branch (4feb77a133eff573ff233fbd96bf1ebd357454e2)")
+define_source("DAVE_BARRA2", "/home/drew/code/lpj-guess/dave3", "Latest Dave branch with all dave switches enabled except for hydraulics. Max 1 tree cohort per PFT. rootdist water uptake method. BARRA2 used for climate data. Run on lpjguess_dave branch (4feb77a133eff573ff233fbd96bf1ebd357454e2)")
+define_source("Trunk", "/home/drew/code/lpj-guess/trunk", "Trunk with global pfts and rootdist water uptake method, run on the lpjguess_dave_baseline branch (2ec439fbd48a9bf326d5a2d76eb35bff706f0bd9)")
 
-# Set to true to use plotly for graph rendering. Note: requires rendering to
-# HTML; see document header.
-plotly <- FALSE
+# define_source("DAVE", "/home/drew/code/lpj-guess/dave", "Dave branch with dave photosynthesis and trunk allocation, after fixing leap years bug, with all pfts except shrubs running in competition. Unlimited number of tree cohorts. rootdist water uptake method. Run on lpjguess_dave branch (448d767c197ee264d7a029ca3aea82e09f57b426)")
+# define_source("Trunk", "/home/drew/code/lpj-guess/dave3", "Dave branch with all dave switches disabled, with global pfts and rootdist water uptake method, run on the lpjguess_dave_baseline branch after fixing leap years bug (c42f294e94968b351cf0b8f6507321c5d784448d)")
 
 sites <- NULL # Plot all sites
 # sites <- c("CumberlandPlain") # Plot a subset of sites
 
 vars <- NULL # Plot all standard variables
-# vars <- c("dave_transpiration") # Plot of a subset of variables
+# vars <- c("dave_gpp") # Plot of a subset of variables
 
-ozflux_benchmarks(sources, source_descriptions, use_plotly = plotly
-                  , sites = sites, vars = vars)
-if (plotly) {
-    tagList(tags)
+# Set to true to use plotly for graph rendering. Note: requires rendering to
+# HTML; see document header. Note also that embedding lots of plotlies in a
+# single document is not conducive to a good benchmarking experience (as the
+# document is slow to load and sluggish once loaded).
+plotly <- FALSE
+if (is.null(sites) || is.null(vars) || length(sites) > 1 || length(vars) > 1) {
+    plotly <- FALSE
 }
+
+ozflux_benchmarks(sources, source_descriptions, use_plotly = plotly,
+                  sites = sites, vars = vars)
 ```
