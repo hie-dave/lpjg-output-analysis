@@ -531,7 +531,10 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     if (do_pvo) {
         log_diag("Creating predicted vs. observed scatter plot...")
         pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size)
-        pvo <- trim_ggplot(pvo, xlab = TRUE)
+        # On the subannual plots, we want the x-axis label (observed) as well
+        # as the y-axis label (predicted), because these are not shared with any
+        # other plots in the panel.
+        pvo <- trim_ggplot(pvo, xlab = TRUE, ylab = TRUE)
         if (use_plotly) {
             pvo <- to_plotly(pvo, ylab)
         }
