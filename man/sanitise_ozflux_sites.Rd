@@ -7,8 +7,13 @@
 sanitise_ozflux_sites(sites)
 }
 \arguments{
-\item{sites:}{One or more ozflux site identifiers. These may be expressed as
-site names or (lon, lat) tuples.}
+\item{sites:}{One or more ozflux site identifiers. If NULL, all sites will be
+used. The sites may be expressed as:
+\itemize{
+\item Site names
+\item (lon, lat) tuples
+\item A dataframe with (Lon, Lat, Name) columns, and one row per site
+}}
 }
 \value{
 Returns a dataframe with (Lon, Lat, Name) columns, and one row per
@@ -16,8 +21,5 @@ site.
 }
 \description{
 Sanitise the a site specifier.
-}
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 }
 \keyword{internal}

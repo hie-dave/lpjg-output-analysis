@@ -13,12 +13,9 @@ read_auseflux(var, data_path)
 \item{data_path}{Data path.}
 }
 \value{
-A DGVMTools::Field object containing the requested AusEFlux data.
+A \link[DGVMTools:Field]{DGVMTools::Field} object containing the requested AusEFlux data.
 }
 \description{
 Read BoM LAI from the specified data file, or from the default location if
 no data file is provided.
-}
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 }

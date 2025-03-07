@@ -21,7 +21,4 @@ An efficiency of 0 means that the predictions are equally accurate predictors
 as the mean of the observed data. An efficiency of < 0 means that the mean of
 the observations is a better predictor than the model.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

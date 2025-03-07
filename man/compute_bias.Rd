@@ -14,7 +14,4 @@ compute_bias(observations, predictions)
 \description{
 Compute bias of predictions to observations.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

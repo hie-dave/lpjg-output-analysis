@@ -11,12 +11,9 @@ read_bom_lai(data_path, type = "rec")
 \item{data_path:}{Path to the directory containing data.}
 }
 \value{
-A DGVMTools::Field object containing the BoM LAI data.
+A \link[DGVMTools:Field]{DGVMTools::Field} object containing the BoM LAI data.
 }
 \description{
 Read BoM LAI from the specified data file, or from the default location if
 no data file is provided.
-}
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 }

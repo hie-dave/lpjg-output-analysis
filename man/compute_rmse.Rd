@@ -14,7 +14,4 @@ compute_rmse(x, y)
 \description{
 This is in the units of the variable.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

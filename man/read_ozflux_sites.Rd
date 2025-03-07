@@ -12,6 +12,3 @@ Data table containing three columns: Lon, lat, Name.
 \description{
 Get a list of all known ozflux sites.
 }
-\author{
-Drew Holzworth
-}

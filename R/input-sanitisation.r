@@ -21,7 +21,6 @@ call_foreach <- function(x, fun, ignore_null = TRUE) {
 #' Get a list of all known ozflux sites.
 #'
 #' @return Data table containing three columns: Lon, lat, Name.
-#' @author Drew Holzworth
 #' @export
 #'
 read_ozflux_sites <- function() {
@@ -43,7 +42,6 @@ read_ozflux_sites <- function() {
 #'
 #' @return Returns the site as a named vector with (Lon, Lat, Name).
 #' @keywords internal
-#' @author Drew Holzworth
 #'
 sanitise_ozflux_site <- function(site) {
 	log_debug("Sanitising ozflux site: ", site)
@@ -76,12 +74,14 @@ sanitise_ozflux_site <- function(site) {
 #'
 #' Sanitise the a site specifier.
 #'
-#' @param sites: One or more ozflux site identifiers. These may be expressed as
-#' site names or (lon, lat) tuples.
+#' @param sites: One or more ozflux site identifiers. If NULL, all sites will be
+#' used. The sites may be expressed as:
+#' - Site names
+#' - (lon, lat) tuples
+#' - A dataframe with (Lon, Lat, Name) columns, and one row per site
 #'
 #' @return Returns a dataframe with (Lon, Lat, Name) columns, and one row per
 #' site.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @keywords internal
 #'
 sanitise_ozflux_sites <- function(sites) {
@@ -112,6 +112,20 @@ sanitise_ozflux_sites <- function(sites) {
 	return(result)
 }
 
+#'
+#' Sanitise version inputs for plotting. Returns a list of [DGVMTools::Source]
+#' objects.
+#'
+#' This is an internal helper function and is not intended for external use.
+#'
+#' @param source: May be one of:
+#' - A [[DGVMTools::Source]] object
+#' - Path to an lpj-guess repository
+#' - Path to a directory containing LPJ-Guess output files
+#'
+#' @return Returns a list of [[DGVMTools::Source]] objects.
+#' @keywords internal
+#'
 sanitise_source <- function(source) {
 	if (class(source)[1] == "Source") {
 		log_debug("Source is a DGVMTools::Source object")
@@ -140,20 +154,14 @@ sanitise_source <- function(source) {
 }
 
 #'
-#' Sanitise version inputs for plotting. Returns a list of DGVMTools::Source
+#' Sanitise version inputs for plotting. Returns a list of [DGVMTools::Source]
 #' objects.
 #'
 #' This is an internal helper function and is not intended for external use.
 #'
-#' @param sources: May be one of:
-#' 					- A single DGVMTools::Source object
-#' 					- List of DGVMTools::Source objects
-#' 					- A single string providing path to an lpj-guess repository,
-#' 					  or a subdirectory of an lpj-guess repository
-#'					- A list of paths to lpj-guess repositories
+#' @param sources: A list of sources parsable by [sanitise_source].
 #'
 #' @return Returns a list of Sources.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @keywords internal
 #'
 sanitise_sources <- function(sources) {
@@ -175,6 +183,7 @@ get_units <- function(var_name) {
 	return("")
 }
 
+# FIXME: this is really bad
 readable_name <- function(name) {
 	name <- trim_dave(name)
 	lower <- tolower(name)
@@ -182,9 +191,27 @@ readable_name <- function(name) {
 	if (lower %in% acronyms) {
 		return(toupper(name))
 	}
+
+	# Check for known observed variables.
+	for (var in get_observed_vars()) {
+		if (var@id == name) {
+			return(var@name)
+		}
+	}
+
 	return(name)
 }
 
+#'
+#' Sanitise a variable provided by the user.
+#'
+#' @param var: May be one of:
+#' - A [[DGVMTools::Quantity]] object (for full control over units/name/filename)
+#' - File name without extension of an lpj-guess output (e.g. lai)
+#'
+#' @return Returns a [[DGVMTools::Quantity]] object.
+#' @keywords internal
+#'
 sanitise_variable <- function(var) {
 	if (class(var)[1] == "Quantity") {
 		# Input is already a Quantity object.
@@ -210,11 +237,10 @@ sanitise_variable <- function(var) {
 #'
 #' Sanitise a list of variables provided by the user.
 #'
-#' @param vars: List of variables provided by the user.
+#' @param vars: List of variables provided by the user (see: [sanitise_variable]).
 #'
-#' @return Returns a list of \seealso{\link{DGVMTools::Quantity}} objects.
+#' @return Returns a list of [DGVMTools::Quantity] objects.
 #' @keywords internal
-#' @author Drew Holzworth
 #'
 sanitise_variables <- function(vars) {
 	result <- call_foreach(vars, sanitise_variable)
@@ -235,7 +261,6 @@ sanitise_variables <- function(vars) {
 #'
 #' @return Returns the name of the ozflux site.
 #' @keywords internal
-#' @author Drew Holzworth
 #'
 sanitise_spatial_extent_id <- function(spatial_extent_id, sites) {
 	if (!(is.character(spatial_extent_id)))
@@ -259,6 +284,10 @@ sanitise_spatial_extent_id <- function(spatial_extent_id, sites) {
 #'                        a raster::extent object or an object from which a
 #'                        raster::extent object can be derived - eg. a Raster*
 #'                        object or another Field object.
+#'
+#' @return This function is not yet implemented and will raise an error.
+#' @keywords internal
+#'
 sanitise_spatial_extent <- function(spatial_extent, sites) {
 	# TBI
 	log_error("OZFLUX support for spatial.extent is not yet implemented. "

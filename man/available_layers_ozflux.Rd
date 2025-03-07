@@ -20,7 +20,4 @@ this quantity (output).
 \description{
 List all available layers for a particular output.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

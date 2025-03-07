@@ -18,7 +18,4 @@ Returns the name of the ozflux site.
 Return the name of the specified ozflux site, or raise an error if the site
 name is invalid.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

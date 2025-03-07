@@ -17,7 +17,4 @@ Compute ratio of RMSE to standard deviation of observations (0 - Inf).
 \details{
 Value of 0 means 0 RMSE (ie perfect fit).
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

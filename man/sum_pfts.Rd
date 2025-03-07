@@ -14,7 +14,4 @@ sum_pfts(df, pfts)
 \description{
 Calculate the sum of the specified columns.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

@@ -5,7 +5,6 @@
 #' @param x: Observations
 #' @param y: Predictions
 #'
-#' @author Drew Holzworth
 #' @keywords internal
 #'
 compute_r2 <- function(x, y) {
@@ -41,7 +40,6 @@ compute_r2 <- function(x, y) {
 #' @param x: Observations
 #' @param y: Predictions
 #'
-#' @author Drew Holzworth
 #' @keywords internal
 #'
 compute_rmse <- function(x, y) {
@@ -68,7 +66,6 @@ compute_rmse <- function(x, y) {
 #' @param x: Observations
 #' @param y: Predictions
 #'
-#' @author Drew Holzworth
 #' @keywords internal
 #'
 compute_nse <- function(x, y) {
@@ -91,7 +88,6 @@ compute_nse <- function(x, y) {
 #' @param x: Observations
 #' @param y: Predictions
 #'
-#' @author Drew Holzworth
 #' @keywords internal
 #'
 compute_rsr <- function(x, y) {
@@ -110,7 +106,6 @@ compute_rsr <- function(x, y) {
 #' @param observations: Observed data.
 #' @param predictions: Predicted data.
 #'
-#' @author Drew Holzworth
 #' @keywords internal
 #'
 compute_bias <- function(observations, predictions) {

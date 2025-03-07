@@ -16,7 +16,4 @@ compare(fields, i, j, lyr)
 \description{
 Compare a layer between the specified fields.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

@@ -16,8 +16,7 @@
 #' @import data.table
 #' @import dplyr
 #' @export
-#' @return A DGVMTools::Field object containing the BoM LAI data.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @return A [DGVMTools::Field] object containing the BoM LAI data.
 #'
 benchmark_lai <- function(settings, params, tables) {
 
@@ -147,8 +146,7 @@ benchmark_lai <- function(settings, params, tables) {
 #' @import data.table
 #' @import ncdf4
 #' @export
-#' @return A DGVMTools::Field object containing the BoM LAI data.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @return A [DGVMTools::Field] object containing the BoM LAI data.
 #'
 read_bom_lai <- function(data_path, type = "rec") {
     data_file <- get_bom_data_path(data_path, type)

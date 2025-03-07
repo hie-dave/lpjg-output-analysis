@@ -15,7 +15,4 @@ A plot with fixed x-axis labels.
 \description{
 Fix overlapping longitude values on the x-axis of a spatial plot.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

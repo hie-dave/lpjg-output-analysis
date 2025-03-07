@@ -11,6 +11,3 @@ ozflux_shiny(sources)
 Run a shiny app which generates interactive plots of site-level ozflux
 simulations against predictions.
 }
-\author{
-Drew Holzworth
-}

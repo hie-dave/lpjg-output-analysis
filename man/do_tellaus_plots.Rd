@@ -9,12 +9,14 @@ do_tellaus_plots(benchmark, settings, params, overall_tables, title)
 }
 \arguments{
 \item{benchmark}{A list with the following elements:
-- maps: Temporally-aggregated dataset (one value per grid cell)
-- trends: Temporal trends (one value per grid cell)
-- seasonals: Seasonally-aggregated values (one value per month per gridcell)
-- comparisons: Output of DGVMTools::fullSpatialComparison()
-- tables: List with two named data frames: "totals" and "metrics"
-- benchmark: A DaveBenchmark instance}
+\itemize{
+\item maps: Temporally-aggregated dataset (one value per grid cell)
+\item trends: Temporal trends (one value per grid cell)
+\item seasonals: Seasonally-aggregated values (one value per month per gridcell)
+\item comparisons: Output of \code{\link[DGVMTools:fullSpatialComparison]{DGVMTools::fullSpatialComparison()}}
+\item tables: List with two named data frames: "totals" and "metrics"
+\item benchmark: A DaveBenchmark instance
+}}
 
 \item{settings}{Benchmarking settings as specified by the user}
 
@@ -28,7 +30,4 @@ A list of tags
 \description{
 Produce a standard set of plots for the tellaus report from the given
 benchmark.
-}
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 }

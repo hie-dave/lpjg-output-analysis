@@ -21,6 +21,3 @@ A data-frame on a the target grid.
 Aggregate the given data frame to the grid specified by the given set of
 coordinates, by taking the mean of the nearest neighbours on the target grid.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}

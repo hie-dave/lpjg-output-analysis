@@ -14,7 +14,4 @@ set_global(name, value)
 \description{
 Set the package-internal global variable with the specified name.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

@@ -14,7 +14,4 @@ get_grouping_names(df)
 Get names of columns by which the data frame should be grouped when
 aggregating spatially.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

@@ -6,11 +6,16 @@
 \usage{
 ozflux_benchmarks(
   sources,
+  source_descriptions,
   use_plotly = FALSE,
   text_multiplier = 1.5,
   combined_graph = TRUE,
   max_title = 4,
-  marker_size = 1
+  marker_size = 1,
+  sites = NULL,
+  vars = NULL,
+  widget_dir = "plots",
+  aspect_ratio = 16/9
 )
 }
 \arguments{
@@ -25,6 +30,14 @@ each variable for each site.}
 \item{max_title:}{Maximum number of nested titles.}
 
 \item{marker_size:}{Marker size. Decrease for smaller markers.}
+
+\item{sites:}{List of names of ozflux sites to be plotted. If NULL, all ozflux sites will be processed.}
+
+\item{vars:}{List of names of output variables to be plotted. If NULL, a standard set of outputs will be plotted. This should be, for example, \code{c("dave_lai", "dave_resp")}.}
+
+\item{widget_dir:}{Directory to which plotly plots will be saved.}
+
+\item{aspect_ratio:}{Aspect ratio (width:height) used for plotly plots.}
 }
 \value{
 Returns a list of HTML tags if use_plotly is TRUE. Otherwise all
@@ -32,7 +45,4 @@ content will be printed, for use in R markdown.
 }
 \description{
 Generate ozflux benchmarks.
-}
-\author{
-Drew Holzworth
 }

@@ -4,26 +4,24 @@
 \alias{read_data}
 \title{Read data for the specified variable.}
 \usage{
-read_data(vars, sources, site = NULL, layers = NULL)
+read_data(sources, vars, sites = NULL, layers = NULL, correct_leaps = FALSE)
 }
 \arguments{
-\item{vars:}{The variables (a list of DGVMTools::Quantity objects).}
+\item{sources:}{The data sources from which to read (see: \link{sanitise_source}).}
 
-\item{sources:}{Input sources (\seealso{\link{sanitise_sources}}}
+\item{vars:}{The variables to be read (see: \link{sanitise_variable}).}
 
-\item{site:}{Optional name of the ozflux site for which data should be read.
-If NULL, data for all sites will be returned.}
+\item{sites:}{The ozflux sites for which data will be read (see: \link{sanitise_ozflux_sites}).}
 
 \item{layers:}{Names of layers to be read.}
+
+\item{correct_leaps:}{Never set this to TRUE unless you know what you're doing.}
 }
 \value{
-A single DGVMTools::Field with a layer of observations, and one layer
+A single \link[DGVMTools:Field]{DGVMTools::Field} with a layer of observations, and one layer
 for each source specified in sources.
 }
 \description{
 Read data for the specified variable.
-}
-\author{
-Drew Holzworth
 }
 \keyword{internal}

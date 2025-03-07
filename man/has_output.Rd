@@ -7,7 +7,7 @@
 has_output(source, layer)
 }
 \arguments{
-\item{source}{A DGVMTools::Source object}
+\item{source}{A \link[DGVMTools:Source]{DGVMTools::Source} object}
 
 \item{layer}{Name of a layer (e.g. "mlai")}
 }

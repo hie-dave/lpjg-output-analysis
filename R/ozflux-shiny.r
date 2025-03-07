@@ -2,7 +2,6 @@
 #' Run a shiny app which generates interactive plots of site-level ozflux
 #' simulations against predictions.
 #'
-#' @author Drew Holzworth
 #' @export
 #'
 ozflux_shiny <- function(sources) {
@@ -39,7 +38,7 @@ ozflux_shiny <- function(sources) {
     } else {
       cat(paste0("Reading ", var_name, " from disk...\n"))
       var <- get_var(var_name)
-      data <- read_data(var, sources)
+      data <- read_data(sources, var)
       cached_vars <<- c(cached_vars, var_name)
       cached_data <<- c(cached_data, data)
     }

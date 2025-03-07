@@ -17,6 +17,3 @@ A data-frame on a 1-degree grid.
 Aggregate the given data frame to 1-degree by taking the mean of the closest
 neighbours to each gridcell on a 1-degree grid.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}

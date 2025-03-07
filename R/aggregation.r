@@ -5,7 +5,6 @@
 #' @param coord: The coordinate value.
 #'
 #' @keywords internal
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 convert_to_1degree <- function(coord) {
     floor(coord) + 0.5
@@ -18,7 +17,6 @@ convert_to_1degree <- function(coord) {
 #' @param coords List of coordinate values.
 #'
 #' @keywords internal
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 closest <- function(coord, coords) {
     return(coords[[which.min(abs(coord - coords))]])
@@ -31,7 +29,6 @@ closest <- function(coord, coords) {
 #' @param df A data frame.
 #'
 #' @keywords internal
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 get_grouping_names <- function(df) {
     cols <- c("Lon_1deg", "Lat_1deg")
@@ -52,7 +49,6 @@ get_grouping_names <- function(df) {
 #' @return A data-frame on a 1-degree grid.
 #'
 #' @import dplyr
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @export
 #'
 aggregate_to_1deg <- function(df) {
@@ -81,7 +77,6 @@ aggregate_to_1deg <- function(df) {
 #' @return A data-frame on a the target grid.
 #'
 #' @import dplyr
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @export
 #'
 aggregate_to <- function(df, lons, lats) {

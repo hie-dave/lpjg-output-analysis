@@ -19,6 +19,3 @@ A list.
 \description{
 Do c3/c4 grass distribution benchmarks.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}

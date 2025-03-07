@@ -7,7 +7,6 @@
 #' @param j index of the second field to be compared (1-indexed)
 #'
 #' @keywords internal
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 compare <- function(fields, i, j, lyr) {
     return(compareLayers(fields[[i]], fields[[j]], lyr, show.stats = FALSE))
@@ -22,7 +21,6 @@ compare <- function(fields, i, j, lyr) {
 #' @param lyr The layer to be compared in the fields. Must exist in all fields.
 #'
 #' @export
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 compare_all <- function(fields, lyr) {
     result <- list()
@@ -48,7 +46,6 @@ compare_all <- function(fields, lyr) {
 #' @param tables Benchmark tables (rbind-ed and outputted as result$tables).
 #'
 #' @export
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 benchmark_lai_dist <- function(settings, params, tables) {
     fields <- list()
@@ -117,7 +114,6 @@ benchmark_lai_dist <- function(settings, params, tables) {
 #' @param pfts Names of columns to be summed.
 #'
 #' @keywords internal
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 sum_pfts <- function(df, pfts) {
     pfts <- pfts[which(pfts %in% names(df))]
@@ -133,10 +129,9 @@ sum_pfts <- function(df, pfts) {
 #' This function reads LPJ-GUESS outputs and post-processes them to calculate
 #' species distribution.
 #'
-#' @param src A DGVMTools::Source object.
+#' @param src A [DGVMTools::Source] object.
 #'
 #' @keywords internal
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 read_guess <- function(src, fields) {
     # Note: monthly LAI output does not divide LAI between PFTs; it only
@@ -195,7 +190,6 @@ read_guess <- function(src, fields) {
 #' @param data_path Path to data directory.
 #'
 #' @keywords internal
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 read_bom_tree_dist <- function(data_path) {
     # Read BoM data.

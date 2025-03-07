@@ -15,7 +15,7 @@ set_global("merge_ndp", ceiling(abs(log10(get_global("merge_tol")))))
 #'
 #' Check if the given layer exists in the given source.
 #'
-#' @param source A DGVMTools::Source object
+#' @param source A [DGVMTools::Source] object
 #' @param layer Name of a layer (e.g. "mlai")
 #'
 #' @keywords internal
@@ -154,21 +154,21 @@ get_obs_layer <- function(quant) {
 #'
 #' Read data for the specified variable.
 #'
-#' @param vars: The variables (a list of DGVMTools::Quantity objects).
-#' @param sources: Input sources (\seealso{\link{sanitise_sources}}
-#' @param site: Optional name of the ozflux site for which data should be read.
-#'              If NULL, data for all sites will be returned.
+#' @param sources: The data sources from which to read (see: [sanitise_source]).
+#' @param vars: The variables to be read (see: [sanitise_variable]).
+#' @param sites: The ozflux sites for which data will be read (see: [sanitise_ozflux_sites]).
 #' @param layers: Names of layers to be read.
-#'
-#' @return A single DGVMTools::Field with a layer of observations, and one layer
-#' for each source specified in sources.
-#' @author Drew Holzworth
+#' @param correct_leaps: Never set this to TRUE unless you know what you're doing.
 #' @keywords internal
+#' @export
+#' @return A single [DGVMTools::Field] with a layer of observations, and one layer
+#' for each source specified in sources.
+#' @export
 #'
 read_data <- function(
-	vars,
 	sources,
-	site = NULL,
+	vars,
+	sites = NULL,
 	layers = NULL,
 	correct_leaps = FALSE) {
 
@@ -177,7 +177,7 @@ read_data <- function(
 	log_debug("[read_data] Sanitising input quantities...")
 	vars <- sanitise_variables(vars)
 	log_debug("[read_data] Sanitising input sites...")
-	site <- sanitise_ozflux_sites(site)
+	site <- sanitise_ozflux_sites(sites)
 
 	# if (is.data.frame(site)) {
 	# 	if (nrow(site) == 1) {
@@ -204,6 +204,7 @@ read_data <- function(
 		# Read all observations for this variable.
 		obs_vars <- get_observed_vars()
 		obs_var_names <- lapply(obs_vars, function(x) x@id)
+		# TODO: read only the data required for the specified sites.
 		if (obs_lyr %in% obs_var_names
 				&& all(layers %in% obs_var_names)) {
 			obs_source <- get_observed_source()
@@ -212,6 +213,7 @@ read_data <- function(
 				source = obs_source, quant = obs_lyr, layers = layers
 					, file.name = get_global("obs_file")
 					, verbose = verbose))
+			obs@quant <- var
 
 			log_debug("Successfully read observed data for variable ", var@name)
 
@@ -226,7 +228,7 @@ read_data <- function(
 				data <- DGVMTools::copyLayers(obs, data, layers
 					, new.layer.names = out_lyr
 					, tolerance = get_global("merge_tol"), keep.all.from = FALSE
-					, keep.all.to = TRUE)
+					, keep.all.to = TRUE)#, allow.cartesian = TRUE
 			}
 		} else {
 			layer_names <- paste(layers, collapse = ", ")
@@ -265,7 +267,7 @@ read_data <- function(
 				stop("Failed to read data for source ", source@id)
 			}
 
-			log_debug("Successfully read   data from source ", source@name
+			log_debug("Successfully read data from source ", source@name
 				, " for variable ", var@name)
 
 			pn <- names(predictions@data)
@@ -286,8 +288,8 @@ read_data <- function(
 				nr <- nrow(data@data)
 				data <- DGVMTools::copyLayers(predictions, data, layers
 					, new.layer.names = layer_names
-					, tolerance = get_global("merge_tol"), keep.all.from = FALSE
-					, keep.all.to = FALSE)
+					, tolerance = get_global("merge_tol"), keep.all.from = TRUE
+					, keep.all.to = TRUE, allow.cartesian = TRUE)
 				if (nrow(data@data) == 0 && nr > 0 && nrow(predictions@data) > 0) {
 					# No observations for this site.
 					log_warning("No observations found for site ", site$Name)
@@ -310,14 +312,13 @@ read_data <- function(
 #'
 #' Extract data for the specified gridcell.
 #'
-#' @param data: The input data as obtained from \seealso{\link{read_data}}
+#' @param data: The input data as obtained from [read_data]
 #' @param lat: Latitude of the gridcell
 #' @param lon: Longitude of the gridcell.
 #' @param site_name: Name of the ozflux site (optional).
 #'
-#' @return Returns a \seealso{\link{DGVMTools::Source}} object containing data
-#' only for the specified location.
-#' @author Drew Holzworth
+#' @return Returns a [DGVMTools::Source] object containing data only for the
+#' specified location.
 #' @keywords internal
 #'
 get_gridcell <- function(data, lat, lon, site_name = NULL) {
@@ -332,8 +333,7 @@ get_gridcell <- function(data, lat, lon, site_name = NULL) {
 #'
 #' Get the list of temporal plottable variables from the observed .nc file.
 #'
-#' @return Returns a list of \seealso{\link{DGVMTools::Quantity}} objects.
-#' @author Drew Holzworth
+#' @return Returns a list of [DGVMTools::Quantity] objects.
 #' @keywords internal
 #'
 get_observed_vars <- function() {

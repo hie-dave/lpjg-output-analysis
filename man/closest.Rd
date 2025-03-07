@@ -14,7 +14,4 @@ closest(coord, coords)
 \description{
 For a given coordinate, return the closest coordinate from the list coords.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

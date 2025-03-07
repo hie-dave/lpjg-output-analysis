@@ -1,9 +1,7 @@
 #'
 #' Get the quantities plotted in the ozflux benchmarks.
 #'
-#' @return Returns a list of \seealso{\link{DGVMTools::Quantity}}
-#' objects.
-#' @author Drew Holzworth
+#' @return Returns a list of [DGVMTools::Quantity] objects.
 #' @keywords internal
 #'
 get_vars <- function() {
@@ -50,7 +48,6 @@ is_installed <- function(pkg) {
 #'
 #' @return Returns a list of HTML tags if use_plotly is TRUE. Otherwise all
 #' content will be printed, for use in R markdown.
-#' @author Drew Holzworth
 #' @export
 #'
 ozflux_benchmarks <- function(
@@ -203,7 +200,7 @@ ozflux_benchmarks <- function(
 			bias[[lyr_name]] <- rep(NA, nrow(sites))
 		}
 
-		data <- read_data(list(var), sources, sites)
+		data <- read_data(sources, list(var), sites)
 		iter <- 0
 		for (i in seq_len(nrow(sites))) {
 			iter <- iter + 1

@@ -7,14 +7,14 @@
 make_metric_table(benchmark, comparisons, simulations, ndigit = 3)
 }
 \arguments{
-\item{benchmark}{A DGVMTools::Benchmark object containing metadata.}
+\item{benchmark}{A \link[DGVMTools:Benchmark]{DGVMTools::Benchmark} object containing metadata.}
 
-\item{simulations}{A list of DGVMTools::Source objects.}
+\item{simulations}{A list of \link[DGVMTools:Source]{DGVMTools::Source} objects.}
 
 \item{ndigit}{The number of decimal digits in the output table.}
 
-\item{comparison}{A list of DGVMTools::Comparison objects, typically the
-output of fullSpatialComparison()[["Values"]], or the output of sequential
+\item{comparison}{A list of \link[DGVMTools:Comparison]{DGVMTools::Comparison} objects, typically the
+output of fullSpatialComparison()[\link{"Values"}], or the output of sequential
 calls to CompareLayers(), concatenated into a single list.}
 }
 \value{
@@ -22,14 +22,13 @@ A data table.
 }
 \description{
 The table will have the following columns:
-- Dataset
-- Quantity
-- Simulation
+\itemize{
+\item Dataset
+\item Quantity
+\item Simulation
+}
 }
 \details{
 The table will have one column per metric and one row per simulation.
-}
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 }
 \keyword{internal}

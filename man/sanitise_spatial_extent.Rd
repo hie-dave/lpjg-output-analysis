@@ -12,7 +12,11 @@ a raster::extent object or an object from which a
 raster::extent object can be derived - eg. a Raster*
 object or another Field object.}
 }
+\value{
+This function is not yet implemented and will raise an error.
+}
 \description{
 Return the name of the ozflux site specified by the given spatial extent.
 Raises an error if the site name is invalid.
 }
+\keyword{internal}

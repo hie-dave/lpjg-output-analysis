@@ -7,12 +7,9 @@
 get_observed_vars()
 }
 \value{
-Returns a list of \seealso{\link{DGVMTools::Quantity}} objects.
+Returns a list of \link[DGVMTools:Quantity]{DGVMTools::Quantity} objects.
 }
 \description{
 Get the list of temporal plottable variables from the observed .nc file.
-}
-\author{
-Drew Holzworth
 }
 \keyword{internal}

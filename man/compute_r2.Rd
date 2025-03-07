@@ -14,7 +14,4 @@ compute_r2(x, y)
 \description{
 Compute r^2 value
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

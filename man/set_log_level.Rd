@@ -10,6 +10,3 @@ set_log_level(level)
 This should be in range 0-4. Higher values will result in more log messages
 being written.
 }
-\author{
-Drew Holzworth
-}

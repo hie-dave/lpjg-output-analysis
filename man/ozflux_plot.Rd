@@ -14,17 +14,11 @@ ozflux_plot(
 )
 }
 \arguments{
-\item{sources:}{One or more sources. These can be paths to lpj-guess
-repositories, or \seealso{\link{DGVMTools::Source}} objects. This argument is
-optional if sources have been configured via \seealso{\link{dave_config}}.}
+\item{sources:}{Sources to be plotted (see: \link{sanitise_source}).}
 
-\item{vars:}{The variables to be plotted. These may be specified as strings
-containing the output file names without extension (e.g. "dave_lai"), or as
-\seealso{\link{DGVMTools::Quantity}} objects.}
+\item{vars:}{Variables to be plotted (see: \link{sanitise_variable}).}
 
-\item{sites:}{List of sites to be plotted. These may be specified as either
-strings (site names), or as tuples of (lon, lat). If NULL is provided, all
-ozflux sites will be plotted.}
+\item{sites:}{Sites to be plotted (see: \link{sanitise_ozflux_sites}).}
 
 \item{separate:}{Iff TRUE, a list of the site-level plots will be returned.
 If FALSE, all plots will be rendered to a single panel. This has no effect
@@ -46,7 +40,4 @@ separate is FALSE, then a panel of all plots will be returned.
 }
 \details{
 If data is missing for any of the sites to be plotted, an error will occur.
-}
-\author{
-Drew Holzworth
 }

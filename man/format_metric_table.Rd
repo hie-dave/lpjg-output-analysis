@@ -18,6 +18,3 @@ A kable table.
 Colour code the metric values according to their goodess, add links to plots,
 etc.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}

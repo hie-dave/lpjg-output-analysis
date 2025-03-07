@@ -14,6 +14,3 @@ compare_all(fields, lyr)
 \description{
 E.g. for 3 fields: compare fields 1&2, 1&3, 2&3.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}

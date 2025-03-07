@@ -7,15 +7,12 @@
 sanitise_variables(vars)
 }
 \arguments{
-\item{vars:}{List of variables provided by the user.}
+\item{vars:}{List of variables provided by the user (see: \link{sanitise_variable}).}
 }
 \value{
-Returns a list of \seealso{\link{DGVMTools::Quantity}} objects.
+Returns a list of \link[DGVMTools:Quantity]{DGVMTools::Quantity} objects.
 }
 \description{
 Sanitise a list of variables provided by the user.
-}
-\author{
-Drew Holzworth
 }
 \keyword{internal}

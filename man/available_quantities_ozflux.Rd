@@ -20,7 +20,4 @@ The LPJ-GUESS dave_* branches have ozflux point-level simulations configured
 in separate directories. This functions lists the outputs which have been
 written by all site-level simulations.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

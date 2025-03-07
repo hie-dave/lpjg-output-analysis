@@ -85,7 +85,6 @@ available_quantities <- function(source, directory, names = TRUE) {
 #'
 #' @return Returns a list of all layers (ie plottable columns) available for
 #' this quantity (output).
-#' @author Drew Holzworth
 #' @keywords internal
 #'
 available_layers_ozflux <- function(source, quant, sites = NULL) {
@@ -137,7 +136,6 @@ available_layers_ozflux <- function(source, quant, sites = NULL) {
 #' @param names Logical, if TRUE return the names of the quantities, if FALSE
 #' return the quanties themseleves.
 #' @return A list of all the .out files present, with the ".out" removed.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #' @keywords internal
 #'
 available_quantities_ozflux <- function(source, names = TRUE, verbose = FALSE) {
@@ -192,7 +190,6 @@ available_quantities_ozflux <- function(source, names = TRUE, verbose = FALSE) {
 #'
 #' @return Returns a list containing firstly the data.table containing the data,
 #' and secondly the STA.info.
-#' @author Drew Holzworth
 #' @keywords internal
 #'
 get_field_ozflux <- function(

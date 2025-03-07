@@ -14,12 +14,11 @@ ozflux_panel(
 )
 }
 \arguments{
-\item{sources:}{One or more sources of data. These may be paths to LPJ-GUESS
-repositories, paths to directories containing output files, or as
-\seealso{\link{DGVMTools::Source}} objects.}
+\item{sources:}{Source or list of data sources to be plotted (see: \link{sanitise_source}).}
 
-\item{sites:}{One or more ozflux sites. May be specified as names of sites,
-or as tuples of (Lon, Lat). If NULL, all sites will be plotted.}
+\item{var:}{The variable to be plotted (see: \link{sanitise_variable}).}
+
+\item{sites:}{Ozflux sites to be plotted (see: \link{sanitise_ozflux_sites}).}
 
 \item{use_plotly:}{TRUE to generate plotly outputs, FALSE to use ggplot.}
 
@@ -34,7 +33,4 @@ plotted.
 \description{
 One series will be plotted on each graph for each source. One
 panel will be created for each site.
-}
-\author{
-Drew Holzworth
 }

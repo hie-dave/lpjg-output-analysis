@@ -10,7 +10,6 @@
 #' @import DGVMTools
 #' @export
 #' @return A list.
-#' @author Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 benchmark_grass_dist <- function(settings, params, tables) {
     var <- "dave_lai"
     verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")

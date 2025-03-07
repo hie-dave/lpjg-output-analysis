@@ -19,6 +19,3 @@ A list of tags
 Create an absolute values differenes plot panel for use in the tellaus
 benchmarks.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}

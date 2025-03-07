@@ -14,8 +14,7 @@
 #' @import data.table
 #' @import dplyr
 #' @export
-#' @return A DGVMTools::Field object containing the BoM LAI data.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @return A [DGVMTools::Field] object containing the BoM LAI data.
 #'
 benchmark_auseflux <- function(var,
                                settings,
@@ -172,8 +171,7 @@ benchmark_auseflux <- function(var,
 #' @import data.table
 #' @import ncdf4
 #' @export
-#' @return A DGVMTools::Field object containing the requested AusEFlux data.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @return A [DGVMTools::Field] object containing the requested AusEFlux data.
 #'
 read_auseflux <- function(var, data_path) {
     var <- auseflux_sanitise_var(var)

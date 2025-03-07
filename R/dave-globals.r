@@ -8,7 +8,6 @@
 #' @param value: Value of the variable.
 #'
 #' @keywords internal
-#' @author Drew Holzworth
 #'
 set_global <- function(name, value) {
 	assign(name, value, .pkg_env)
@@ -22,7 +21,6 @@ set_global <- function(name, value) {
 #' @return Returns the value of the variable
 #'
 #' @keywords internal
-#' @author Drew Holzworth
 #'
 get_global <- function(name) {
 	return(.pkg_env[[name]])

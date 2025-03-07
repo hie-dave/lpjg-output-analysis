@@ -21,7 +21,6 @@
 #' - comparisons: Output of fullSpatialComparison()
 #' - tables: Benchmark tables
 #' - benchmark: The benchmark object containing standard metadata
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
 #'
 benchmark_gpp <- function(params, settings, tables) {
     # Note: auseflux and gosif gpp are both in gC/m2/month.
@@ -174,8 +173,7 @@ benchmark_gpp <- function(params, settings, tables) {
 #' @rdname read_gosif
 #' @import DGVMTools
 #' @keywords internal
-#' @return A DGVMTools::Field object containing GOSIF global monthly GPP.
-#' @author Drew Holzworth \email{d.holzworth@@westernsydney.edu.au}
+#' @return A [DGVMTools::Field] object containing GOSIF global monthly GPP.
 #'
 read_gosif <- function(data_path) {
     gosif_file_name <- "GOSIF_GPP.txt.gz"

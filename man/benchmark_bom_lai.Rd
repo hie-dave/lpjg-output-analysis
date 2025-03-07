@@ -24,21 +24,20 @@ benchmark_gpp(params, settings, tables)
 \item{tables:}{Benchmark tables.}
 }
 \value{
-A DGVMTools::Field object containing the BoM LAI data.
+A \link[DGVMTools:Field]{DGVMTools::Field} object containing the BoM LAI data.
 
-A DGVMTools::Field object containing the BoM LAI data.
+A \link[DGVMTools:Field]{DGVMTools::Field} object containing the BoM LAI data.
 
 A list containing the following named items:
-- maps: Mean of yearly total GPP for each gridcell
-- trends: Temporal trend in GPP for each gridcell
-- seasonals: Gridded mean monthly GPP for each month over the time period
-- comparisons: Output of fullSpatialComparison()
-- tables: Benchmark tables
-- benchmark: The benchmark object containing standard metadata
+\itemize{
+\item maps: Mean of yearly total GPP for each gridcell
+\item trends: Temporal trend in GPP for each gridcell
+\item seasonals: Gridded mean monthly GPP for each month over the time period
+\item comparisons: Output of fullSpatialComparison()
+\item tables: Benchmark tables
+\item benchmark: The benchmark object containing standard metadata
+}
 }
 \description{
 This benchmark considers subannual LAI and will do seasonal analysis.
-}
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 }

@@ -17,7 +17,4 @@ A colour representing the goodness of a particular value.
 \description{
 Get a colour representing the goodness of a metric value.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

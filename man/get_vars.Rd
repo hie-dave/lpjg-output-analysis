@@ -7,13 +7,9 @@
 get_vars()
 }
 \value{
-Returns a list of \seealso{\link{DGVMTools::Quantity}}
-objects.
+Returns a list of \link[DGVMTools:Quantity]{DGVMTools::Quantity} objects.
 }
 \description{
 Get the quantities plotted in the ozflux benchmarks.
-}
-\author{
-Drew Holzworth
 }
 \keyword{internal}

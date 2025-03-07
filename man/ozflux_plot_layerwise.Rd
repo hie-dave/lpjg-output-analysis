@@ -17,17 +17,13 @@ ozflux_plot_layerwise(
 )
 }
 \arguments{
-\item{sources:}{Sources of data. Should be paths to lpj-guess repos or
-\seealso{\link{DGVMTools::Source}} objects.}
+\item{sources:}{Data sources to be plotted (see: \link{sanitise_source}).}
 
-\item{var:}{The variable to be plotted, specified as the output filename
-without extension (e.g. `"dave_sw"`), or as
-\seealso{\link{DGVMTools::Quantity}} objects.}
+\item{vars:}{The single variable to be plotted (see: \link{sanitise_variable}).}
 
-\item{sites:}{Ozflux sites to be plotted, expressed as site names or as
-tuples of (lon, lat).}
+\item{sites:}{Sites to be plotted (see: \link{sanitise_ozflux_sites}).}
 
-\item{layers:}{The layers to be plotted. E.g. `paste0("sw_", 0:14)`.}
+\item{layers:}{The layers to be plotted. E.g. \code{paste0("sw_", 0:14)}.}
 
 \item{title:}{The desired panel titles.}
 
@@ -51,7 +47,4 @@ layers of the specified variable. One panel will be generated for each site.
 \details{
 (In this nomenclature, a "layer" technically refers to a column in the output
 file).
-}
-\author{
-Drew Holzworth
 }

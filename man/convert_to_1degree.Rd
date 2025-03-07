@@ -12,7 +12,4 @@ convert_to_1degree(coord)
 \description{
 Convert the coordinate to the closest coordinate on a 1-degree grid.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

@@ -13,7 +13,4 @@ read_bom_tree_dist(data_path)
 Read BoM LAI estimates and post-process them to calculate species
 distribution.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

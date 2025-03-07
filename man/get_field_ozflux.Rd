@@ -38,7 +38,4 @@ and secondly the STA.info.
 An internal function that reads data from an ozflux run. Note that the dave_*
 output files (e.g. dave_lai.out) will be read if available.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

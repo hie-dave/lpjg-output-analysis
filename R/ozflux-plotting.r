@@ -8,15 +8,9 @@
 #'
 #' If data is missing for any of the sites to be plotted, an error will occur.
 #'
-#' @param sources: One or more sources. These can be paths to lpj-guess
-#' repositories, or \seealso{\link{DGVMTools::Source}} objects. This argument is
-#' optional if sources have been configured via \seealso{\link{dave_config}}.
-#' @param vars: The variables to be plotted. These may be specified as strings
-#' containing the output file names without extension (e.g. "dave_lai"), or as
-#' \seealso{\link{DGVMTools::Quantity}} objects.
-#' @param sites: List of sites to be plotted. These may be specified as either
-#' strings (site names), or as tuples of (lon, lat). If NULL is provided, all
-#' ozflux sites will be plotted.
+#' @param sources: Sources to be plotted (see: [sanitise_source]).
+#' @param vars: Variables to be plotted (see: [sanitise_variable]).
+#' @param sites: Sites to be plotted (see: [sanitise_ozflux_sites]).
 #' @param separate: Iff TRUE, a list of the site-level plots will be returned.
 #' If FALSE, all plots will be rendered to a single panel. This has no effect
 #' if a single site is to be plotted.
@@ -25,7 +19,6 @@
 #' axis range. No effect if only 1 site is being plotted.
 #'
 #' @return Can return a single, or vector of, ggplot or plotly objects.
-#' @author Drew Holzworth
 #' @export
 #'
 ozflux_plot <- function(
@@ -45,7 +38,7 @@ ozflux_plot <- function(
 	vars <- sanitise_variables(vars)
 
 	# Read data for this gridcell.
-	data <- read_data(vars, sources, site = sites)
+	data <- read_data(sources, vars, sites = sites)
 
 	# Get upper/lower limits of y-axis data.
 	if (common_yaxis) {
@@ -95,14 +88,9 @@ ozflux_plot <- function(
 #' One series will be plotted on each graph for each source. One
 #' panel will be created for each site.
 #'
-#' @param sources: One or more sources of data. These may be paths to LPJ-GUESS
-#' repositories, paths to directories containing output files, or as
-#' \seealso{\link{DGVMTools::Source}} objects.
-#' @param var: The variable to be plotted. This may be specified as a string
-#' containing the output file name without extension (e.g. "dave_lai"), or as
-#' a DGVMTools::Quantity}} object.
-#' @param sites: One or more ozflux sites. May be specified as names of sites,
-#' or as tuples of (Lon, Lat). If NULL, all sites will be plotted.
+#' @param sources: Source or list of data sources to be plotted (see: [sanitise_source]).
+#' @param var: The variable to be plotted (see: [sanitise_variable]).
+#' @param sites: Ozflux sites to be plotted (see: [sanitise_ozflux_sites]).
 #' @param use_plotly: TRUE to generate plotly outputs, FALSE to use ggplot.
 #' @param common_yaxis: TRUE to use the same y-axis scales for all sites. FALSE
 #' otherwise.
@@ -110,7 +98,6 @@ ozflux_plot <- function(
 #' @return Returns a single plot object if plotting one site, otherwise returns
 #' a list of plot objects of the same length as the number of sites to be
 #' plotted.
-#' @author Drew Holzworth
 #' @export
 #'
 ozflux_panel <- function(
@@ -130,7 +117,7 @@ ozflux_panel <- function(
 	var <- sanitise_variable(var)
 
 	# Read data for this gridcell.
-	data <- read_data(list(var), sources, site = sites)
+	data <- read_data(sources, list(var), sites = sites)
 
 	# Get upper/lower limits of y-axis data.
 	ylim <- get_ylim(data, common_yaxis)
@@ -172,13 +159,9 @@ ozflux_panel <- function(
 #' (In this nomenclature, a "layer" technically refers to a column in the output
 #' file).
 #'
-#' @param sources: Sources of data. Should be paths to lpj-guess repos or
-#' \seealso{\link{DGVMTools::Source}} objects.
-#' @param var: The variable to be plotted, specified as the output filename
-#' without extension (e.g. `"dave_sw"`), or as
-#' \seealso{\link{DGVMTools::Quantity}} objects.
-#' @param sites: Ozflux sites to be plotted, expressed as site names or as
-#' tuples of (lon, lat).
+#' @param sources: Data sources to be plotted (see: [sanitise_source]).
+#' @param vars: The single variable to be plotted (see: [sanitise_variable]).
+#' @param sites: Sites to be plotted (see: [sanitise_ozflux_sites]).
 #' @param layers: The layers to be plotted. E.g. `paste0("sw_", 0:14)`.
 #' @param title: The desired panel titles.
 #' @param separate_plots: TRUE to draw each layer in a separate plot. FALSE to
@@ -189,7 +172,6 @@ ozflux_panel <- function(
 #' @param common_yaxis: TRUE to use a common y-axis for all plots. False otherwise.
 #'
 #' @return Returns a list of ggplot objects.
-#' @author Drew Holzworth
 #' @export
 #'
 ozflux_plot_layerwise <- function(
@@ -224,7 +206,7 @@ ozflux_plot_layerwise <- function(
 			, "this file will be used. These are: ["
 			, paste(layers, collapse = ", "), "]")
 	}
-	data <- read_data(list(var), sources, site = sites, layers = layers)
+	data <- read_data(sources, list(var), sites = sites, layers = layers)
 
 	panels <- list()
 	nsite <- nrow(sites)
@@ -234,11 +216,7 @@ ozflux_plot_layerwise <- function(
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
 		# Get upper/lower limits of y-axis data.
-		if (common_yaxis) {
-			ylim <- get_ylim(gridcell)
-		} else {
-			ylim <- NULL
-		}
+		ylim <- ifelse(common_yaxis, get_ylim(gridcell), NULL)
 
 		plots <- list()
 		if (separate_plots) {

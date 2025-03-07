@@ -18,7 +18,4 @@ A ggplot object.
 \description{
 Create a spatial plot of the absolute values of the given dataset.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
 \keyword{internal}

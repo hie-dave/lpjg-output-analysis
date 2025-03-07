@@ -15,7 +15,4 @@ Returns the value of the variable
 \description{
 Get the package-internal global variable with the specified name.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

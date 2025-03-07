@@ -7,7 +7,7 @@
 get_gridcell(data, lat, lon, site_name = NULL)
 }
 \arguments{
-\item{data:}{The input data as obtained from \seealso{\link{read_data}}}
+\item{data:}{The input data as obtained from \link{read_data}}
 
 \item{lat:}{Latitude of the gridcell}
 
@@ -16,13 +16,10 @@ get_gridcell(data, lat, lon, site_name = NULL)
 \item{site_name:}{Name of the ozflux site (optional).}
 }
 \value{
-Returns a \seealso{\link{DGVMTools::Source}} object containing data
-only for the specified location.
+Returns a \link[DGVMTools:Source]{DGVMTools::Source} object containing data only for the
+specified location.
 }
 \description{
 Extract data for the specified gridcell.
-}
-\author{
-Drew Holzworth
 }
 \keyword{internal}

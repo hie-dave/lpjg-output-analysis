@@ -15,7 +15,4 @@ Returns the site as a named vector with (Lon, Lat, Name).
 \description{
 Sanitise a single ozflux site name.
 }
-\author{
-Drew Holzworth
-}
 \keyword{internal}

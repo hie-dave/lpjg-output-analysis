@@ -15,7 +15,6 @@ set_global("warning_as_error", FALSE)
 #' This should be in range 0-4. Higher values will result in more log messages
 #' being written.
 #'
-#' @author Drew Holzworth
 #' @export
 #'
 set_log_level <- function(level) {
@@ -37,7 +36,6 @@ set_log_level <- function(level) {
 #' The log file will not be truncated.
 #'
 #' @param file The file to which log messages will be written.
-#' @author Drew Holzworth
 #' @export
 #'
 set_log_file <- function(file) {

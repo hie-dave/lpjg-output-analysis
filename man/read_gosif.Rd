@@ -10,12 +10,9 @@ read_gosif(data_path)
 \item{data_path}{Path to data files.}
 }
 \value{
-A DGVMTools::Field object containing GOSIF global monthly GPP.
+A \link[DGVMTools:Field]{DGVMTools::Field} object containing GOSIF global monthly GPP.
 }
 \description{
 Read GOSIF GPP from the specified data path.
-}
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
 }
 \keyword{internal}

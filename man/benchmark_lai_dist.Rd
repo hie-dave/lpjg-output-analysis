@@ -17,6 +17,3 @@ benchmark_lai_dist(settings, params, tables)
 Note that the subannual (monthly) LAI output does not distinguish between
 PFTs, so this benchmark only considers annual LAI.
 }
-\author{
-Drew Holzworth \email{d.holzworth@westernsydney.edu.au}
-}
