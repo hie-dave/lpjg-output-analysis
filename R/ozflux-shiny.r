@@ -8,7 +8,6 @@
 #'
 #' @return Returns a [shiny::shinyApp] object
 #' @import shiny
-#' @import shinydashboard
 #' @export
 #'
 ozflux_shiny <- function(sources) {
