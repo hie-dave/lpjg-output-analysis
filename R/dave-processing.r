@@ -159,6 +159,8 @@ get_obs_layer <- function(quant) {
 #' @param sites: The ozflux sites for which data will be read (see: [sanitise_ozflux_sites]).
 #' @param layers: Names of layers to be read.
 #' @param correct_leaps: Never set this to TRUE unless you know what you're doing.
+#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #' @keywords internal
 #' @export
 #' @return A single [DGVMTools::Field] with a layer of observations, and one layer
@@ -170,7 +172,9 @@ read_data <- function(
 	vars,
 	sites = NULL,
 	layers = NULL,
-	correct_leaps = FALSE) {
+	correct_leaps = FALSE,
+	show_all_observations = TRUE,
+	show_all_predictions = TRUE) {
 
 	log_debug("[read_data] Sanitising input sources...")
 	sources <- sanitise_sources(sources)
@@ -227,8 +231,8 @@ read_data <- function(
 			} else {
 				data <- DGVMTools::copyLayers(obs, data, layers
 					, new.layer.names = out_lyr
-					, tolerance = get_global("merge_tol"), keep.all.from = FALSE
-					, keep.all.to = TRUE)#, allow.cartesian = TRUE
+					, tolerance = get_global("merge_tol"), keep.all.from = show_all_observations
+					, keep.all.to = show_all_observations)#, allow.cartesian = TRUE
 			}
 		} else {
 			layer_names <- paste(layers, collapse = ", ")
@@ -288,8 +292,8 @@ read_data <- function(
 				nr <- nrow(data@data)
 				data <- DGVMTools::copyLayers(predictions, data, layers
 					, new.layer.names = layer_names
-					, tolerance = get_global("merge_tol"), keep.all.from = TRUE
-					, keep.all.to = TRUE)#, allow.cartesian = TRUE
+					, tolerance = get_global("merge_tol"), keep.all.from = show_all_predictions
+					, keep.all.to = show_all_observations)#, allow.cartesian = TRUE
 				if (nrow(data@data) == 0 && nr > 0 && nrow(predictions@data) > 0) {
 					# No observations for this site.
 					log_warning("No observations found for site ", site$Name)

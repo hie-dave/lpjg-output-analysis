@@ -45,6 +45,8 @@ is_installed <- function(pkg) {
 #' @param vars: List of names of output variables to be plotted. If NULL, a standard set of outputs will be plotted. This should be, for example, `c("dave_lai", "dave_resp")`.
 #' @param widget_dir: Directory to which plotly plots will be saved.
 #' @param aspect_ratio: Aspect ratio (width:height) used for plotly plots.
+#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #'
 #' @return Returns a list of HTML tags if use_plotly is TRUE. Otherwise all
 #' content will be printed, for use in R markdown.
@@ -61,7 +63,9 @@ ozflux_benchmarks <- function(
 	sites = NULL,
 	vars = NULL,
 	widget_dir = "plots",
-	aspect_ratio = 16 / 9
+	aspect_ratio = 16 / 9,
+	show_all_observations = TRUE,
+	show_all_predictions = TRUE
 ) {
 	# Sanitise input sources.
 	log_debug("Sanitising input sources...")
@@ -200,7 +204,9 @@ ozflux_benchmarks <- function(
 			bias[[lyr_name]] <- rep(NA, nrow(sites))
 		}
 
-		data <- read_data(sources, list(var), sites)
+		data <- read_data(sources, list(var), sites
+				          show_all_observations = show_all_observations,
+						  show_all_predictions = show_all_predictions)
 		iter <- 0
 		for (i in seq_len(nrow(sites))) {
 			iter <- iter + 1

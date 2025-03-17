@@ -17,6 +17,8 @@
 #' @param use_plotly iff TRUE, graphs will be plotted using [plotly]
 #' @param common_yaxis iff TRUE, all plots in the panel will have the same y-axis
 #' range. No effect if only 1 site is being plotted.
+#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #'
 #' @return Returns either a single [ggplot2::ggplot] object (if separate is FALSE),
 #' or a list of [ggplot2::ggplot] objects (if separate is TRUE). If use_plotly
@@ -29,7 +31,9 @@ ozflux_plot <- function(
 		sites = NULL,
 		separate = FALSE,
 		use_plotly = FALSE,
-		common_yaxis = FALSE) {
+		common_yaxis = FALSE,
+		show_all_observations = TRUE,
+		show_all_predictions = TRUE) {
 	# Sanitise the sites to be plotted.
 	sites <- sanitise_ozflux_sites(sites)
 
@@ -40,7 +44,9 @@ ozflux_plot <- function(
 	vars <- sanitise_variables(vars)
 
 	# Read data for this gridcell.
-	data <- read_data(sources, vars, sites = sites)
+	data <- read_data(sources, vars, sites = sites,
+	 				  show_all_observations = show_all_observations,
+					  show_all_predictions = show_all_predictions)
 
 	# Get upper/lower limits of y-axis data.
 	if (common_yaxis) {
@@ -96,6 +102,8 @@ ozflux_plot <- function(
 #' @param use_plotly iff TRUE, generate [plotly] outputs, FALSE to use [ggplot2::ggplot]
 #' @param common_yaxis iff TRUE, use the same y-axis scales for all sites. FALSE
 #' otherwise
+#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #'
 #' @return Returns a single [ggplot2::ggplot] object if plotting one site, otherwise returns
 #' a list of [ggplot2::ggplot] objects of the same length as the number of sites to be
@@ -107,7 +115,9 @@ ozflux_panel <- function(
 		var,
 		sites = NULL,
 		use_plotly = FALSE,
-		common_yaxis = FALSE) {
+		common_yaxis = FALSE,
+		show_all_observations = TRUE,
+		show_all_predictions = TRUE) {
 
 	# Sanitise sites to be plotted.
 	sites <- sanitise_ozflux_sites(sites)
@@ -119,7 +129,9 @@ ozflux_panel <- function(
 	var <- sanitise_variable(var)
 
 	# Read data for this gridcell.
-	data <- read_data(sources, list(var), sites = sites)
+	data <- read_data(sources, list(var), sites = sites,
+					  show_all_observations = show_all_observations,
+					  show_all_predictions = show_all_predictions)
 
 	# Get upper/lower limits of y-axis data.
 	ylim <- get_ylim(data, common_yaxis)
@@ -170,6 +182,8 @@ ozflux_panel <- function(
 #' draw all layers in a single plot
 #' @param use_plotly iff TRUE, generate [plotly] outputs, FALSE to use [ggplot2::ggplot]
 #' @param common_yaxis iff TRUE, use a common y-axis for all plots. False otherwise
+#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #'
 #' @return Returns a list of [ggplot2::ggplot] objects. If use_plotly is TRUE,
 #' returns [plotly] objects instead.
@@ -184,7 +198,9 @@ ozflux_plot_layerwise <- function(
 	separate_plots = TRUE,
 	combine_sites = FALSE,
 	use_plotly = FALSE,
-	common_yaxis = FALSE) {
+	common_yaxis = FALSE,
+	show_all_observations = TRUE,
+	show_all_predictions = TRUE) {
 	# TODO: refactor this function out of the package. The layers should be an
 	# optional argument to ozflux_plot(). If absent, they're determined using
 	# the current algorithm (ie try total/mean). If present, there should be
@@ -207,7 +223,9 @@ ozflux_plot_layerwise <- function(
 			, "this file will be used. These are: ["
 			, paste(layers, collapse = ", "), "]")
 	}
-	data <- read_data(sources, list(var), sites = sites, layers = layers)
+	data <- read_data(sources, list(var), sites = sites, layers = layers,
+					  show_all_observations = show_all_observations,
+					  show_all_predictions = show_all_predictions)
 
 	panels <- list()
 	nsite <- nrow(sites)
