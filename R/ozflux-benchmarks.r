@@ -204,7 +204,7 @@ ozflux_benchmarks <- function(
 			bias[[lyr_name]] <- rep(NA, nrow(sites))
 		}
 
-		data <- read_data(sources, list(var), sites
+		data <- read_data(sources, list(var), sites,
 				          show_all_observations = show_all_observations,
 						  show_all_predictions = show_all_predictions)
 		iter <- 0
