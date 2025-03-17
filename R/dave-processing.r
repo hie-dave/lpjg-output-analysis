@@ -289,7 +289,7 @@ read_data <- function(
 				data <- DGVMTools::copyLayers(predictions, data, layers
 					, new.layer.names = layer_names
 					, tolerance = get_global("merge_tol"), keep.all.from = TRUE
-					, keep.all.to = TRUE, allow.cartesian = TRUE)
+					, keep.all.to = TRUE)#, allow.cartesian = TRUE
 				if (nrow(data@data) == 0 && nr > 0 && nrow(predictions@data) > 0) {
 					# No observations for this site.
 					log_warning("No observations found for site ", site$Name)
