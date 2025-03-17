@@ -9,7 +9,7 @@ get_vars <- function() {
 	  DGVMTools::defineQuantity("dave_gpp", "GPP", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("dave_resp", "Respiration", "gC m^-2 day^-1")
 	, DGVMTools::defineQuantity("dave_nee", "NEE", "gC m^-2 day^-1")
-	, DGVMTools::defineQuantity("dave_transpiration", "Transpiration", "mm day^-1")
+	, DGVMTools::defineQuantity("dave_aet", "Evapotranspiration", "mm day^-1")
 	, DGVMTools::defineQuantity("dave_lai", "LAI", "m^2 m^-2")
 	, DGVMTools::defineQuantity("dave_live_biomass", "Above-Ground Biomass", "kg/m2")
 	, DGVMTools::defineQuantity("dave_height", "Mean Canopy Height", "m")
