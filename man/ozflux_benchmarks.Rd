@@ -15,7 +15,9 @@ ozflux_benchmarks(
   sites = NULL,
   vars = NULL,
   widget_dir = "plots",
-  aspect_ratio = 16/9
+  aspect_ratio = 16/9,
+  show_all_observations = TRUE,
+  show_all_predictions = TRUE
 )
 }
 \arguments{
@@ -38,6 +40,10 @@ each variable for each site.}
 \item{widget_dir:}{Directory to which plotly plots will be saved.}
 
 \item{aspect_ratio:}{Aspect ratio (width:height) used for plotly plots.}
+
+\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+
+\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 }
 \value{
 Returns a list of HTML tags if use_plotly is TRUE. Otherwise all

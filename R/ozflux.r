@@ -117,7 +117,7 @@ available_layers_ozflux <- function(source, quant, sites = NULL) {
 			log_debug("Reading file ", out_file_name, "...")
 			table <- read.table(out_file_name, header = TRUE, nrows = 1)
 			layers <- colnames(table)
-			ignored_layers <- c("Lon", "Lat", "Year", "Day", "patch")
+			ignored_layers <- c("Lon", "Lat", "Year", "Day", "patch", "stand")
 			return(setdiff(layers, ignored_layers))
 		} else {
 			log_error(paste0("Output file does not exist: ", out_file_name))

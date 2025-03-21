@@ -105,7 +105,7 @@ set_text_multiplier <- function(plt, text_multiplier = NULL) {
 
 #' Plot temporal data
 #'
-#' This is a modified copy of [DGVMTools::plotTemporal,] with the ability to plot
+#' This is a modified copy of [DGVMTools::plotTemporal], with the ability to plot
 #' some fields as points instead of lines.
 #'
 #' For more information, see: [DGVMTools::plotTemporal]

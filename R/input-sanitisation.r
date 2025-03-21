@@ -172,31 +172,75 @@ sanitise_sources <- function(sources) {
 	return(result)
 }
 
+#'
+#' Find a known quantity whose lpj-guess "standard" output file name is given by
+#' name.
+#'
+#' @param name Standard name of the output file.
+#'
+#' @return A [DGVMTools::Quantity] object, or NULL if not found.
+#' @keywords internal
+#'
+get_known_quantity <- function(name) {
+	# Get known quantities, a list of DGVMTools::Quantity objects.
+	quantities <- DGVMTools::GUESS@quantities
+
+	# Find the first quantity (if any) with quant@id == name.
+	quant <- Find(function(q) q@id == name, quantities)
+	if (!is.null(quant)) {
+		return(quant)
+	}
+	quant <- Find(function(q) q@id == name, ozflux_quantities)
+	return(quant)
+}
+
+#'
+#' Check if a quantity is a known quantity.
+#'
+#' @param name Name of a quantity.
+#'
+#' @return TRUE iff the quantity is a known quantity.
+#' @keywords internal
+#'
+is_known_quantity <- function(name) {
+	return(!is.null(get_known_quantity(name)))
+}
+
 # Attempt to get units given a variable name by looking in the observed file.
 get_units <- function(var_name) {
-	var_name <- trim_dave(var_name)
+	trimmed <- trim_dave(var_name)
 	for (var in get_observed_vars()) {
-		if (var@id == var_name) {
+		if (var@id == trimmed) {
 			return(var@units)
 		}
+	}
+	quant <- get_known_quantity(var_name)
+	if (!is.null(quant)) {
+		return(quant@units)
 	}
 	return("")
 }
 
 # FIXME: this is really bad
 readable_name <- function(name) {
-	name <- trim_dave(name)
-	lower <- tolower(name)
+	trimmed <- trim_dave(name)
+	lower <- tolower(trimmed)
 	acronyms <- c("lai", "gpp", "nee", "nep", "et", "er")
 	if (lower %in% acronyms) {
-		return(toupper(name))
+		return(toupper(trimmed))
 	}
 
 	# Check for known observed variables.
 	for (var in get_observed_vars()) {
-		if (var@id == name) {
+		if (var@id == trimmed) {
 			return(var@name)
 		}
+	}
+
+	# Check for known quantities.
+	quant <- get_known_quantity(name)
+	if (!is.null(quant)) {
+		return(quant@name)
 	}
 
 	return(name)

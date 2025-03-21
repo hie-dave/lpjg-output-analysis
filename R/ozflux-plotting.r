@@ -235,7 +235,7 @@ ozflux_plot_layerwise <- function(
 		gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
 
 		# Get upper/lower limits of y-axis data.
-		ylim <- ifelse(common_yaxis, get_ylim(gridcell), NULL)
+		ylim <- get_ylim(gridcell, common_yaxis)
 
 		plots <- list()
 		if (separate_plots) {

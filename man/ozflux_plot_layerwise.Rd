@@ -13,7 +13,9 @@ ozflux_plot_layerwise(
   separate_plots = TRUE,
   combine_sites = FALSE,
   use_plotly = FALSE,
-  common_yaxis = FALSE
+  common_yaxis = FALSE,
+  show_all_observations = TRUE,
+  show_all_predictions = TRUE
 )
 }
 \arguments{
@@ -33,6 +35,10 @@ draw all layers in a single plot}
 \item{common_yaxis}{iff TRUE, use a common y-axis for all plots. False otherwise}
 
 \item{vars}{The single variable to be plotted (see: \link{sanitise_variable})}
+
+\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+
+\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 }
 \value{
 Returns a list of \link[ggplot2:ggplot]{ggplot2::ggplot} objects. If use_plotly is TRUE,

@@ -10,7 +10,9 @@ ozflux_panel(
   var,
   sites = NULL,
   use_plotly = FALSE,
-  common_yaxis = FALSE
+  common_yaxis = FALSE,
+  show_all_observations = TRUE,
+  show_all_predictions = TRUE
 )
 }
 \arguments{
@@ -24,6 +26,10 @@ ozflux_panel(
 
 \item{common_yaxis}{iff TRUE, use the same y-axis scales for all sites. FALSE
 otherwise}
+
+\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+
+\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 }
 \value{
 Returns a single \link[ggplot2:ggplot]{ggplot2::ggplot} object if plotting one site, otherwise returns

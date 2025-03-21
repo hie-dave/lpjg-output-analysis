@@ -255,7 +255,7 @@ read_data <- function(
 			args <- list()
 			args$source <- source
 			args$layers <- layers
-			args$quant <- var@id
+			args$quant <- var
 			args$decimal.places <- num_decimal_places
 			args$verbose <- FALSE
 			if (!is.null(site)) {
@@ -267,6 +267,9 @@ read_data <- function(
 				}
 			}
 			predictions <- do.call(DGVMTools::getField, args)
+			if (is_known_quantity(var@id)) {
+				predictions@quant <- var
+			}
 			if (nrow(predictions@data) == 0) {
 				stop("Failed to read data for source ", source@id)
 			}

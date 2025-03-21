@@ -4,7 +4,15 @@
 \alias{read_data}
 \title{Read data for the specified variable.}
 \usage{
-read_data(sources, vars, sites = NULL, layers = NULL, correct_leaps = FALSE)
+read_data(
+  sources,
+  vars,
+  sites = NULL,
+  layers = NULL,
+  correct_leaps = FALSE,
+  show_all_observations = TRUE,
+  show_all_predictions = TRUE
+)
 }
 \arguments{
 \item{sources:}{The data sources from which to read (see: \link{sanitise_source}).}
@@ -16,6 +24,10 @@ read_data(sources, vars, sites = NULL, layers = NULL, correct_leaps = FALSE)
 \item{layers:}{Names of layers to be read.}
 
 \item{correct_leaps:}{Never set this to TRUE unless you know what you're doing.}
+
+\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+
+\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 }
 \value{
 A single \link[DGVMTools:Field]{DGVMTools::Field} with a layer of observations, and one layer

@@ -10,7 +10,9 @@ ozflux_plot(
   sites = NULL,
   separate = FALSE,
   use_plotly = FALSE,
-  common_yaxis = FALSE
+  common_yaxis = FALSE,
+  show_all_observations = TRUE,
+  show_all_predictions = TRUE
 )
 }
 \arguments{
@@ -28,6 +30,10 @@ if a single site is to be plotted.}
 
 \item{common_yaxis}{iff TRUE, all plots in the panel will have the same y-axis
 range. No effect if only 1 site is being plotted.}
+
+\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+
+\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 }
 \value{
 Returns either a single \link[ggplot2:ggplot]{ggplot2::ggplot} object (if separate is FALSE),

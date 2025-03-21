@@ -43,7 +43,7 @@ plot_temporal(
 A ggplot
 }
 \description{
-This is a modified copy of \link[DGVMTools:plotTemporal,]{DGVMTools::plotTemporal,} with the ability to plot
+This is a modified copy of \link[DGVMTools:plotTemporal]{DGVMTools::plotTemporal}, with the ability to plot
 some fields as points instead of lines.
 }
 \details{
