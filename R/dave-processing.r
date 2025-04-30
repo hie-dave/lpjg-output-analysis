@@ -162,7 +162,7 @@ get_obs_layer <- function(quant) {
 #' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
 #' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #' @keywords internal
-#' @export
+#'
 #' @return A single [DGVMTools::Field] with a layer of observations, and one layer
 #' for each source specified in sources.
 #' @export
