@@ -7,6 +7,8 @@
 #' @param params Benchmark parameters
 #' @param tables Benchmark tables. This will be rbind-ed and returned as
 #' result$tables.
+#' @param lai_type "tot" for total LAI, "per" for persistent (ie trees), and
+#' "rec" for recurrent (ie grasses).
 #'
 #' @return Returns a list containing the following named items:
 #' - maps: Mean maximum annual LAI for each dataset.
@@ -21,7 +23,7 @@
 #' @import dplyr
 #' @export
 #'
-benchmark_lai <- function(settings, params, tables) {
+benchmark_lai <- function(settings, params, tables, lai_type = "tot") {
     if (!requireNamespace("DGVMBenchmarks", quietly = TRUE)) {
         warning("DGVMBenchmarks package is required for LAI benchmarking")
         return(NULL)
@@ -39,7 +41,7 @@ benchmark_lai <- function(settings, params, tables) {
     areas <- list()
 
     # Read observed data and calculate annual mean over the time period.
-    bom_data <- read_bom_lai(settings$data_path)
+    bom_data <- read_bom_lai(settings$data_path, lai_type)
 
     do_aggregation <- function(field) {
         name <- field@source@name
@@ -114,8 +116,7 @@ benchmark_lai <- function(settings, params, tables) {
 
     comparisons <- DGVMBenchmarks::fullSpatialComparison(benchmark, maps
                                                          , trends, seasonals
-                                                         , params$new_name
-                                                         , params$old_name)
+                                                         , params$new_name)
 
     for (i in seq_along(comparisons[["Seasonal"]])) {
         comparisons[["Seasonal"]][[i]]@name <- sub("Seasonal comparison ", ""
@@ -126,7 +127,9 @@ benchmark_lai <- function(settings, params, tables) {
     tables[["totals"]] <- rbind(tables[["totals"]], summary)
 
     sims <- list()
-    sims[["GUESS"]] <- settings$simulations
+    # REQUIRED for TellMeEurope?
+    # sims[["GUESS"]] <- settings$simulations
+    settings$simulations
 
     metrics <- DGVMBenchmarks::makeMetricTable(benchmark, comparisons, sims)
     tables[["metrics"]] <- rbind(tables[["metrics"]], metrics)
@@ -140,6 +143,23 @@ benchmark_lai <- function(settings, params, tables) {
     result$tables <- tables
     result$benchmark <- benchmark
     return(result)
+}
+
+#'
+#' Ensure that all data exists which is required for this benchmark.
+#'
+#' @param data_path Path to the data directory
+#'
+#' @export
+#'
+validate_lai <- function(data_path) {
+    types <- c("tot", "rec", "per")
+    for (type in types) {
+        data_file <- get_bom_data_path(data_path, type)
+        if (!file.exists(data_file)) {
+            stop("Unable to locate BoM LAI data. File not found: ", data_file)
+        }
+    }
 }
 
 #'

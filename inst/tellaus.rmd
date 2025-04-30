@@ -32,7 +32,7 @@ debug <- FALSE
 
 # Global script parameters.
 settings <- list(
-    data_path = "/home/drew/code/lpj-guess/output-analysis/.data",
+    data_path = params$data_directory,
 
     analysis_version = "tellme_dave  v0.1",
 
@@ -163,6 +163,23 @@ summary_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
 
 # This table is completely empty; it will by built benchmark by benchmark.
 metric_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
+
+# Verify that observed data exists.
+if (do_bom_lai) {
+    validate_lai(params$data_directory)
+}
+
+if (do_auseflux_gpp) {
+    validate_auseflux(params$data_directory, "GPP")
+}
+
+if (do_auseflux_nee) {
+    validate_auseflux(params$data_directory, "NEE")
+}
+
+if (do_auseflux_er) {
+    validate_auseflux(params$data_directory, "ER")
+}
 
 # This list contains tables that gets passed in and out of each benchmark.
 tables <- list(

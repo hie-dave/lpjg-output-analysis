@@ -160,6 +160,20 @@ benchmark_auseflux <- function(var,
 }
 
 #'
+#' Ensure that all data exists which is required for this benchmark.
+#'
+#' @param data_path Path to the data directory
+#'
+#' @export
+#'
+validate_auseflux <- function(data_path, var) {
+    file <- auseflux_get_file_path(var, data_path)
+    if (!file.exists(file)) {
+        stop("Unable to locate Auseflux ", var, " data. File not found: ", file)
+    }
+}
+
+#'
 #' Read AusEFlux data from the specified data file, or from the default location if
 #' no data file is provided.
 #'
