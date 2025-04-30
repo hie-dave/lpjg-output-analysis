@@ -5,6 +5,7 @@ date: '`r strftime(Sys.time(), format = "%B %d, %Y")`'
 output:
  html_document:
   toc: true
+  css: tellaus.css
 params:
   new_directory:
     value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/dave/baseline"
