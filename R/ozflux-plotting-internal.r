@@ -351,10 +351,13 @@ plot_timeseries <- function(
     xlab = NULL,
     ylab = NULL,
     layers = NULL,
-    subtitle = NULL) {
+    subtitle = NULL,
+    colours = NULL) {
 
     ncolour <- ifelse(is.null(layers), length(names(gc)), length(layers))
-    colours <- get_colour_palette(ncolour)
+    if (is.null(colours)) {
+        colours <- get_colour_palette(ncolour)
+    }
     lyrs <- ifelse(is.null(layers), names(gc), layers)
     return(plot_temporal(gc, layers = layers, cols = colours
         , text.multiplier = text_multiplier, text.expression = FALSE
@@ -362,8 +365,17 @@ plot_timeseries <- function(
         , title = NULL))
 }
 
-plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
-    colours <- get_colour_palette(length(names(gc)))
+plot_pvo <- function(
+    gc,
+    ylim = NULL,
+    text_multiplier = NULL,
+    marker_size = 3,
+    colours = NULL) {
+
+    if (is.null(colours)) {
+        colours <- get_colour_palette(length(names(gc)))
+    }
+
     # predicted_name <- names(gc)[[length(names(gc))]]
     log_debug("[plot_pvo] names(gc) = ", paste(names(gc), collapse = ", "))
     # plt <- DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
@@ -414,9 +426,16 @@ plot_pvo <- function(gc, ylim = NULL, text_multiplier = NULL, marker_size = 3) {
     return(plt)
 }
 
-plot_subannual <- function(gc, ylim = NULL, text_multiplier = NULL) {
-    colours <- get_colour_palette(length(names(gc)))
-    colours <- setNames(colours, names(gc))
+plot_subannual <- function(
+    gc,
+    ylim = NULL,
+    text_multiplier = NULL,
+    colours = NULL) {
+
+    if (is.null(colours)) {
+        colours <- get_colour_palette(length(names(gc)))
+        colours <- setNames(colours, names(gc))
+    }
 
     # Process each layer separately to handle NAs correctly
     agg_data <- NULL
@@ -516,12 +535,16 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         ylim <- c(ymin, ymax)
     }
 
+    colours <- get_colour_palette(length(names(gc)))
+    colours <- setNames(colours, names(gc))
+
     # Create plots.
     result <- list()
 
     if (do_timeseries) {
         log_diag("Creating timeseries plot...")
-        timeseries <- plot_timeseries(gc, ylim, text_multiplier)
+        timeseries <- plot_timeseries(gc, ylim, text_multiplier,
+                                      colours = colours)
         timeseries <- trim_ggplot(timeseries, xlab = TRUE)
         if (use_plotly) {
             timeseries <- to_plotly(timeseries, ylab)
@@ -530,7 +553,8 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     }
     if (do_pvo) {
         log_diag("Creating predicted vs. observed scatter plot...")
-        pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size)
+        pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size,
+                        colours = colours)
         # On the subannual plots, we want the x-axis label (observed) as well
         # as the y-axis label (predicted), because these are not shared with any
         # other plots in the panel.
@@ -542,7 +566,8 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     }
     if (do_subannual) {
         log_diag("Creating subannual plot...")
-        subannual <- plot_subannual(gc, ylim, text_multiplier)
+        subannual <- plot_subannual(gc, ylim, text_multiplier,
+                                    colours = colours)
         subannual <- trim_ggplot(subannual, xlab = TRUE)
         if (use_plotly) {
             subannual <- to_plotly(subannual, ylab)
