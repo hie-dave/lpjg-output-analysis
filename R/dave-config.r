@@ -7,22 +7,22 @@
 #'
 #' @export
 dave_config <- function(versions, log_level, warning_as_error, log_file) {
-	# Set default sources.
-	if (!missing(versions) && !is.null(versions)) {
-		set_global(".versions", sanitise_sources(versions))
-	}
+    # Set default sources.
+    if (!missing(versions) && !is.null(versions)) {
+        set_global(".versions", sanitise_sources(versions))
+    }
 
-	# Set default log level.
-	if (!missing(log_level) && !is.null(log_level)) {
-		set_log_level(log_level)
-	}
+    # Set default log level.
+    if (!missing(log_level) && !is.null(log_level)) {
+        set_log_level(log_level)
+    }
 
-	if (!missing(log_file)) {
-		set_log_file(log_file)
-	}
+    if (!missing(log_file)) {
+        set_log_file(log_file)
+    }
 
-	# Set whether warnings should be treated as errors.
-	if (!missing(warning_as_error)) {
-		set_warning_as_error(warning_as_error)
-	}
+    # Set whether warnings should be treated as errors.
+    if (!missing(warning_as_error)) {
+        set_warning_as_error(warning_as_error)
+    }
 }

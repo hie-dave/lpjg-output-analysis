@@ -10,7 +10,7 @@
 #' @keywords internal
 #'
 set_global <- function(name, value) {
-	assign(name, value, .pkg_env)
+    assign(name, value, .pkg_env)
 }
 
 #'
@@ -23,5 +23,5 @@ set_global <- function(name, value) {
 #' @keywords internal
 #'
 get_global <- function(name) {
-	return(.pkg_env[[name]])
+    return(.pkg_env[[name]])
 }

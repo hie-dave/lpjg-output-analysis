@@ -1,79 +1,79 @@
 get_ozflux_path <- function(source) {
-	return(file.path(source@dir, "benchmarks", "ozflux"))
+    return(file.path(source@dir, "benchmarks", "ozflux"))
 }
 
 get_sites_ozflux <- function(source) {
-	ozflux <- get_ozflux_path(source)
-	standard_sites <- read_ozflux_sites()$Name
+    ozflux <- get_ozflux_path(source)
+    standard_sites <- read_ozflux_sites()$Name
 
-	sites <- c()
-	for (dir in list.dirs(ozflux, full.names = FALSE, recursive = FALSE)) {
-		ins <- file.path(ozflux, dir, paste0(dir, ".ins"))
-		if (file.exists(ins)) {
-			if (dir %in% standard_sites) {
-				sites <- c(sites, dir)
-			} else {
-				log_info("Ignoring site ", dir
-					, " because it's not in the standard site list")
-			}
-		}
-	}
-	return(sites)
+    sites <- c()
+    for (dir in list.dirs(ozflux, full.names = FALSE, recursive = FALSE)) {
+        ins <- file.path(ozflux, dir, paste0(dir, ".ins"))
+        if (file.exists(ins)) {
+            if (dir %in% standard_sites) {
+                sites <- c(sites, dir)
+            } else {
+                log_info("Ignoring site ", dir
+                    , " because it's not in the standard site list")
+            }
+        }
+    }
+    return(sites)
 }
 
 get_output_dir <- function(ins) {
-	pattern <- "^[^!]*outputdirectory \"([^\"]+)\""
-	text <- readLines(ins)
-	return(sub(pattern, "\\1", regmatches(text, regexpr(pattern, text))))
+    pattern <- "^[^!]*outputdirectory \"([^\"]+)\""
+    text <- readLines(ins)
+    return(sub(pattern, "\\1", regmatches(text, regexpr(pattern, text))))
 }
 
 # Helper function for raster::trimming file names to get a variable name
 quant_from_file_name <- function(file_name) {
-	for (ending in c(".out", ".out.gz")) {
-		stop <- nchar(file_name)
-		start <- stop - nchar(ending) + 1
-		if (substr(file_name, start, stop) == ending)
-			return(substr(file_name, 1, stop - nchar(ending)))
-	}
-	return(NULL)
+    for (ending in c(".out", ".out.gz")) {
+        stop <- nchar(file_name)
+        start <- stop - nchar(ending) + 1
+        if (substr(file_name, start, stop) == ending)
+            return(substr(file_name, 1, stop - nchar(ending)))
+    }
+    return(NULL)
 }
 
 available_quantities <- function(source, directory, names = TRUE) {
-	# First get the list of *.out files present
-	files <- list.files(directory, ".out$")
-	files <- append(files, list.files(directory, ".out.gz$"))
+    # First get the list of *.out files present
+    files <- list.files(directory, ".out$")
+    files <- append(files, list.files(directory, ".out.gz$"))
 
-	# Check that they correspond to actual quantities; emit a warning if not.
-	good_list <- list()
-	ignore_list <- c("*", "guess_out", "guess_err")
-	fmt <- source@format
+    # Check that they correspond to actual quantities; emit a warning if not.
+    good_list <- list()
+    ignore_list <- c("*", "guess_out", "guess_err")
+    fmt <- source@format
 
-	for (this.file in files){
+    for (this.file in files){
 
-		variable <- quant_from_file_name(this.file)
+        variable <- quant_from_file_name(this.file)
 
-		if (!variable %in% ignore_list) {
+        if (!variable %in% ignore_list) {
 
-			result <- tryCatch({
-				x <- suppressWarnings(DGVMTools::lookupQuantity(variable, fmt))
-			},	warning = function(w) {
-				# We could log a warning here if we wanted.
-			}, error = function(e) {
-				# We could log a warning here if we wanted.
-			}, finally = {
-			})
+            result <- tryCatch({
+                x <- suppressWarnings(DGVMTools::lookupQuantity(variable, fmt))
+            },    warning = function(w) {
+                # We could log a warning here if we wanted.
+            }, error = function(e) {
+                # We could log a warning here if we wanted.
+            }, finally = {
+            })
 
-			if (DGVMTools::is.Quantity(result))	{
-				if (names)
-					good_list <- append(good_list, variable)
-				else
-					good_list <- append(good_list, result)
-			} else {
-				log_warning("Although I have found file with an appropriate extension that looks like an LPJ-GUESS output variable (", this.file, "), I have no Quantity object corrsponding to \"", variable, "\".	I am therefore ignoring it.	\n However, not to worry! If you want this file included, you can easily add a new Quantity to the dgvm.quantities list (just in your analysis script, doesn't need to be in the package).")
-			}
-		}
-	}
-	return(unlist(good_list))
+            if (DGVMTools::is.Quantity(result))    {
+                if (names)
+                    good_list <- append(good_list, variable)
+                else
+                    good_list <- append(good_list, result)
+            } else {
+                log_warning("Although I have found file with an appropriate extension that looks like an LPJ-GUESS output variable (", this.file, "), I have no Quantity object corrsponding to \"", variable, "\".    I am therefore ignoring it.    \n However, not to worry! If you want this file included, you can easily add a new Quantity to the dgvm.quantities list (just in your analysis script, doesn't need to be in the package).")
+            }
+        }
+    }
+    return(unlist(good_list))
 }
 
 #'
@@ -88,41 +88,41 @@ available_quantities <- function(source, directory, names = TRUE) {
 #' @keywords internal
 #'
 available_layers_ozflux <- function(source, quant, sites = NULL) {
-	# Get path to the ozflux directory within the repository.
-	ozflux <- get_ozflux_path(source)
+    # Get path to the ozflux directory within the repository.
+    ozflux <- get_ozflux_path(source)
 
-	# Get a list of site names.
-	if (is.null(sites)) {
-		sites <- get_sites_ozflux(source)
-	}
+    # Get a list of site names.
+    if (is.null(sites)) {
+        sites <- get_sites_ozflux(source)
+    }
 
-	if (length(sites) < 1) {
-		# No sites. This shouldn't really happen, but if it does, there's
-		# nothing more to be done.
-		return(list())
-	}
+    if (length(sites) < 1) {
+        # No sites. This shouldn't really happen, but if it does, there's
+        # nothing more to be done.
+        return(list())
+    }
 
-	# Get the name of the output directory, as specified in the .ins file.
-	out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
+    # Get the name of the output directory, as specified in the .ins file.
+    out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
 
-	# Get names of outputs which are common to all sites.
-	for (site in sites) {
-		# Get path to this site's output directory.
-		site_out <- file.path(ozflux, site, out_dir_name)
+    # Get names of outputs which are common to all sites.
+    for (site in sites) {
+        # Get path to this site's output directory.
+        site_out <- file.path(ozflux, site, out_dir_name)
 
-		# Get the expected output file name.
-		out_file_name <- file.path(site_out, paste0(quant@id, ".out"))
+        # Get the expected output file name.
+        out_file_name <- file.path(site_out, paste0(quant@id, ".out"))
 
-		if (file.exists(out_file_name)) {
-			log_debug("Reading file ", out_file_name, "...")
-			table <- read.table(out_file_name, header = TRUE, nrows = 1)
-			layers <- colnames(table)
-			ignored_layers <- c("Lon", "Lat", "Year", "Day", "patch", "stand")
-			return(setdiff(layers, ignored_layers))
-		} else {
-			log_error(paste0("Output file does not exist: ", out_file_name))
-		}
-	}
+        if (file.exists(out_file_name)) {
+            log_debug("Reading file ", out_file_name, "...")
+            table <- read.table(out_file_name, header = TRUE, nrows = 1)
+            layers <- colnames(table)
+            ignored_layers <- c("Lon", "Lat", "Year", "Day", "patch", "stand")
+            return(setdiff(layers, ignored_layers))
+        } else {
+            log_error(paste0("Output file does not exist: ", out_file_name))
+        }
+    }
 }
 
 #'
@@ -139,38 +139,38 @@ available_layers_ozflux <- function(source, quant, sites = NULL) {
 #' @keywords internal
 #'
 available_quantities_ozflux <- function(source, names = TRUE, verbose = FALSE) {
-	# Get path to the ozflux directory within the repository.
-	ozflux <- get_ozflux_path(source)
+    # Get path to the ozflux directory within the repository.
+    ozflux <- get_ozflux_path(source)
 
-	# Get a list of site names.
-	sites <- get_sites_ozflux(source)
+    # Get a list of site names.
+    sites <- get_sites_ozflux(source)
 
-	if (length(sites) < 1) {
-		# No sites. This shouldn't really happen, but if it does, there's
-		# nothing more to be done.
-		return(list())
-	}
+    if (length(sites) < 1) {
+        # No sites. This shouldn't really happen, but if it does, there's
+        # nothing more to be done.
+        return(list())
+    }
 
-	# Get the name of the output directory, as specified in the .ins file.
-	out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
+    # Get the name of the output directory, as specified in the .ins file.
+    out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
 
-	# Get names of outputs which are common to all sites.
-	outputs <- NULL
-	for (site in sites) {
-		# Get path to this site's output directory.
-		site_out <- file.path(ozflux, site, out_dir_name)
+    # Get names of outputs which are common to all sites.
+    outputs <- NULL
+    for (site in sites) {
+        # Get path to this site's output directory.
+        site_out <- file.path(ozflux, site, out_dir_name)
 
-		# Construct a Source object which will interrogate the output directory.
-		s <- DGVMTools::defineSource(site, site, site_out, DGVMTools::GUESS)
-		site_outputs <- DGVMTools::availableQuantities(s, names = names)
-		# Remove any outputs which aren't present for this site.
-		if (is.null(outputs))
-			outputs <- site_outputs
-		else
-			outputs <- intersect(outputs, site_outputs)
-	}
+        # Construct a Source object which will interrogate the output directory.
+        s <- DGVMTools::defineSource(site, site, site_out, DGVMTools::GUESS)
+        site_outputs <- DGVMTools::availableQuantities(s, names = names)
+        # Remove any outputs which aren't present for this site.
+        if (is.null(outputs))
+            outputs <- site_outputs
+        else
+            outputs <- intersect(outputs, site_outputs)
+    }
 
-	return(outputs)
+    return(outputs)
 }
 
 #' Get a field for OZFLUX LPJ-GUESS.
@@ -193,151 +193,151 @@ available_quantities_ozflux <- function(source, names = TRUE, verbose = FALSE) {
 #' @keywords internal
 #'
 get_field_ozflux <- function(
-	source,
-	quant,
-	layers = NULL,
-	target_stainfo,
-	file_name,
-	verbose,
-	sites = NULL,
-	...) {
-	# Get path to the ozflux directory within the repository.
-	ozflux <- get_ozflux_path(source)
+    source,
+    quant,
+    layers = NULL,
+    target_stainfo,
+    file_name,
+    verbose,
+    sites = NULL,
+    ...) {
+    # Get path to the ozflux directory within the repository.
+    ozflux <- get_ozflux_path(source)
 
-	quant <- sanitise_variable(quant)
+    quant <- sanitise_variable(quant)
 
-	# Get a list of site names.
-	if (is.null(sites)) {
-		# No site list provided - check which sites are available.
-		sites <- get_sites_ozflux(source)
+    # Get a list of site names.
+    if (is.null(sites)) {
+        # No site list provided - check which sites are available.
+        sites <- get_sites_ozflux(source)
 
-		if (length(sites) < 1) {
-			# No sites. This shouldn't really happen, but if it does, there's
-			# nothing more to be done.
-			return(list())
-		}
-	} else {
-		# Site list was provided.
-		sites <- sanitise_ozflux_sites(sites, source@dir)
-	}
+        if (length(sites) < 1) {
+            # No sites. This shouldn't really happen, but if it does, there's
+            # nothing more to be done.
+            return(list())
+        }
+    } else {
+        # Site list was provided.
+        sites <- sanitise_ozflux_sites(sites, source@dir)
+    }
 
-	# Get the name of the output directory, as specified in the .ins file.
-	out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
-	verbose <- get_global("log_level") > get_global("LOG_LEVEL_DIAGNOSTIC") && get_global("log_file") == ""
-	quant_id <- quant@id
-	if (is.null(file_name)) {
-		base_name <- paste0(quant_id, ".out")
-		file_name <- base_name
-	}
+    # Get the name of the output directory, as specified in the .ins file.
+    out_dir_name <- get_output_dir(file.path(ozflux, "outputs.ins"))
+    verbose <- get_global("log_level") > get_global("LOG_LEVEL_DIAGNOSTIC") && get_global("log_file") == ""
+    quant_id <- quant@id
+    if (is.null(file_name)) {
+        base_name <- paste0(quant_id, ".out")
+        file_name <- base_name
+    }
 
-	site <- NULL
-	if (nrow(sites) == 1) {
-		site <- sites[1, "Name"]
-	} else if (!is.null(target_stainfo)) {
-		spatial_extent_id <- target_stainfo@spatial.extent.id
-		spatial_extent <- target_stainfo@spatial.extent
-		if (!is.null(spatial_extent_id) && length(spatial_extent_id) > 0) {
-			site <- sanitise_spatial_extent_id(spatial_extent_id, sites)
-		} else if (!is.null(spatial_extent) && spatial_extent != FALSE) {
-			# For some reason, FALSE gets passed in for spatial.extent if no value
-			# is given.
-			site <- sanitise_spatial_extent(spatial_extent, sites)
-		} else {
-			log_debug("spatial.extent and spatial.extent.id not specified.")
-		}
-	}
+    site <- NULL
+    if (nrow(sites) == 1) {
+        site <- sites[1, "Name"]
+    } else if (!is.null(target_stainfo)) {
+        spatial_extent_id <- target_stainfo@spatial.extent.id
+        spatial_extent <- target_stainfo@spatial.extent
+        if (!is.null(spatial_extent_id) && length(spatial_extent_id) > 0) {
+            site <- sanitise_spatial_extent_id(spatial_extent_id, sites)
+        } else if (!is.null(spatial_extent) && spatial_extent != FALSE) {
+            # For some reason, FALSE gets passed in for spatial.extent if no value
+            # is given.
+            site <- sanitise_spatial_extent(spatial_extent, sites)
+        } else {
+            log_debug("spatial.extent and spatial.extent.id not specified.")
+        }
+    }
 
-	if (!is.null(site)) {
-		site_path <- file.path(ozflux, site, out_dir_name)
-		if (!dir.exists(site_path)) {
-			log_error("Site '", site, "' does not exist at path '", site_path
-				, "'")
-		}
-		log_debug("Using site '", site, "' at path '", site_path, "'")
-		log_debug("Constructing site source with ID='", source@id, "', name='"
-			, source@name, "', format=GUESS")
-		site_source <- DGVMTools::defineSource(source@id, source@name, site_path
-			, DGVMTools::GUESS)
-		log_debug("file.name = ", file_name)
-		log_debug("Reading ", site, " ", quant_id, " data...")
-		field <- DGVMTools::getField(site_source, quant_id, layers
-			, file.name = file_name, verbose = verbose)
-		log_debug("Successfully read ", nrow(field@data), " rows of ", site, " "
-			, quant_id, " data!")
-		field@source <- source
-		return(field)
-	}
+    if (!is.null(site)) {
+        site_path <- file.path(ozflux, site, out_dir_name)
+        if (!dir.exists(site_path)) {
+            log_error("Site '", site, "' does not exist at path '", site_path
+                , "'")
+        }
+        log_debug("Using site '", site, "' at path '", site_path, "'")
+        log_debug("Constructing site source with ID='", source@id, "', name='"
+            , source@name, "', format=GUESS")
+        site_source <- DGVMTools::defineSource(source@id, source@name, site_path
+            , DGVMTools::GUESS)
+        log_debug("file.name = ", file_name)
+        log_debug("Reading ", site, " ", quant_id, " data...")
+        field <- DGVMTools::getField(site_source, quant_id, layers
+            , file.name = file_name, verbose = verbose)
+        log_debug("Successfully read ", nrow(field@data), " rows of ", site, " "
+            , quant_id, " data!")
+        field@source <- source
+        return(field)
+    }
 
-	working_directory <- file.path(ozflux, "combined-output")
-	working_file <- file.path(working_directory, file_name)
-	if (!dir.exists(working_directory))
-		dir.create(working_directory)
-	if (file.exists(working_file))
-		file.remove(working_file)
+    working_directory <- file.path(ozflux, "combined-output")
+    working_file <- file.path(working_directory, file_name)
+    if (!dir.exists(working_directory))
+        dir.create(working_directory)
+    if (file.exists(working_file))
+        file.remove(working_file)
 
-	log_debug("data will be read for ", nrow(sites), "sites")
-	expected_cols <- NULL
-	# for (site in sites) {
-	for (i in 1:nrow(sites)) {
-		row <- sites[i, ]
-		site <- row$Name
-		log_debug("Concatenating ", quant@name, " for site ", site, "...")
+    log_debug("data will be read for ", nrow(sites), "sites")
+    expected_cols <- NULL
+    # for (site in sites) {
+    for (i in 1:nrow(sites)) {
+        row <- sites[i, ]
+        site <- row$Name
+        log_debug("Concatenating ", quant@name, " for site ", site, "...")
 
-		# Get path to this site's output directory.
-		site_out <- file.path(ozflux, site, out_dir_name, file_name)
-		if (!file.exists(site_out)) {
-			log_warning("Ignoring missing file '", site_out, "'")
-			next
-		}
+        # Get path to this site's output directory.
+        site_out <- file.path(ozflux, site, out_dir_name, file_name)
+        if (!file.exists(site_out)) {
+            log_warning("Ignoring missing file '", site_out, "'")
+            next
+        }
 
-		lines <- readLines(site_out)
+        lines <- readLines(site_out)
 
-		cols <- unlist(strsplit(lines[1], " "))
-		cols <- cols[cols != ""]
-		if (is.null(expected_cols)) {
-			expected_cols <- cols
-		} else {
-			handle_error <- function(msg) {
-				expected <- paste(expected_cols, collapse = " ")
-				actual <- paste(cols, collapse = " ")
-				log_error(msg, " in site ", site, ", variable ", quant@name,
-					", output file '", site_out, "'.", "\nExpected: ", expected,
-					"\nActual  : ", actual)
-			}
-			if (length(cols) != length(expected_cols)) {
-				handle_error("Incorrect number of columns")
-			}
-			for (i in seq_along(cols)) {
-				if (cols[i] != expected_cols[i]) {
-					handle_error("Incorrect columns")
-				}
-			}
-		}
+        cols <- unlist(strsplit(lines[1], " "))
+        cols <- cols[cols != ""]
+        if (is.null(expected_cols)) {
+            expected_cols <- cols
+        } else {
+            handle_error <- function(msg) {
+                expected <- paste(expected_cols, collapse = " ")
+                actual <- paste(cols, collapse = " ")
+                log_error(msg, " in site ", site, ", variable ", quant@name,
+                    ", output file '", site_out, "'.", "\nExpected: ", expected,
+                    "\nActual  : ", actual)
+            }
+            if (length(cols) != length(expected_cols)) {
+                handle_error("Incorrect number of columns")
+            }
+            for (i in seq_along(cols)) {
+                if (cols[i] != expected_cols[i]) {
+                    handle_error("Incorrect columns")
+                }
+            }
+        }
 
-		if (file.exists(working_file))
-			lines <- lines[-1]
-		cat(lines, file = working_file, sep = "\n", append = TRUE)
-		rm(lines)
-	}
-	log_debug("Successfully concatenated data from all sites")
+        if (file.exists(working_file))
+            lines <- lines[-1]
+        cat(lines, file = working_file, sep = "\n", append = TRUE)
+        rm(lines)
+    }
+    log_debug("Successfully concatenated data from all sites")
 
-	# Construct a Source object which will interrogate the output directory.
-	log_debug("Constructing a temporary source object with ID '", site, "', name '", site, "'...")
-	src <- DGVMTools::defineSource(site, site, working_directory
-		, DGVMTools::GUESS)
-	log_debug("Calling getField() on temporary source object with quant='"
-		, quant_id, "', layers = ", layers, ", file.name = '", file_name, "'")
-	result <- DGVMTools::getField(src, quant_id, layers = layers
-		, file.name = file_name, sta.info = target_stainfo
-		, verbose = verbose)
-	result@id <- paste(source@id, quant@id, sep = ".")
-	result@source <- source
-	result@quant <- quant
-	log_debug("Successfully read all data.")
-	log_debug("Removing temporary file...")
-	file.remove(working_file)
+    # Construct a Source object which will interrogate the output directory.
+    log_debug("Constructing a temporary source object with ID '", site, "', name '", site, "'...")
+    src <- DGVMTools::defineSource(site, site, working_directory
+        , DGVMTools::GUESS)
+    log_debug("Calling getField() on temporary source object with quant='"
+        , quant_id, "', layers = ", layers, ", file.name = '", file_name, "'")
+    result <- DGVMTools::getField(src, quant_id, layers = layers
+        , file.name = file_name, sta.info = target_stainfo
+        , verbose = verbose)
+    result@id <- paste(source@id, quant@id, sep = ".")
+    result@source <- source
+    result@quant <- quant
+    log_debug("Successfully read all data.")
+    log_debug("Removing temporary file...")
+    file.remove(working_file)
 
-	return(result)
+    return(result)
 }
 
 #'
@@ -354,18 +354,18 @@ get_field_ozflux <- function(
 #' @export
 #'
 OZFLUX <- new("Format",
-	# Unique id.
-	id = "OZFLUX",
+    # Unique id.
+    id = "OZFLUX",
 
-	# Function to list all quanties available in a run
-	availableQuantities = available_quantities_ozflux,
+    # Function to list all quanties available in a run
+    availableQuantities = available_quantities_ozflux,
 
-	# Function to read a field.
-	getField = get_field_ozflux,
+    # Function to read a field.
+    getField = get_field_ozflux,
 
-	# Default global layers.
-	predefined.layers = ozflux_layers,
+    # Default global layers.
+    predefined.layers = ozflux_layers,
 
-	# Quantities that can be pulled directly from lpj-guess runs.
-	quantities = ozflux_quantities
+    # Quantities that can be pulled directly from lpj-guess runs.
+    quantities = ozflux_quantities
 )
