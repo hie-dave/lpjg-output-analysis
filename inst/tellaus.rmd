@@ -1,5 +1,5 @@
 ---
-title: "TellAus Benchmark Report for LPJ-GUESS DAVE"
+title: "TellAus Benchmark Report for LPJ-GUESS Trunk (NARCliM2)"
 author: "Drew Holzworth"
 date: '`r strftime(Sys.time(), format = "%B %d, %Y")`'
 output:
@@ -8,22 +8,22 @@ output:
   css: tellaus.css
 params:
   new_directory:
-    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/dave/baseline"
+    value: "/home/drew/code/lpj-guess/.data/runs/narclim2/1deg/trunk"
   new_name:
-    value: "DAVE"
+    value: NULL
   old_directory:
-    value: "/home/drew/code/lpj-guess/output-analysis/.data/runs/dave/rootdist"
+    value: "/home/drew/code/lpj-guess/.data/runs/narclim2/1deg/trunk"
   old_name:
-    value: "DaveRootDist"
+    value: NULL
   data_directory:
-    value: "/home/drew/code/lpj-guess/output-analysis/.data"
+    value: "/home/drew/code/lpj-guess/.data"
 ---
 
 ```{r benchmark selection and script parameters, echo=FALSE}
 
 ### Select which benchmarks to do
 do_bom_lai <- TRUE
-do_grass_dist <- FALSE # TODO: download dave_lai.out.gz from gadi when it's back online; also backup all outputs onto hie-storage
+do_grass_dist <- TRUE # TODO: download dave_lai.out.gz from gadi when it's back online; also backup all outputs onto hie-storage
 do_auseflux_gpp <- TRUE
 do_auseflux_nee <- TRUE
 do_auseflux_er <- TRUE
@@ -70,7 +70,7 @@ settings <- list(
     annotation_text_size = 7,
 
     # Number of columns in which plots will be rendered.
-    num_cols = 2,
+    num_cols = 3,
 
     # Coordinates at which metrics/annotations will be rendered on maps.
     stats_lon = 125,
@@ -124,6 +124,10 @@ dave_config(log_level = log_level, log_file = "daveanalysis.log")
 tic()
 ```
 
+# Description
+
+These simulations are the Trunk version of the model run with NARCliM2.
+
 # Settings {.tabset}
 
 ## Click here to hide Settings
@@ -131,15 +135,65 @@ tic()
 ## Click here to show settings
 
 ```{r settings}
-dave_source <- defineSource(name = params$new_name,
-                            dir = params$new_directory,
-                            format = GUESS)
-trunk_source <- defineSource(name = params$old_name,
-                             dir = params$old_directory,
-                             format = GUESS)
+# Simple setup
+# dave_source <- defineSource(name = params$new_name,
+#                             dir = params$new_directory,
+#                             format = GUESS)
+# trunk_source <- defineSource(name = params$old_name,
+#                              dir = params$old_directory,
+#                              format = GUESS)
+# settings$simulations <- list(dave_source, trunk_source)
+
+# NARCliM2 setup
+# For now, use params$new_directory
+
+# Files are:
+# ${new_directory}/${GCM}/${RCM}/${EXPT}
+
+sources <- list()
+gcms <- list.dirs(params$new_directory, recursive = FALSE, full.names = FALSE)
+for (gcm in gcms) {
+    rcms <- list.dirs(file.path(params$new_directory, gcm), recursive = FALSE, full.names = FALSE)
+    for (rcm in rcms) {
+        # expts <- list.dirs(file.path(params$new_directory, gcm, rcm), recursive = FALSE, full.names = FALSE)
+        expts <- "historical"
+        for (expt in expts) {
+            source_name <- paste(gcm, rcm, expt, sep = "_")
+            source_dir <- file.path(params$new_directory, gcm, rcm, expt)
+            if (!dir.exists(source_dir)) {
+                stop("Directory not found: ", source_dir)
+            }
+
+            expt_short <- substr(expt, 1, 2)
+            if (expt == "ssp126") {
+                expt_short <- "S1"
+            } else if (expt == "ssp370") {
+                expt_short <- "S3"
+            }
+            gcm_short <- gsub("-", "", gcm)
+            short_name <- paste(
+                substr(gcm_short, 1, min(nchar(gcm_short), 3)),
+                substr(rcm, max(1, nchar(rcm) - 1), nchar(rcm)),
+                expt_short,
+                sep = "_"
+            )
+            # Define source and add to list
+            sources[[source_name]] <- defineSource(
+                name = short_name,
+                dir = source_dir,
+                format = GUESS
+            )
+        }
+    }
+}
+
 
 # Create a list of sources and store it in script settings.
-settings$simulations <- list(dave_source, trunk_source)
+settings$simulations <- sources
+
+if (length(settings$simulations) == 0) {
+    stop("No simulations were provided")
+}
 
 for (sim in settings$simulations) {
     cat(sim@name, ": ", sim@dir, "\n")
@@ -194,8 +248,10 @@ fix_xaxis_label_overlap <- function(plt) {
     return(plt + scale_x_continuous(guide = guide, limits = xlim))
 }
 print_plot <- function(plt) {
-    plt <- fix_xaxis_label_overlap(plt)
-    print(plt)
+    if (!is.null(plt)) {
+        plt <- fix_xaxis_label_overlap(plt)
+        print(plt)
+    }
 }
 ```
 
@@ -391,10 +447,10 @@ if (do_bom_lai && settings$plot_maps) {
 
 ```{r grass_dist}
 if (do_grass_dist) {
-    grass_benchmark <- benchmark_grass_dist(settings, params, tables)
+    grass_benchmark <- benchmark_grasses(settings, params, tables)
     tables <- grass_benchmark$tables
-    grass_first_year <- min(grass_benchmark$trends[[1]]@first.year)
-    grass_last_year <- max(grass_benchmark$trends[[1]]@last.year)
+    grass_first_year <- min(grass_benchmark$first_year)
+    grass_last_year <- max(grass_benchmark$last_year)
     grass_subtitle <- paste(grass_first_year, grass_last_year, sep = "-")
     grass_delta_subtitle <- paste0(params$new_name, " - ", params$old_name
                                    , " (", grass_subtitle, ")")
@@ -407,6 +463,7 @@ if (do_grass_dist) {
 
 ```{r grass_dist_plots_abs}
 if (do_grass_dist && settings$plot_maps) {
+    log_diag("first.year=", grass_first_year, ", last.year=", grass_last_year)
     plt <- plotSpatial(grass_benchmark$period_maps
                        , legend.title = expression(1)
                        , map.overlay = settings$map_overlay
@@ -458,7 +515,7 @@ if (do_grass_dist && settings$plot_maps) {
 ### Differences
 
 ```{r grass_dist_plots_abs_differences}
-if (do_grass_dist && settings$plot_maps) {
+if (do_grass_dist && settings$plot_maps && !is.null(grass_benchmark$comparisons)) {
     plot_absolute_deltas(grass_benchmark, settings)
     # plt <- plotSpatialComparison(grass_benchmark$comparisons[["Values"]]
     #                              , ncol = settings$num_cols
@@ -477,7 +534,7 @@ if (do_grass_dist && settings$plot_maps) {
 ### Trend Value
 
 ```{r grass_dist_plots_trend_values}
-if (do_grass_dist && settings$plot_maps) {
+if (do_grass_dist && settings$plot_maps && !is.null(grass_benchmark$trends) && length(grass_benchmark$trends) > 0) {
     plt <- plotSpatial(grass_benchmark$trends
                        , layers = "Trend"
                        , ncol = settings$num_cols
@@ -495,7 +552,7 @@ if (do_grass_dist && settings$plot_maps) {
 ### Trend Significance
 
 ```{r grass_dist_plots_trend_significances}
-if (do_grass_dist && settings$plot_maps) {
+if (do_grass_dist && settings$plot_maps && !is.null(grass_benchmark$trends) && length(grass_benchmark$trends) > 0) {
     plt <- plotSpatial(grass_benchmark$trends
                        , layers = "p.value"
                        , ncol = settings$num_cols
@@ -514,7 +571,7 @@ if (do_grass_dist && settings$plot_maps) {
 ### Trend Differences
 
 ```{r grass_dist_plots_trend_deltas}
-if (do_grass_dist && settings$plot_maps) {
+if (do_grass_dist && settings$plot_maps && !is.null(grass_benchmark$comparisons)) {
     plt <- plotSpatialComparison(grass_benchmark$comparisons[["Trend"]]
                                  , ncol = settings$num_cols
                                  , drop.cuts = NULL
@@ -530,7 +587,7 @@ if (do_grass_dist && settings$plot_maps) {
 ### Significant Trends
 
 ```{r grass_dist_plots_significant_trends}
-if (do_grass_dist && settings$plot_maps) {
+if (do_grass_dist && settings$plot_maps && !is.null(grass_benchmark$trends) && length(grass_benchmark$trends) > 0) {
     plt <- plotSpatial(grass_benchmark$trends
                        , layers = "Significant_Trend"
                        , ncol = settings$num_cols
@@ -557,7 +614,8 @@ Intro, data links, etc.
 
 ```{r auseflux_gpp}
 if (do_auseflux_gpp) {
-    auseflux_gpp <- benchmark_auseflux("GPP", settings, params, tables)
+    # auseflux_gpp <- benchmark_auseflux("GPP", settings, params, tables)
+    auseflux_gpp <- benchmark_gpp(params, settings, tables)
     tables <- auseflux_gpp$tables
     benchmark <- auseflux_gpp$benchmark
     auseflux_subtitle <- paste0(benchmark@first.year, "-", benchmark@last.year)
@@ -1139,7 +1197,6 @@ TODO
 
 ```{r global_summary}
 summary_table <- tables[["totals"]]
-
 ```
 
 ## Model-Data Agreement Metrics
@@ -1147,8 +1204,10 @@ summary_table <- tables[["totals"]]
 ```{r global_metrics}
 metric_table <- tables[["metrics"]]
 if (nrow(metric_table) > 0) {
-    metric_table$Metric <- gsub("r2_eff", "NSE", metric_table$Metric)
-    metric_table$Metric <- gsub("r2", "R^2^", metric_table$Metric)
+    if ("Metric" %in% names(metric_table)) {
+        metric_table$Metric <- gsub("r2_eff", "NSE", metric_table$Metric)
+        metric_table$Metric <- gsub("r2", "R^2^", metric_table$Metric)
+    }
 
     # TODO: make use of these columns?
     to_remove <- c("Data bootstrap", "Data mean", "Dataset ref.")

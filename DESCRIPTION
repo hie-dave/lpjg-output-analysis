@@ -74,6 +74,7 @@ Collate:
 	'benchmark-grasses.r'
 	'benchmark-lai-dist.r'
 	'benchmark-gpp.r'
+	'benchmark-agb.r'
 	'summary.r'
 	'classes.r'
 	'tellaus.r'

@@ -53,7 +53,7 @@ benchmark_gpp <- function(params, settings, tables) {
                      simulation_format = "GUESS",
                      dataset_source = "<AusEFlux reference should go here>")
 
-    summary_lines <- make_summary_line(benchmark, summary_col_names)
+    summary_lines <- make_summary_line(benchmark, settings$summary_col_names)
 
     maps <- list()
     trends <- list()
@@ -141,15 +141,15 @@ benchmark_gpp <- function(params, settings, tables) {
     new_name <- params$new_name
     old_name <- params$old_name
 
-    if (!(new_name %in% names(maps))) {
+    if (!is.null(new_name) && !(new_name %in% names(maps))) {
         new_name <- NULL
     }
-    if (!(old_name %in% names(maps))) {
+    if (!is.null(new_name) && !(old_name %in% names(maps))) {
         old_name <- NULL
     }
 
     comparisons <- fullSpatialComparison(benchmark, maps, trends, seasonal,
-                                         new_name, old_name)
+                                         new_name)
 
     # tables$totals <- rbind(tables$totals, summary_lines)
     m <- make_metric_table(benchmark, comparisons$Values, settings$simulations)

@@ -129,9 +129,10 @@ benchmark_lai <- function(settings, params, tables, lai_type = "tot") {
     sims <- list()
     # REQUIRED for TellMeEurope?
     # sims[["GUESS"]] <- settings$simulations
-    settings$simulations
+    sims <- settings$simulations
 
-    metrics <- DGVMBenchmarks::makeMetricTable(benchmark, comparisons, sims)
+    # metrics <- DGVMBenchmarks::makeMetricTable(benchmark, comparisons, sims)
+    metrics <- make_metric_table(benchmark, comparisons$Values, settings$simulations)
     tables[["metrics"]] <- rbind(tables[["metrics"]], metrics)
 
     result <- list()

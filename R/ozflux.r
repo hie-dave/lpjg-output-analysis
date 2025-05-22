@@ -218,7 +218,7 @@ get_field_ozflux <- function(
 		}
 	} else {
 		# Site list was provided.
-		sites <- sanitise_ozflux_sites(sites)
+		sites <- sanitise_ozflux_sites(sites, source@dir)
 	}
 
 	# Get the name of the output directory, as specified in the .ins file.

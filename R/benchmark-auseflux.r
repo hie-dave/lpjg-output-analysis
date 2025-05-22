@@ -129,8 +129,8 @@ benchmark_auseflux <- function(var,
     log_diag("Performing full spatial comparison for AusEFlux ", var, "...")
     comparisons <- DGVMBenchmarks::fullSpatialComparison(benchmark, maps, trends
                                                          , seasonals
-                                                         , params$new_name
-                                                         , params$old_name)
+                                                         , params$new_name)
+                                                         #, params$old_name)
 
     for (i in seq_along(comparisons[["Seasonal"]])) {
         comparisons[["Seasonal"]][[i]]@name <- sub("Seasonal comparison ", ""
@@ -141,10 +141,16 @@ benchmark_auseflux <- function(var,
     # names(summary) <- names(tables[["totals"]])
     # tables[["totals"]] <- rbind(tables[["totals"]], summary)
 
-    sims <- list()
-    sims[["GUESS"]] <- settings$simulations
+    # Needed for TellMeEurope?
+    sims <- settings$simulations
+    # sims <- list()
+    # sims[["GUESS"]] <- settings$simulations
 
-    metrics <- DGVMBenchmarks::makeMetricTable(benchmark, comparisons, sims)
+    # metrics <- DGVMBenchmarks::makeMetricTable(benchmark, comparisons, sims)
+    metrics <- make_metric_table(benchmark, comparisons$Values, sims)
+    if (ncol(tables[["metrics"]]) != ncol(metrics)) {
+        stop("Number of columns in metrics table does not match number of columns in auseflux metrics table. Master table has columns: [", paste(names(tables[["metrics"]]), collapse = ", "), "], and auseflux metrics table has columns: [", paste(names(metrics), collapse = ", "), "].")
+    }
     tables[["metrics"]] <- rbind(tables[["metrics"]], metrics)
 
     log_diag("Successfully read all AusEFlux ", var, " data...")

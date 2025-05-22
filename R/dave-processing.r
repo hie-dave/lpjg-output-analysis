@@ -181,7 +181,7 @@ read_data <- function(
 	log_debug("[read_data] Sanitising input quantities...")
 	vars <- sanitise_variables(vars)
 	log_debug("[read_data] Sanitising input sites...")
-	site <- sanitise_ozflux_sites(sites)
+	site <- sanitise_ozflux_sites(sites, sources[[1]]@dir)
 
 	# if (is.data.frame(site)) {
 	# 	if (nrow(site) == 1) {
@@ -213,6 +213,8 @@ read_data <- function(
 				&& all(layers %in% obs_var_names)) {
 			obs_source <- get_observed_source()
 			log_debug("Reading field ", obs_lyr, " from observed source...")
+			# TODO: Refactor this to specify the precise lon/lat that we want.
+			# Currently we read observations for ALL sites.
 			suppressWarnings(obs <- DGVMTools::getField(
 				source = obs_source, quant = obs_lyr, layers = layers
 					, file.name = get_global("obs_file")
@@ -297,7 +299,14 @@ read_data <- function(
 					, new.layer.names = layer_names
 					, tolerance = get_global("merge_tol"), keep.all.from = show_all_predictions
 					, keep.all.to = show_all_observations)#, allow.cartesian = TRUE
-				if (nrow(data@data) == 0 && nr > 0 && nrow(predictions@data) > 0) {
+				# Note: if using a "non-standard" ozflux site (such as Abisko),
+				# we will have observations for all standard sites but not this
+				# one. If show_all_observations is TRUE, copyLayers() will emit
+				# a data frame containing NA lat/lon values for the predictions.
+				#
+				# That needs to be treated the same as an empty data frame.
+				if ( (nrow(data@data) == 0 && nr > 0 && nrow(predictions@data) > 0) ||
+				     any(is.na(data@data$Lon)) ) {
 					# No observations for this site.
 					log_warning("No observations found for site ", site$Name)
 					data <- predictions

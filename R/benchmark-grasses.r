@@ -17,7 +17,7 @@ benchmark_grasses <- function(settings, params, tables) {
         return(NULL)
     }
 
-    var <- "dave_lai"
+    default_var <- "dave_lai"
     verbose <- get_global("log_level") >= get_global("LOG_LEVEL_DEBUG")
     years <- settings$grass_dist_years
 
@@ -47,19 +47,32 @@ benchmark_grasses <- function(settings, params, tables) {
     seasonals <- list()
     trends <- list()
 
+    first_year <- 1e6
+    last_year <- -1e6
+
     do_aggregation <- function(field, name) {
+        first_year <<- min(first_year, field@first.year)
+        last_year <<- max(last_year, field@last.year)
+
         # Mean value each year.
         year_max <- DGVMTools::aggregateSubannual(field, "mean", "Year")
 
         # Mean c4 fraction over the full time period.
         mean_lai <- DGVMTools::aggregateYears(year_max, "mean")
 
-        period_maps[[name]] <<- mean_lai
+        if (nrow(mean_lai@data) > 0) {
+            period_maps[[name]] <<- mean_lai
+        }
     }
 
     for (simulation in settings$simulations) {
+        var <- default_var
         if (!has_output(simulation, var)) {
-            warning("No ", var, " data found for simulation ", simulation@name)
+            log_warning("No daily LAI (", var, ") data found for simulation '", simulation@name, "'. Falling back to annual LAI (not ideal!)")
+            var <- "lai"
+        }
+        if (!has_output(simulation, var)) {
+            log_warning("No annual LAI (", var, ") data found for simulation '", simulation@name, "'. This simulation will not be included in the C3/C4 grass distribution benchmark.")
             next
         }
 
@@ -82,26 +95,39 @@ benchmark_grasses <- function(settings, params, tables) {
         # It's possible that some gridcells may be missing from one or both
         # data frames. Subtracting two data frames with different rows is going
         # to cause problems, so we need to merge them.
-        p1 <- period_maps[[name1]]@data
-        p0 <- period_maps[[name0]]@data
+        if (name1 %in% names(period_maps) && name0 %in% names(period_maps)) {
+            p1 <- period_maps[[name1]]@data
+            p0 <- period_maps[[name0]]@data
 
-        merged <- base::merge(p1, p0, by = c("Lon", "Lat"), all = TRUE)
-        merged$c4_frac <- merged$c4_frac.x - merged$c4_frac.y
-        merged <- merged[, c("Lon", "Lat", "c4_frac")]
+            # Calculate change in C4 fraction between the two periods.
+            merged <- base::merge(p1, p0, by = c("Lon", "Lat"), all = TRUE)
+            merged$c4_frac <- merged$c4_frac.x - merged$c4_frac.y
+            merged <- merged[, c("Lon", "Lat", "c4_frac")]
 
-        diff <- period_maps[[name1]]
-        diff@data <- merged
-        diffs[[simulation@name]] <- diff
+            diff <- period_maps[[name1]]
+            diff@data <- merged
+            diffs[[simulation@name]] <- diff
+        }
 
         meanfrac <- DGVMTools::aggregateSubannual(predictions)
         meanfrac <- DGVMTools::aggregateYears(meanfrac)
         means[[simulation@name]] <- meanfrac
 
-        seasonal <- DGVMTools::aggregateSubannual(predictions, target = "Month")
-        seasonals[[simulation@name]] <- seasonal
+        if (predictions@subannual.resolution == "Year") {
+            # Annual output - can't do seasonal analysis.
+            seasonals[[simulation@name]] <- NULL
+            trends[[simulation@name]] <- NULL
+        } else {
+            seasonal <- DGVMTools::aggregateSubannual(predictions, target = "Month")
+            seasonals[[simulation@name]] <- seasonal
 
-        trend <- DGVMBenchmarks::calcLinearTrend(predictions)
-        trends[[simulation@name]] <- trend
+            trend <- DGVMBenchmarks::calcLinearTrend(predictions)
+            trends[[simulation@name]] <- trend
+        }
+    }
+
+    if (length(period_maps) == 0) {
+        stop("No simulations have LAI outputs suitable for a C3/C4 grass distribution analysis. Must have at least file_lai, or, better still, file_dave_lai")
     }
 
     benchmark <- new("DaveBenchmark"
@@ -120,16 +146,19 @@ benchmark_grasses <- function(settings, params, tables) {
                      , simulation_format = "GUESS"
                      , dataset_source = "<Add reference once we have data>")
 
-    name0 <- names(means)[[1]]
-    name1 <- names(means)[[2]]
-    comparisons <- DGVMBenchmarks::fullSpatialComparison(benchmark, means
-                                                         , trends, seasonals
-                                                         , name0, name1)
+    comparisons <- NULL
+    if (length(trends) > 0) {
+        name0 <- names(means)[[1]]
+        name1 <- names(means)[[2]]
+        comparisons <- DGVMBenchmarks::fullSpatialComparison(benchmark, means
+                                                            , trends, seasonals
+                                                            , name0)#, name1)
 
-    for (i in seq_along(comparisons[["Seasonal"]])) {
-        name <- comparisons[["Seasonal"]][[i]]@name
-        name <- sub("Seasonal comparison ", "", name)
-        comparisons[["Seasonal"]][[i]]@name <- name
+        for (i in seq_along(comparisons[["Seasonal"]])) {
+            name <- comparisons[["Seasonal"]][[i]]@name
+            name <- sub("Seasonal comparison ", "", name)
+            comparisons[["Seasonal"]][[i]]@name <- name
+        }
     }
 
     # TODO: generate metric table once we have some observations.
@@ -144,5 +173,7 @@ benchmark_grasses <- function(settings, params, tables) {
     result$seasonals <- seasonals
     result$tables <- tables
     result$benchmark <- benchmark
+    result$first_year <- first_year
+    result$last_year <- last_year
     return(result)
 }

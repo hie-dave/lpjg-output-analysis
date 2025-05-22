@@ -5,11 +5,11 @@ set_global("dave_pkgname", "daveanalysis")
 # Ozflux gridcells. This is a data frame with 3 columns (Lon, Lat, Name).
 set_global("ozflux_sites", NULL)
 
-call_foreach <- function(x, fun, ignore_null = TRUE) {
+call_foreach <- function(x, fun, ignore_null = TRUE, ...) {
 	if (is.vector(x) || is.list(x)) {
-		result <- lapply(x, fun)
+		result <- lapply(x, fun, ...)
 	} else {
-		result <- list(fun(x))
+		result <- list(fun(x, ...))
 	}
 	if (ignore_null) {
 		result <- Filter(Negate(is.null), result)
@@ -39,25 +39,41 @@ read_ozflux_sites <- function() {
 #' Sanitise a single ozflux site name.
 #'
 #' @param site: Name of the site, or a (lon, lat) tuple.
+#' @param repo: Path to an LPJ-Guess DAVE repository. This will be used if the
+#' site is not in the standard site list, in which case its coordinates will be
+#' read from the gridlist file.
 #'
 #' @return Returns the site as a named vector with (Lon, Lat, Name).
 #' @keywords internal
 #'
-sanitise_ozflux_site <- function(site) {
+sanitise_ozflux_site <- function(site, repo = NULL) {
 	log_debug("Sanitising ozflux site: ", site)
 	if (class(site) == "character") {
 		log_debug("Site is a character vector. Probably. ¿Maybe(?).")
 		sites <- read_ozflux_sites()
 		index <- which(sites$Name == site)
-		if (length(index) < 1) {
-			log_error("Unknown ozflux site: '", sites, "'")
-		}
 		if (length(index) > 1) {
 			log_error("Site name '", site, "' somehow matches multiple sites")
 		}
-    	lat <- sites$Lat[index]
-    	lon <- sites$Lon[index]
-		name <- sites$Name[index]
+		if (length(index) == 1) {
+			lat <- sites$Lat[index]
+			lon <- sites$Lon[index]
+			name <- sites$Name[index]
+		} else {
+			if (is.null(repo)) {
+				# No repo provided, and site name not found in site list.
+				log_error("Unknown ozflux site: '", sites, "'")
+			}
+			# Read gridlist file.
+			file <- file.path(repo, "benchmarks", "ozflux", site, "gridlist.txt")
+			if (!file.exists(file)) {
+				log_error("Ozflux site '", site, "' is not in the standard site list, and a gridlist file could not be found at: ", file)
+			}
+			gridlist <- read.table(file)
+			lon <- gridlist$V1
+			lat <- gridlist$V2
+			name <- site
+		}
 	} else if (class(site) == "numeric" && length(site) == 2) {
 		lon <- as.double(site[1])
 		lat <- as.double(site[2])
@@ -79,12 +95,15 @@ sanitise_ozflux_site <- function(site) {
 #' - Site names
 #' - (lon, lat) tuples
 #' - A dataframe with (Lon, Lat, Name) columns, and one row per site
+#' @param repo: Path to an LPJ-Guess DAVE repository. This will be used if the
+#' site is not in the standard site list, in which case its coordinates will be
+#' read from the gridlist file.
 #'
 #' @return Returns a dataframe with (Lon, Lat, Name) columns, and one row per
 #' site.
 #' @keywords internal
 #'
-sanitise_ozflux_sites <- function(sites) {
+sanitise_ozflux_sites <- function(sites, repo = NULL) {
 	# Return a dataframe of all sites if sites is NULL.
 	log_debug("Sanitising ozflux sites...")
 	if (is.null(sites)) {
@@ -99,7 +118,7 @@ sanitise_ozflux_sites <- function(sites) {
 	}
 
 	log_debug("Not sure what sites is, so let's assume it's a list")
-	result <- call_foreach(sites, sanitise_ozflux_site)
+	result <- call_foreach(sites, sanitise_ozflux_site, repo = repo)
 	if (length(result) < 1) {
 		log_error("No sites were specified. To plot all sites, use NULL")
 	}

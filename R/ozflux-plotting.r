@@ -34,11 +34,12 @@ ozflux_plot <- function(
 		common_yaxis = FALSE,
 		show_all_observations = TRUE,
 		show_all_predictions = TRUE) {
-	# Sanitise the sites to be plotted.
-	sites <- sanitise_ozflux_sites(sites)
 
 	# Sanitise data sources.
 	sources <- sanitise_sources(sources)
+
+	# Sanitise the sites to be plotted.
+	sites <- sanitise_ozflux_sites(sites, sources[[1]]@dir)
 
 	# Sanitise variables to be plotted.
 	vars <- sanitise_variables(vars)
@@ -119,11 +120,11 @@ ozflux_panel <- function(
 		show_all_observations = TRUE,
 		show_all_predictions = TRUE) {
 
-	# Sanitise sites to be plotted.
-	sites <- sanitise_ozflux_sites(sites)
-
 	# Sanitise data sources.
 	sources <- sanitise_sources(sources)
+
+	# Sanitise sites to be plotted.
+	sites <- sanitise_ozflux_sites(sites, sources[[1]]@dir)
 
 	# Sanitise variables to be plotted.
 	var <- sanitise_variable(var)
@@ -214,7 +215,7 @@ ozflux_plot_layerwise <- function(
 	var <- sanitise_variable(var)
 
 	# Get the site to be plotted.
-	sites <- sanitise_ozflux_sites(sites)
+	sites <- sanitise_ozflux_sites(sites, sources[[1]]@dir)
 
 	# Read data for this gridcell.
 	if (is.null(layers) && length(sources) > 0) {
