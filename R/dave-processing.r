@@ -258,10 +258,12 @@ read_data <- function(
             args$source <- source
             args$layers <- layers
             args$quant <- var
-            args$decimal.places <- num_decimal_places
+            if (source@format == OZFLUX) {
+                args$decimal.places <- num_decimal_places
+            }
             args$verbose <- FALSE
             if (!is.null(site)) {
-                if (is.data.frame(site)) {
+                if (is.data.frame(site) && source@format == OZFLUX) {
                     args$sites <- site
                 } else {
                     args$spatial.extent.id <- site$Name
