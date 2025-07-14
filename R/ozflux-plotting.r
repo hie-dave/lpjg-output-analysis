@@ -244,8 +244,8 @@ ozflux_plot_layerwise <- function(
                 layers_to_plot <- get_layer_names_for_sources(var, 1, layer
                     , sources, nlayer = length(layers))
                 multiplot <- length(layers) > 1 || nrow(sites) > 1
-                xlab <- ifelse(multiplot, "", NULL)
-                ylab <- ifelse(multiplot, "", NULL)
+                xlab <- if (multiplot) "" else NULL
+                ylab <- if (multiplot) "" else NULL
                 plt <- plot_timeseries(gridcell, layers = layers_to_plot, ylim = ylim, xlab = xlab, ylab = ylab)
                 plt <- convert_plot(plt, use_plotly)
                 plt <- set_title(plt, layer, use_plotly)
