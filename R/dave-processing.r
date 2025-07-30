@@ -129,6 +129,9 @@ get_layers <- function(
     if (ignore_mean) {
         ignored_layers <- c(ignored_layers, "mean", "Mean", "MEAN")
     }
+    if ("Name" %in% names(sites)) {
+        sites <- sites[["Name"]]
+    }
     available <- available_layers_ozflux(source, var, sites)
     return(setdiff(available, ignored_layers))
 }
