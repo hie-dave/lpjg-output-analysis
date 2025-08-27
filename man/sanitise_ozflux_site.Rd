@@ -4,10 +4,14 @@
 \alias{sanitise_ozflux_site}
 \title{Sanitise a single ozflux site name.}
 \usage{
-sanitise_ozflux_site(site)
+sanitise_ozflux_site(site, repo = NULL)
 }
 \arguments{
 \item{site:}{Name of the site, or a (lon, lat) tuple.}
+
+\item{repo:}{Path to an LPJ-Guess DAVE repository. This will be used if the
+site is not in the standard site list, in which case its coordinates will be
+read from the gridlist file.}
 }
 \value{
 Returns the site as a named vector with (Lon, Lat, Name).

@@ -4,7 +4,7 @@
 \alias{benchmark_lai}
 \title{Do LAI benchmarks.}
 \usage{
-benchmark_lai(settings, params, tables)
+benchmark_lai(settings, params, tables, lai_type = "tot")
 }
 \arguments{
 \item{settings}{Benchmark settings}
@@ -13,6 +13,9 @@ benchmark_lai(settings, params, tables)
 
 \item{tables}{Benchmark tables. This will be rbind-ed and returned as
 result$tables.}
+
+\item{lai_type}{"tot" for total LAI, "per" for persistent (ie trees), and
+"rec" for recurrent (ie grasses).}
 }
 \value{
 Returns a list containing the following named items:

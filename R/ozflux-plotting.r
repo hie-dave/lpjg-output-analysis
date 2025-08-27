@@ -201,7 +201,8 @@ ozflux_plot_layerwise <- function(
     use_plotly = FALSE,
     common_yaxis = FALSE,
     show_all_observations = TRUE,
-    show_all_predictions = TRUE) {
+    show_all_predictions = TRUE,
+    allow_points = TRUE) {
     # TODO: refactor this function out of the package. The layers should be an
     # optional argument to ozflux_plot(). If absent, they're determined using
     # the current algorithm (ie try total/mean). If present, there should be
@@ -246,14 +247,14 @@ ozflux_plot_layerwise <- function(
                 multiplot <- length(layers) > 1 || nrow(sites) > 1
                 xlab <- if (multiplot) "" else NULL
                 ylab <- if (multiplot) "" else NULL
-                plt <- plot_timeseries(gridcell, layers = layers_to_plot, ylim = ylim, xlab = xlab, ylab = ylab)
+                plt <- plot_timeseries(gridcell, layers = layers_to_plot, ylim = ylim, xlab = xlab, ylab = ylab, allow_points = allow_points)
                 plt <- convert_plot(plt, use_plotly)
                 plt <- set_title(plt, layer, use_plotly)
                 plots[[length(plots) + 1]] <- plt
             }
         } else {
             lyrs <- get_layer_names_for_sources(var, 1, layers, sources)
-            plt <- plot_timeseries(gridcell, layers = lyrs, ylim = ylim)
+            plt <- plot_timeseries(gridcell, layers = lyrs, ylim = ylim, allow_points = allow_points)
             plt <- trim_ggplot(plt)
             plt <- convert_plot(plt, use_plotly)
             plots[[length(plots) + 1]] <- plt

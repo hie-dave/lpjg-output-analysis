@@ -352,11 +352,25 @@ plot_timeseries <- function(
     ylab = NULL,
     layers = NULL,
     subtitle = NULL,
-    colours = NULL) {
+    colours = NULL,
+    allow_points = TRUE) {
 
     ncolour <- ifelse(is.null(layers), length(names(gc)), length(layers))
     if (is.null(colours)) {
         colours <- get_colour_palette(ncolour)
+    }
+
+    points <- FALSE
+    lyrs <- ifelse(is.null(layers), names(gc), layers)
+    if (allow_points) {
+        POINTS_THRESHOLD <- 30
+        for (lyr in lyrs) {
+            data <- gc@data[[lyr]]
+            data <- data[which(!is.na(data))]
+            if (length(data) < POINTS_THRESHOLD) {
+                points <- TRUE
+            }
+        }
     }
     lyrs <- ifelse(is.null(layers), names(gc), layers)
     return(plot_temporal(gc, layers = layers, cols = colours
