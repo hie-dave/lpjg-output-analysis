@@ -154,8 +154,8 @@ ozflux_panel <- function(
 
         gc <- get_gridcell(data, site$Lat, site$Lon, site$Name)
         p <- create_plots(gc, ylab, use_plotly = use_plotly, ylim = ylim)
-        panel <- create_panel(p$timeseries, p$pvo, p$subannual, use_plotly
-            , ylab = ylab, title = site_title)
+        panel <- create_panel(p$timeseries, p$pvo, p$subannual, use_plotly = use_plotly
+            , ylab = ylab, title = site_title, colspans = c(2, 1, 1))
         plots[[length(plots) + 1]] <- panel
     }
 

@@ -39,12 +39,20 @@ create_panel <- function(
         ncol = 2,
         xlab = NULL,
         ylab = NULL,
-        title = NULL) {
+        title = NULL,
+        colspans = NULL) {
 
     plots <- list(...)
     log_diag("Creating panel with ", length(plots), " plots")
     nplot <- length(plots)
-    nrow <- as.integer(ceiling(nplot / ncol))
+    
+    # Set default colspans if not provided
+    if (is.null(colspans)) {
+        colspans <- rep(1, nplot)
+    } else if (length(colspans) != nplot) {
+        stop("Length of colspans (", length(colspans), ") must match the number of plots (", nplot, ")")
+    }
+    
     if (use_plotly) {
         fix_legend <- function(p) {
             return(plotly::layout(p, legendgroup = "Layout"))
@@ -52,21 +60,93 @@ create_panel <- function(
         for (plot in plots) {
             plot <- fix_legend(plot)
         }
+        
+        # Custom colspans not supported for plotly yet
+        if (any(colspans != 1)) {
+            warning("Custom colspans not supported for plotly. Using default layout.")
+        }
+        
+        nrow <- as.integer(ceiling(nplot / ncol))
         args <- c(plots, nrows = nrow, shareY = TRUE)
         plt <- do.call(plotly::subplot, args)
         for (layer in seq_len(length(plt$x$data) * (nplot - 1L) / nplot)) {
             plt$x$data[[layer]]$showlegend <- FALSE
         }
     } else {
-        for (plot in plots) {
-            plot <- trim_ggplot(plot, xlab = TRUE)
+        for (i in seq_along(plots)) {
+            plots[[i]] <- trim_ggplot(plots[[i]], xlab = TRUE)
         }
 
         gp <- grid::gpar(cex = 1.3)
 
-        args <- c(plots, ncol = ncol, nrow = nrow, common.legend = TRUE
-            , legend = "bottom", align = "hv")
-        plt <- do.call(ggpubr::ggarrange, args)
+        # Check if we need custom layout
+        if (all(colspans == 1)) {
+            # Use standard layout
+            nrow <- as.integer(ceiling(nplot / ncol))
+            args <- c(plots, ncol = ncol, nrow = nrow, common.legend = TRUE,
+                legend = "bottom", align = "hv")
+            plt <- do.call(ggpubr::ggarrange, args)
+        } else {
+            # Use custom layout with colspans
+            # First, calculate how many rows we need and how many plots go in each row
+            total_cols <- ncol
+            row_plots <- list()
+            plot_index <- 1
+            row_index <- 1
+
+            while (plot_index <= nplot) {
+                row_plots[[row_index]] <- list()
+                cols_used <- 0
+                
+                # Add plots to this row until we run out of columns or plots
+                while (plot_index <= nplot && cols_used + colspans[plot_index] <= total_cols) {
+                    row_plots[[row_index]] <- c(row_plots[[row_index]], list(plots[[plot_index]]))
+                    cols_used <- cols_used + colspans[plot_index]
+                    plot_index <- plot_index + 1
+                }
+                
+                row_index <- row_index + 1
+            }
+            
+            # Now create each row as a separate ggarrange
+            row_panels <- list()
+            plot_tracker <- 1
+            
+            for (i in seq_along(row_plots)) {
+                row_size <- length(row_plots[[i]])
+                if (row_size > 0) {
+                    # Get the colspans for plots in this row
+                    row_indices <- seq(plot_tracker, length.out = row_size)
+                    row_colspans <- colspans[row_indices]
+                    widths <- row_colspans / sum(row_colspans) * length(row_colspans)
+                    
+                    # Create this row's panel
+                    row_panels[[i]] <- ggpubr::ggarrange(
+                        plotlist = row_plots[[i]],
+                        ncol = length(row_plots[[i]]), 
+                        widths = widths,
+                        common.legend = FALSE,
+                        legend = "none",
+                        align = "h"
+                    )
+                    
+                    # Update the plot tracker
+                    plot_tracker <- plot_tracker + row_size
+                }
+            }
+
+            # Combine all rows into a single panel
+            plt <- ggpubr::ggarrange(
+                plotlist = row_panels,
+                ncol = 1,
+                nrow = length(row_panels),
+                common.legend = TRUE,
+                legend = "bottom",
+                legend.grob = ggpubr::get_legend(plots),
+                align = "v"
+            )
+        }
+
         if (!is.null(xlab)) {
             plt <- ggpubr::annotate_figure(plt,
                 bottom = grid::textGrob(xlab, gp = gp))
@@ -451,36 +531,40 @@ plot_subannual <- function(
         colours <- setNames(colours, names(gc))
     }
 
-    # Process each layer separately to handle NAs correctly
-    agg_data <- NULL
+    # Create the base plot
+    plt <- ggplot2::ggplot() + 
+           ggplot2::theme_bw() +
+           ggplot2::labs(x = "Day") +
+           ggplot2::scale_color_manual(values = colours)
+    
+    # Process and plot each layer separately
     for (layer_name in names(gc)) {
         # Create a temporary gc with just this layer
         temp_gc <- DGVMTools::selectLayers(gc, layer_name)
+        
+        # Remove rows with NA values for this layer
         temp_gc@data <- temp_gc@data[!is.na(temp_gc@data[[layer_name]]), ]
-        # Aggregate this layer
-        agg_result <- DGVMTools::aggregateYears(temp_gc)
-        # layer_results[[layer_name]] <- agg_result@data[[layer_name]]
-        if (is.null(agg_data)) {
-            agg_data <- agg_result
-        } else {
-            agg_data <- DGVMTools::copyLayers(agg_result, agg_data, layer_name)
+        
+        # Only proceed if we have data
+        if (nrow(temp_gc@data) > 0) {
+            # Aggregate this layer
+            agg_result <- DGVMTools::aggregateYears(temp_gc)
+            
+            # Convert to long format for this layer only
+            df_layer <- tidyr::pivot_longer(
+                agg_result@data, 
+                cols = layer_name,
+                names_to = "variable",
+                values_to = "value"
+            )
+            
+            # Add this layer to the plot
+            plt <- plt + ggplot2::geom_line(
+                data = df_layer,
+                ggplot2::aes(x = Day, y = value, color = variable)
+            )
         }
     }
-
-    # Combine results into a data frame
-    # Create the plot using the combined data
-    df_long <- tidyr::pivot_longer(agg_data@data, cols = names(gc)
-                                   , names_to = "variable"
-                                   , values_to = "value")
-    plt <- ggplot2::ggplot(df_long, aes(x = Day, y = value, color = variable)) +
-                    ggplot2::geom_line() +
-                    ggplot2::scale_color_manual(values = colours) +
-                    ggplot2::labs(x = "Day") +
-                    ggplot2::theme_bw()
-
-    # plt <- DGVMTools::plotTemporal(agg, title = NULL, subtitle = NULL
-    #                                , point.size = 0,cols = colours
-    #                                , text.multiplier = text_multiplier)
 
     if (!is.null(ylim)) {
         plt <- plt + ggplot2::scale_y_continuous(limits = ylim)
