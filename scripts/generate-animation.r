@@ -27,12 +27,12 @@ start_time <- Sys.time()
 saveGIF({
   # Loop through each PNG file and read it
   for (i in 1:length(frames)) {  # Adjust the range as per your number of frames
-	progress <- 1.0 * i / length(frames)
-	percent <- round(100.0 * progress, 2)
-	elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
-	duration <- elapsed / progress
-	remaining = round(duration - elapsed, 0)
-	cat(paste0("Working: ", percent, "%, remaining = ", remaining, "s\r"))
+    progress <- 1.0 * i / length(frames)
+    percent <- round(100.0 * progress, 2)
+    elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
+    duration <- elapsed / progress
+    remaining = round(duration - elapsed, 0)
+    cat(paste0("Working: ", percent, "%, remaining = ", remaining, "s\r"))
     img_file <- frames[i]
     img <- png::readPNG(img_file)
     grid::grid.raster(img)
