@@ -34,7 +34,7 @@ get_observed_source <- function() {
     obs_dir <- system.file("data", package = get_global("dave_pkgname"))
     log_debug("Loading observed source from dir: '", obs_dir, "'...")
     return(DGVMTools::defineSource("obs", "Ozflux", format = DGVMTools::NetCDF
-        , dir = obs_dir))
+                                   , dir = obs_dir))
 }
 
 get_layer_names <- function(
@@ -108,8 +108,8 @@ get_default_layers <- function(source, var, sites = NULL) {
     }
     last_layer <- available[[length(available)]]
     log_warning("Unsure which layers to plot for variable ", var@name
-        , "; therefore the last layer (", last_layer
-        , ") will be plotted.")
+                , "; therefore the last layer (", last_layer
+                , ") will be plotted.")
     return(last_layer)
 }
 
@@ -159,25 +159,31 @@ get_obs_layer <- function(quant) {
 #'
 #' @param sources: The data sources from which to read (see: [sanitise_source]).
 #' @param vars: The variables to be read (see: [sanitise_variable]).
-#' @param sites: The ozflux sites for which data will be read (see: [sanitise_ozflux_sites]).
+#' @param sites: The ozflux sites for which data will be read (see:
+#'               [sanitise_ozflux_sites]).
 #' @param layers: Names of layers to be read.
-#' @param correct_leaps: Never set this to TRUE unless you know what you're doing.
-#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
-#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
+#' @param correct_leaps: Never set to TRUE unless you know what you're doing.
+#' @param show_all_observations: If true, all observations will be returned (ie
+#'                               the predicted data may contain NA values). If
+#'                               false, only the observations which have a
+#'                               matching prediction will be returned.
+#' @param show_all_predictions: If true, all predictions will be returned (ie
+#'                              the observed data may contain NA values). If
+#'                              false, only the predictions which have a
+#'                              matching observation will be returned.
 #' @keywords internal
 #'
-#' @return A single [DGVMTools::Field] with a layer of observations, and one layer
-#' for each source specified in sources.
+#' @return A single [DGVMTools::Field] with a layer of observations, and one
+#'         layer for each source specified in sources.
 #' @export
 #'
-read_data <- function(
-    sources,
-    vars,
-    sites = NULL,
-    layers = NULL,
-    correct_leaps = FALSE,
-    show_all_observations = TRUE,
-    show_all_predictions = TRUE) {
+read_data <- function(sources
+                      , vars
+                      , sites = NULL
+                      , layers = NULL
+                      , correct_leaps = FALSE
+                      , show_all_observations = TRUE
+                      , show_all_predictions = TRUE) {
 
     log_debug("[read_data] Sanitising input sources...")
     sources <- sanitise_sources(sources)
@@ -212,8 +218,7 @@ read_data <- function(
         obs_vars <- get_observed_vars()
         obs_var_names <- lapply(obs_vars, function(x) x@id)
         # TODO: read only the data required for the specified sites.
-        if (obs_lyr %in% obs_var_names
-                && all(layers %in% obs_var_names)) {
+        if (obs_lyr %in% obs_var_names && all(layers %in% obs_var_names)) {
             obs_source <- get_observed_source()
             log_debug("Reading field ", obs_lyr, " from observed source...")
             # TODO: Refactor this to specify the precise lon/lat that we want.

@@ -8,11 +8,11 @@ output:
   css: tellaus.css
 params:
   new_directory:
-    value: "/home/drew/code/lpj-guess/.data/runs/narclim2/1deg/trunk"
+    value: "/home/drew/code/lpj-guess/.data/runs/narclim2/1deg/download/dave"
   new_name:
     value: NULL
   old_directory:
-    value: "/home/drew/code/lpj-guess/.data/runs/narclim2/1deg/trunk"
+    value: "/home/drew/code/lpj-guess/.data/runs/narclim2/1deg/download/dave"
   old_name:
     value: NULL
   data_directory:
@@ -22,11 +22,12 @@ params:
 ```{r benchmark selection and script parameters, echo=FALSE}
 
 ### Select which benchmarks to do
-do_bom_lai <- TRUE
-do_grass_dist <- TRUE # TODO: download dave_lai.out.gz from gadi when it's back online; also backup all outputs onto hie-storage
-do_auseflux_gpp <- TRUE
-do_auseflux_nee <- TRUE
-do_auseflux_er <- TRUE
+do_lai <- TRUE
+do_grass_dist <- FALSE # TODO: download dave_lai.out.gz from gadi when it's back online; also backup all outputs onto hie-storage
+do_auseflux_gpp <- FALSE
+do_auseflux_nee <- FALSE
+do_auseflux_er <- FALSE
+do_agb <- FALSE
 
 debug <- FALSE
 
@@ -219,7 +220,7 @@ summary_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
 metric_table <- data.frame(check.names = FALSE, stringsAsFactors = FALSE)
 
 # Verify that observed data exists.
-if (do_bom_lai) {
+if (do_lai) {
     validate_lai(params$data_directory)
 }
 
@@ -233,6 +234,10 @@ if (do_auseflux_nee) {
 
 if (do_auseflux_er) {
     validate_auseflux(params$data_directory, "ER")
+}
+
+if (do_agb) {
+    validate_agb(params$data_directory)
 }
 
 # This list contains tables that gets passed in and out of each benchmark.
@@ -259,16 +264,16 @@ print_plot <- function(plt) {
 
 # BoM LAI
 
-Potential intro text about Luigi's LAI data, links to online description of the
-data, what to look for in the benchmark, etc.
+Potential intro text about LAI data, links to online description of the data,
+what to look for in the benchmark, etc.
 
-```{r luigi_lai}
-if (do_bom_lai) {
-    bom_lai <- benchmark_lai(settings, params, tables)
-    tables <- bom_lai$tables
+```{r lai_benchmark}
+if (do_lai) {
+    lai <- benchmark_lai(settings, params, tables)
+    tables <- lai$tables
 
-    first_year <- bom_lai$benchmark@first.year
-    last_year <- bom_lai$benchmark@last.year
+    first_year <- lai$benchmark@first.year
+    last_year <- lai$benchmark@last.year
     subtitle <- paste(first_year, last_year, sep = "-")
 }
 ```
@@ -277,9 +282,9 @@ if (do_bom_lai) {
 
 ### Absolute Values
 
-```{r bom_lai_plots_absolute_values}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatial(bom_lai$maps,
+```{r lai_plots_absolute_values}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatial(lai$maps,
                        ncol = settings$num_cols,
                        legend.title = expression(m^{"2"}~m^{"-2"}),
                        map.overlay = settings$map_overlay,
@@ -293,9 +298,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Differences
 
-```{r bom_lai_plots_deltas}
-if (do_bom_lai && settings$plot_maps) {
-    plot_absolute_deltas(bom_lai, settings)
+```{r lai_plots_deltas}
+if (do_lai && settings$plot_maps) {
+    plot_absolute_deltas(lai, settings)
 }
 ```
 
@@ -303,9 +308,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Trend Value
 
-```{r bom_lai_plots_trend_values}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatial(bom_lai$trends
+```{r lai_plots_trend_values}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatial(lai$trends
                        , layers = "Trend"
                        , ncol = settings$num_cols
                        , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
@@ -322,9 +327,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Trend Significance
 
-```{r bom_lai_plots_trend_significance}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatial(bom_lai$trends
+```{r lai_plots_trend_significance}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatial(lai$trends
                        , layers = "p.value"
                        , ncol = settings$num_cols
                        , cols = viridis::turbo(6)
@@ -341,9 +346,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Trend Differences
 
-```{r bom_lai_plots_trend_deltas}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatialComparison(bom_lai$comparisons[["Trend"]]
+```{r lai_plots_trend_deltas}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(lai$comparisons[["Trend"]]
                                  , ncol = settings$num_cols
                                  , drop.cuts = NULL
                                  , title = "Difference Trend in LAI"
@@ -357,9 +362,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Significant Trends
 
-```{r bom_lai_plots_trends}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatial(bom_lai$trends
+```{r lai_plots_trends}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatial(lai$trends
                        , layers = "Significant_Trend"
                        , ncol = settings$num_cols
                        , cols = rev(RColorBrewer::brewer.pal(11, "RdBu"))
@@ -380,9 +385,9 @@ Definition of seasonal concentration and phase follow Kelley *et al.* 2013. **Se
 
 ### Seasonal Phase
 
-```{r bom_lai_plots_phases}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+```{r lai_plots_phases}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(lai$comparisons[["Seasonal"]]
                                  , do.phase = TRUE
                                  , type = "values"
                                  , cuts = 0:12
@@ -398,9 +403,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Phase Differences
 
-```{r bom_lai_plots_phase_deltas}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+```{r lai_plots_phase_deltas}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(lai$comparisons[["Seasonal"]]
                                  , do.phase = TRUE
                                  , cuts = seq(-6, 6)
                                  , symmetric.scale = FALSE
@@ -414,9 +419,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Seasonal Concentration
 
-```{r bom_lai_plots_seasonsal_concentration}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+```{r lai_plots_seasonsal_concentration}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(lai$comparisons[["Seasonal"]]
                                  , type = "values"
                                  , ncol = settings$num_cols
                                  , map.overlay = settings$map_overlay
@@ -428,9 +433,9 @@ if (do_bom_lai && settings$plot_maps) {
 
 ### Concentration Differences
 
-```{r bom_lai_plots_concentration_deltas}
-if (do_bom_lai && settings$plot_maps) {
-    plt <- plotSpatialComparison(bom_lai$comparisons[["Seasonal"]]
+```{r lai_plots_concentration_deltas}
+if (do_lai && settings$plot_maps) {
+    plt <- plotSpatialComparison(lai$comparisons[["Seasonal"]]
                                  , ncol = settings$num_cols
                                  , map.overlay = settings$map_overlay
                                  , text.multiplier = settings$text_multiplier
@@ -1180,6 +1185,52 @@ if (do_auseflux_er && settings$plot_maps) {
                                  , title = "Difference Seasonal Concentration ER"
                                  , subtitle = auseflux_subtitle)
     print_plot(plt)
+}
+```
+
+## {.unlisted .unnumbered}
+
+<a href="#top">Back to top</a>
+
+# Above-Ground Biomass
+
+Potential intro text about AGB data, links to online description of the data,
+what to look for in the benchmark, etc.
+
+```{r benchmark_agb}
+if (do_agb) {
+    agb <- benchmark_agb(params, settings, tables)
+    tables <- agb$tables
+
+    first_year <- agb$benchmark@first.year
+    last_year <- agb$benchmark@last.year
+    subtitle <- paste(first_year, last_year, sep = "-")
+}
+```
+
+## Spatial patterns {.tabset}
+
+### Absolute Values
+
+```{r agb_plots_absolute_values}
+if (do_agb && settings$plot_maps) {
+    plt <- plotSpatial(agb$maps,
+                       ncol = settings$num_cols,
+                       legend.title = expression(kg~m^{"-2"}),
+                       map.overlay = settings$map_overlay,
+                       text.multiplier = settings$text_multiplier,
+                       title = "Absolute AGB values",
+                       limits = c(0, 60),
+                       subtitle = subtitle)
+    print_plot(plt)
+}
+```
+
+### Differences
+
+```{r agb_plots_deltas}
+if (do_agb && settings$plot_maps) {
+    plot_absolute_deltas(agb, settings)
 }
 ```
 
