@@ -30,6 +30,16 @@ set_log_level <- function(level) {
 }
 
 #'
+#' Get the current log level used by dave_analysis logging functions.
+#'
+#' @return Log level (0-4)
+#' @keywords internal
+#'
+get_log_level <- function() {
+    return(get_global("log_level"))
+}
+
+#'
 #' Set the log file used by dave_analysis logging functions.
 #'
 #' If this includes a directory component, the parent directory must exist.
