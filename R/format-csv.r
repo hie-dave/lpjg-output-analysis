@@ -11,9 +11,9 @@
 #' available quantities, if FALSE return a list of the actual Quantities.
 #'
 #' @return A list of all the .csv files present, with the ".csv" removed.#'
-#' @keywords internal
+#' @export
 #'
-available_quantities_csv <- function(source, names){
+available_quantities_csv <- function(source, names) {
     directory <- source@dir
 
     # First get the list of *.csv files present.
@@ -24,6 +24,25 @@ available_quantities_csv <- function(source, names){
     vars <- unlist(lapply(files, FUN = function(f) gsub("\\.csv$", "", f)))
 
     return(vars)
+}
+
+#'
+#' List the available layers (columns) in a CSV file.
+#'
+#' @param source A \code{\linkS4class{Source}} containing the meta-data about
+#' the CSV source.
+#' @param quant A \code{\linkS4class{Quantity}} object to specify what quantity
+#' should be opened.
+#'
+#' @return A character vector of layer names available for this quantity.
+#' @export
+#'
+available_layers_csv <- function(source, quant) {
+    file_path <- get_file_path(source, quant)
+    log_diag("[available_layers_csv] Reading file ", file_path)
+    dt <- data.table::fread(file_path, nrows = 0)
+    log_diag("[available_layers_csv] Read ", ncol(dt), " columns")
+    return(colnames(dt))
 }
 
 #'
@@ -72,6 +91,21 @@ get_site_name <- function(lat, lon, all_sites, epsilon = 1e-6, max_distance = 0.
 }
 
 #'
+#' Get the file name for a given quantity
+#'
+#' @param source A \code{\linkS4class{Source}} containing the meta-data about
+#' the CSV source.
+#' @param quant A \code{\linkS4class{Quantity}} object to specify what quantity
+#' should be opened.
+#'
+#' @return A character string holding the name of the file.
+#' @keywords internal
+#'
+get_file_path <- function(source, quant) {
+    return(file.path(source@dir, paste0(quant@id, ".csv")))
+}
+
+#'
 #' Filter a data.table by site
 #'
 #' @param dt A data.table to filter
@@ -109,7 +143,8 @@ filter_sites <- function(dt, sites, lat_col, lon_col, site_col) {
 #' @keywords internal
 #' @return A character vector of site names
 #'
-filter_stainfo <- function(target.STAInfo) {
+filter_stainfo <- function(target_stainfo) {
+    sites <- read_ozflux_sites()
     spatial_extent_id <- target_stainfo@spatial.extent.id
     spatial_extent <- target_stainfo@spatial.extent
     if (!is.null(spatial_extent_id) && length(spatial_extent_id) > 0) {
@@ -156,13 +191,28 @@ get_field_csv <- function(source,
                          site_col = NULL,
                          time_col = "date",
                          sites = NULL) {
-    file_name <- paste0(quant@id, ".csv")
-    file_path <- file.path(source@dir, file_name)
+
+    log_diag("[get_field_csv] Called with source: ", source@dir,
+             ", quant: ", quant@id,
+             ", layers: ", layers,
+             ", target.STAInfo: ", target.STAInfo@spatial.extent.id,
+             ", file.name: ", file.name,
+             ", verbose: ", verbose,
+             ", lat_col: ", lat_col,
+             ", lon_col: ", lon_col,
+             ", site_col: ", site_col,
+             ", time_col: ", time_col,
+             ", sites: ", sites)
+
+    file_path <- get_file_path(source, quant)
+    log_diag("[get_field_csv] Reading file ", file_path)
 
     verbose <- get_log_level() >= get_global("LOG_LEVEL_DIAGNOSTIC")
     dt <- data.table::fread(file_path, verbose = verbose, showProgress = verbose)
+    log_diag("[get_field_csv] Read ", nrow(dt), " rows")
 
     if (!is.null(layers)) {
+        log_diag("[get_field_csv] Filtering by layers: ", paste0(layers, collapse = ", "))
         if (any(!layers %in% colnames(dt))) {
             log_error("Some of the layers specified are not present in the file: ", paste0(layers, collapse = ", "))
         }
@@ -177,11 +227,16 @@ get_field_csv <- function(source,
     }
 
     if (is.null(sites)) {
+        log_diag("[get_field_csv] No sites specified. Therefore, all sites will be read.")
         sites <- filter_stainfo(target.STAInfo)
+        log_diag("[get_field_csv] Found sites: ", paste0(sites$Name, collapse = ", "))
     }
 
     if (!is.null(sites)) {
+        log_diag("[get_field_csv] Filtering by sites: ", paste0(sites$Name, collapse = ", "))
+        nrow <- nrow(dt)
         dt <- filter_sites(dt, sites, lat_col, lon_col, site_col)
+        log_diag("[get_field_csv] Filtered from ", nrow, " to ", nrow(dt), " rows")
     }
 
     field_id <- DGVMTools::makeFieldID(
@@ -195,7 +250,7 @@ get_field_csv <- function(source,
         data = dt,
         quant = quant,
         source = source,
-        sta.info = target.STAInfo)
+        target.STAInfo)
     return(fld)
 }
 
