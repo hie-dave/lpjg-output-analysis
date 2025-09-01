@@ -68,7 +68,14 @@ benchmark_lai <- function(settings, params, tables, lai_type = "tot") {
     }
 
     # Aggregation/analysis of observations.
+    datasets <- c(bom_data)
     do_aggregation(bom_data)
+
+    if (lai_type == "tot") {
+        modis_lai_data <- read_modis_lai(settings$data_path)
+        datasets <- c(datasets, modis_lai_data)
+        do_aggregation(modis_lai_data)
+    }
 
     # Create benchmark object.
     # The ID of this benchmark object is used as the quantity column in the
@@ -82,7 +89,7 @@ benchmark_lai <- function(settings, params, tables, lai_type = "tot") {
                      , guess_layers = "mlai"
                      , unit = "m2/m2"
                      , agg.unit = "m2/m2"
-                     , datasets = list(bom_data)
+                     , datasets = datasets
                      , first.year = min(bom_data@data$Year)
                      , last.year = max(bom_data@data$Year)
                      , metrics = settings$metrics
@@ -154,6 +161,7 @@ benchmark_lai <- function(settings, params, tables, lai_type = "tot") {
 #' @export
 #'
 validate_lai <- function(data_path) {
+    # Validate BoM LAI data.
     types <- c("tot", "rec", "per")
     for (type in types) {
         data_file <- get_bom_data_path(data_path, type)
@@ -161,6 +169,46 @@ validate_lai <- function(data_path) {
             stop("Unable to locate BoM LAI data. File not found: ", data_file)
         }
     }
+
+    # Validate MODIS LAI data.
+    modis_file <- get_modis_data_path(data_path)
+    if (!file.exists(modis_file)) {
+        stop("Unable to locate MODIS LAI data. File not found: ", modis_file)
+    }
+}
+
+#'
+#' Read MODIS LAI from the specified data path.
+#'
+#' @param data_path Path to the data directory
+#'
+#' @return Returns a [DGVMTools::Field] object containing the MODIS LAI data
+#' @import DGVMTools
+#' @export
+#'
+read_modis_lai <- function(data_path) {
+    modis_file <- get_modis_data_path(data_path)
+    if (!file.exists(modis_file)) {
+        log_error("Modis data file not found: '", modis_file, "'")
+    }
+    src <- DGVMTools::defineSource(id = "modis", name = "MODIS LAI"
+                        , dir = dirname(modis_file), format = GUESS)
+    fld <- DGVMTools::getField(src, "mlai", file.name = basename(modis_file))
+
+    return(fld)
+}
+
+#'
+#' Get the location of the MODIS LAI data.
+#'
+#' @param data_path Path to the data directory.
+#'
+#' @return Path to the MODIS LAI data file.
+#'
+#' @keywords internal
+#'
+get_modis_data_path <- function(data_path) {
+    return(file.path(data_path, "lai", "modis", "MODIS_LAI.txt.gz"))
 }
 
 #'

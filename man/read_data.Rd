@@ -19,19 +19,26 @@ read_data(
 
 \item{vars:}{The variables to be read (see: \link{sanitise_variable}).}
 
-\item{sites:}{The ozflux sites for which data will be read (see: \link{sanitise_ozflux_sites}).}
+\item{sites:}{The ozflux sites for which data will be read (see:
+\link{sanitise_ozflux_sites}).}
 
 \item{layers:}{Names of layers to be read.}
 
-\item{correct_leaps:}{Never set this to TRUE unless you know what you're doing.}
+\item{correct_leaps:}{Never set to TRUE unless you know what you're doing.}
 
-\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+\item{show_all_observations:}{If true, all observations will be returned (ie
+the predicted data may contain NA values). If
+false, only the observations which have a
+matching prediction will be returned.}
 
-\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
+\item{show_all_predictions:}{If true, all predictions will be returned (ie
+the observed data may contain NA values). If
+false, only the predictions which have a
+matching observation will be returned.}
 }
 \value{
-A single \link[DGVMTools:Field]{DGVMTools::Field} with a layer of observations, and one layer
-for each source specified in sources.
+A single \link[DGVMTools:Field]{DGVMTools::Field} with a layer of observations, and one
+layer for each source specified in sources.
 }
 \description{
 Read data for the specified variable.
