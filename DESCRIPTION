@@ -29,7 +29,9 @@ Depends:
 	tictoc(>= 1.2.1),
 	showtext(>= 0.9-7),
 	data.table(>= 1.15.4),
-	ggplot2(>= 3.5.1)
+	ggplot2(>= 3.5.1),
+	methods(>= 4.5.0),
+	withr(>= 3.0.2),
 Imports:
 	DGVMTools,
 	plotly,

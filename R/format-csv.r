@@ -127,11 +127,12 @@ filter_sites <- function(dt, sites, lat_col, lon_col, site_col) {
     if (is.null(site_col)) {
         site_col <- "site"
         all_sites <- read_ozflux_sites()
-        dt[, site_col := get_site_name(lat_col, lon_col, all_sites)]
+        dt[, (site_col) := mapply(get_site_name, get(lat_col), get(lon_col), MoreArgs = list(all_sites = all_sites))]
     }
 
     # Now we can filter by site.
-    dt <- dt[site_col %in% sites]
+
+    dt <- dt[get(site_col) %in% sites]
     return(dt)
 }
 
@@ -223,7 +224,7 @@ get_field_csv <- function(source,
             layers_to_keep <- c(layers_to_keep, site_col)
         }
         layers_to_keep <- c(layers_to_keep, layers)
-        dt <- dt[, layers_to_keep]
+        dt <- dt[, ..layers_to_keep]
     }
 
     if (is.null(sites)) {
