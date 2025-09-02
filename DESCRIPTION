@@ -62,6 +62,7 @@ Collate:
 	'dave-globals.r'
 	'dave-logging.r'
 	'input-sanitisation.r'
+	'observation-reader.r'
 	'dave-config.r'
 	'dave-stats.r'
 	'dave-processing.r'

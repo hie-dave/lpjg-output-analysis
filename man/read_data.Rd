@@ -43,4 +43,7 @@ layer for each source specified in sources.
 \description{
 Read data for the specified variable.
 }
+\seealso{
+\link{ObservationReader}, \link{find_readers_for_var}, \link{register_reader}
+}
 \keyword{internal}
