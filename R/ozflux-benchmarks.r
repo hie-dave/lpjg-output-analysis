@@ -255,7 +255,7 @@ ozflux_benchmarks <- function(
             if (combined_graph) {
                 ylab <- get_y_label(var, NULL)
                 plt <- create_panel(res$timeseries, res$pvo, res$subannual
-                    , use_plotly = use_plotly, ylab = ylab)
+                    , use_plotly = use_plotly, ylab = ylab, colspans = c(2, 1, 1))
                 combined_plots[[length(combined_plots) + 1L]] <- plt
                 name <- paste(row$Name, var@name, sep = "_")
             } else {
