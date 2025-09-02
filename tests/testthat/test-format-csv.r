@@ -142,6 +142,25 @@ test_that("get_field_csv reads and filters data correctly", {
     expect_equal(nrow(field_sites@data), 2)
     # Check that only data for the correct site is present
     expect_true(all(field_sites@data$Lat == -35.0))
+
+    # --- Test Case 4: Filter by a non-existent site ---
+    # This should return an empty data table gracefully.
+    field_none <- get_field_csv(
+        source = mock_source,
+        quant = mock_quant,
+        target.STAInfo = mock_stainfo,
+        sites = "SiteC" # This site does not exist
+    )
+    expect_equal(nrow(field_none@data), 0)
+
+    # --- Test Case 5: Filter and rename layers ---
+    field_renamed <- get_field_csv(
+        source = mock_source,
+        quant = mock_quant,
+        target.STAInfo = mock_stainfo,
+        layers = c("GrossPrimaryProductivity" = "GPP")
+    )
+    expect_equal(colnames(field_renamed@data), c("date", "Lat", "Lon", "GrossPrimaryProductivity"))
 })
 
 test_that("get_file_path constructs correct path", {

@@ -213,18 +213,28 @@ get_field_csv <- function(source,
     log_diag("[get_field_csv] Read ", nrow(dt), " rows")
 
     if (!is.null(layers)) {
-        log_diag("[get_field_csv] Filtering by layers: ", paste0(layers, collapse = ", "))
-        if (any(!layers %in% colnames(dt))) {
-            log_error("Some of the layers specified are not present in the file: ", paste0(layers, collapse = ", "))
+        is_named_layers <- !is.null(names(layers))
+        input_col_names <- if (is_named_layers) unname(layers) else layers
+
+        log_diag("[get_field_csv] Filtering by layers: ", paste0(input_col_names, collapse = ", "))
+        if (any(!input_col_names %in% colnames(dt))) {
+            missing_cols <- input_col_names[!input_col_names %in% colnames(dt)]
+            log_error("Some of the layers specified are not present in the file: ", paste0(missing_cols, collapse = ", "))
         }
+
         layers_to_keep <- c(time_col)
         if (is.null(site_col)) {
             layers_to_keep <- c(layers_to_keep, lat_col, lon_col)
         } else {
             layers_to_keep <- c(layers_to_keep, site_col)
         }
-        layers_to_keep <- c(layers_to_keep, layers)
+        layers_to_keep <- c(layers_to_keep, input_col_names)
         dt <- dt[, ..layers_to_keep]
+
+        if (is_named_layers) {
+            log_diag("[get_field_csv] Renaming layers.")
+            data.table::setnames(dt, old = unname(layers), new = names(layers))
+        }
     }
 
     if (is.null(sites)) {
