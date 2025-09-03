@@ -104,7 +104,8 @@ test_that("get_field_csv reads and filters data correctly", {
     field_all <- get_field_csv(
         source = mock_source,
         quant = mock_quant,
-        target.STAInfo = mock_stainfo
+        target.STAInfo = mock_stainfo,
+        date_fmt = "%Y-%m-%d"
     )
     expect_equal(nrow(field_all@data), 4)
     expect_equal(colnames(field_all@data), c("date", "Lat", "Lon", "GPP", "NPP"))
@@ -114,7 +115,8 @@ test_that("get_field_csv reads and filters data correctly", {
         source = mock_source,
         quant = mock_quant,
         target.STAInfo = mock_stainfo,
-        layers = "GPP"
+        layers = "GPP",
+        date_fmt = "%Y-%m-%d"
     )
     # Expect time, site identifiers, and the selected layer
     expect_equal(colnames(field_layers@data), c("date", "Lat", "Lon", "GPP"))
@@ -131,7 +133,8 @@ test_that("get_field_csv reads and filters data correctly", {
         source = mock_source,
         quant = mock_quant,
         target.STAInfo = mock_stainfo,
-        sites = "SiteA"
+        sites = "SiteA",
+        date_fmt = "%Y-%m-%d"
     )
     expect_equal(nrow(field_sites@data), 2)
     # Check that only data for the correct site is present
@@ -143,7 +146,8 @@ test_that("get_field_csv reads and filters data correctly", {
         source = mock_source,
         quant = mock_quant,
         target.STAInfo = mock_stainfo,
-        sites = "SiteC" # This site does not exist
+        sites = "SiteC", # This site does not exist
+        date_fmt = "%Y-%m-%d"
     )
     expect_equal(nrow(field_none@data), 0)
 
@@ -152,7 +156,8 @@ test_that("get_field_csv reads and filters data correctly", {
         source = mock_source,
         quant = mock_quant,
         target.STAInfo = mock_stainfo,
-        layers = c("GrossPrimaryProductivity" = "GPP")
+        layers = c("GrossPrimaryProductivity" = "GPP"),
+        date_fmt = "%Y-%m-%d"
     )
     expect_equal(colnames(field_renamed@data), c("date", "Lat", "Lon", "GrossPrimaryProductivity"))
 })

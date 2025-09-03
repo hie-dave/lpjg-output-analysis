@@ -124,7 +124,11 @@ register_reader <- function(reader) {
         stop("Reader must be an ObservationReader object")
     }
     readers_env <- get_global("observation_readers")
-    readers_env[[reader@src@id]] <- reader
+    reader_id <- reader@src@id
+    if (reader_id %in% names(readers_env)) {
+        log_warning("Overwriting existing observation reader with ID: ", reader_id)
+    }
+    readers_env[[reader_id]] <- reader
 }
 
 #'
@@ -157,7 +161,7 @@ find_readers_for_var <- function(var_id) {
 get_reader <- function(id) {
     readers_env <- get_global("observation_readers")
     if (!id %in% names(readers_env)) {
-        return(NULL)
+        log_error("Reader '", id, "' not found")
     }
     return(readers_env[[id]])
 }
@@ -179,6 +183,15 @@ list_readers <- function() {
 #' @return List of ObservationReader objects.
 #' @export
 #'
+#'
+#' Clear the observation reader registry
+#'
+#' This function is mainly intended for testing purposes.
+#' @export
+clear_observation_registry <- function() {
+    set_global("observation_readers", new.env(parent = emptyenv()))
+}
+
 list_all_readers <- function() {
     readers_env <- get_global("observation_readers")
     return(as.list(readers_env))
@@ -255,16 +268,18 @@ create_netcdf_reader <- function() {
 #' vector, the names are used as the variable IDs.
 #'
 #' @return An ObservationReader object.
+#' @export
 #'
-register_csv_reader <- function(id,
-                                name,
-                                file_path,
-                                quant,
-                                layers,
-                                lat_col = "Lat",
-                                lon_col = "Lon",
-                                site_col = NULL,
-                                time_col = "date") {
+create_csv_reader <- function(id,
+                              name,
+                              file_path,
+                              quant,
+                              layers,
+                              lat_col = "Lat",
+                              lon_col = "Lon",
+                              site_col = NULL,
+                              time_col = "date",
+                              time_fmt) {
     src <- defineSource(
         id = id,
         name = name,
@@ -282,11 +297,13 @@ register_csv_reader <- function(id,
                 src,
                 sanitise_variable(var_id),
                 layers,
+                target.STAInfo = NULL,
                 file.name = file_path,
                 lat_col = lat_col,
                 lon_col = lon_col,
                 site_col = site_col,
                 time_col = time_col,
+                date_fmt = time_fmt,
                 ...
             ))
         }

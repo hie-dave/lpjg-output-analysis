@@ -42,12 +42,13 @@ Imports:
 	knitr,
 	ggpubr,
 	ggplot2,
-	ncdf4
+	ncdf4,
 Suggests:
 	rmarkdown,
 	ggpubr,
 	knitrProgressBar,
-	DGVMBenchmarks
+	DGVMBenchmarks,
+	fasttime
 License: GPL | file LICENSE
 URL: https://github.com/hie-dave
 BugReports: https://github.com/hie-dave/output-analysis/issues

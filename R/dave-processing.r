@@ -4,6 +4,9 @@ set_global("obs_file", "ozflux-obs.nc")
 # Name of the observed data layer.
 set_global("obs_lyr", "observed")
 
+# Import required functions from methods package
+#' @importFrom methods is new callGeneric
+
 # Tolerance used for floating point comparisons between spatial coordinates when
 # merging data from different sources. Two grid points are considered identical
 # if their latitude and longitude are different by less than this amount.
@@ -145,6 +148,24 @@ get_obs_layer <- function(quant) {
     # "dave_" but the variable names in the observed data file don't have
     # this prefix.
     name <- tolower(trim_dave(quant@id))
+
+    # If using the registry, check if any reader has a mapping for this variable
+    if (requireNamespace("methods", quietly = TRUE)) {
+        var_id <- name
+        readers <- find_readers_for_var(var_id)
+        if (length(readers) > 0) {
+            # Use the first available reader's mapping
+            reader_id <- names(readers)[1]
+            reader <- readers[[reader_id]]
+            if (var_id %in% names(reader@model_var_mapping)) {
+                # Return the original variable ID, not the mapped one,
+                # since we'll use the mapping when reading the data
+                return(var_id)
+            }
+        }
+    }
+
+    # Fall back to the original behavior
     if (name == "live_biomass") {
         return("live_biomass")
     }
@@ -177,13 +198,15 @@ get_obs_layer <- function(quant) {
 #'         layer for each source specified in sources.
 #' @export
 #'
+#' @seealso [ObservationReader], [find_readers_for_var], [register_reader]
+#'
 read_data <- function(sources
-                      , vars
-                      , sites = NULL
-                      , layers = NULL
-                      , correct_leaps = FALSE
-                      , show_all_observations = TRUE
-                      , show_all_predictions = TRUE) {
+                       , vars
+                       , sites = NULL
+                       , layers = NULL
+                       , correct_leaps = FALSE
+                       , show_all_observations = TRUE
+                       , show_all_predictions = TRUE) {
 
     log_debug("[read_data] Sanitising input sources...")
     sources <- sanitise_sources(sources)
@@ -201,53 +224,52 @@ read_data <- function(sources
     # }
 
     data <- NULL
-    verbose <- FALSE
     nvar <- length(vars)
     original_layer <- layers
 
     for (var in vars) {
 
-        obs_lyr <- get_obs_layer(var)
+        # Get the observation layer name for this variable
+        var_id <- trim_dave(var@id)
+        obs_lyr <- var_id
 
         layers <- original_layer
         if (is.null(layers)) {
             layers <- obs_lyr
         }
 
-        # Read all observations for this variable.
-        obs_vars <- get_observed_vars()
-        obs_var_names <- lapply(obs_vars, function(x) x@id)
-        # TODO: read only the data required for the specified sites.
-        if (obs_lyr %in% obs_var_names && all(layers %in% obs_var_names)) {
-            obs_source <- get_observed_source()
-            log_debug("Reading field ", obs_lyr, " from observed source...")
-            # TODO: Refactor this to specify the precise lon/lat that we want.
-            # Currently we read observations for ALL sites.
-            suppressWarnings(obs <- DGVMTools::getField(
-                source = obs_source, quant = obs_lyr, layers = layers
-                    , file.name = get_global("obs_file")
-                    , verbose = verbose))
-            obs@quant <- var
+        # Find readers that support this variable using the registry
+        readers <- find_readers_for_var(var_id)
 
-            log_debug("Successfully read observed data for variable ", var@name)
+        if (length(readers) > 0) {
+            log_debug("Found ", length(readers), " reader(s) for variable ", var_id)
 
-            # Rename the (for now only) data layer from lyr_name to "observed", to avoid
-            # conflicts with the prediction layers with which we're about to read/merge.
-            out_lyr <- get_layer_names(var, nvar, layers, get_global("obs_lyr"))
-            if (is.null(data)) {
-                DGVMTools::renameLayers(obs, layers, out_lyr)
-                obs@quant@name <- var@name
-                data <- obs
-            } else {
-                data <- DGVMTools::copyLayers(obs, data, layers
-                    , new.layer.names = out_lyr
-                    , tolerance = get_global("merge_tol"), keep.all.from = show_all_observations
-                    , keep.all.to = show_all_observations)#, allow.cartesian = TRUE
+            # Process all readers that support this variable
+            for (reader_id in names(readers)) {
+                reader <- readers[[reader_id]]
+
+                log_debug("Reading field ", var_id, " using reader ", reader@id, "...")
+
+                # Read the observation data using the reader's read_func
+                # Use direct slot access to avoid S4 method dispatch issues
+                obs_field <- reader@read_func(var_id, sites = sites)
+
+                # For now, use reader_id as the layer name. Should revisit this.
+                if (is.null(data)) {
+                    data <- obs_field
+                    DGVMTools::renameLayers(data, layers, reader_id)
+                } else {
+                    data <- DGVMTools::copyLayers(obs_field, data, layers
+                        , new.layer.names = reader_id
+                        , tolerance = get_global("merge_tol"), keep.all.from = show_all_observations
+                        , keep.all.to = show_all_observations)#, allow.cartesian = TRUE
+                }
             }
-        } else {
-            layer_names <- paste(layers, collapse = ", ")
-            log_warning("No observed data found for layers [", layer_names
-                , "] of variable '", obs_lyr, "'")
+        }
+
+        # If no readers were found, log a warning
+        if (length(readers) == 0) {
+            log_warning("No observation readers found for variable '", var_id, "'")
         }
 
         layers <- original_layer
@@ -292,7 +314,8 @@ read_data <- function(sources
             pn <- names(predictions@data)
             if ("Year" %in% pn && "Day" %in% pn && correct_leaps) {
                 log_diag("Fixing day of year to account for leap days...")
-                predictions@data[is_leap(Year) & Day > 59, Day := Day + 1]
+                # Use with= to avoid 'no visible binding' lint warnings
+                predictions@data[is_leap(predictions@data$Year) & predictions@data$Day > 59, Day := predictions@data$Day + 1]
                 log_debug("Successfully performed leap year conversion")
             }
 
@@ -391,3 +414,4 @@ get_ylim <- function(data, common_yaxis = TRUE) {
     }
     return(c(ymin, ymax))
 }
+

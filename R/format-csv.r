@@ -122,37 +122,6 @@ get_file_path <- function(source, quant) {
 }
 
 #'
-#' Filter a data.table by site
-#'
-#' @param dt A data.table to filter
-#' @param sites A character vector of site names to keep
-#' @param lat_col The name of the column containing latitude data
-#' @param lon_col The name of the column containing longitude data
-#' @param site_col The name of the column containing site names
-#'
-#' @keywords internal
-#' @return A data.table filtered by site
-#'
-filter_sites <- function(dt, sites, lat_col, lon_col, site_col) {
-    # Checked by caller - this should never happen.
-    if (is.null(sites)) log_error("No sites specified")
-
-    # Right now, the data table could have either lat/lon columns, or a site
-    # name column. The first step is to get it into a consistent state, by
-    # adding a site name column.
-    if (is.null(site_col)) {
-        site_col <- "site"
-        all_sites <- read_ozflux_sites()
-        dt[, (site_col) := get_site_names_by_coord(get(lat_col), get(lon_col), all_sites)]
-    }
-
-    # Now we can filter by site.
-
-    dt <- dt[get(site_col) %in% sites]
-    return(dt)
-}
-
-#'
 #' Get the list of sites defined by a spatial extent.
 #'
 #' @param target.STAInfo An STAInfo object defining the spatial-temporal-annual extent over which we want the data
@@ -177,6 +146,40 @@ filter_stainfo <- function(target_stainfo) {
 }
 
 #'
+#' Convert a character vector of date strings to Date objects.
+#'
+#' @param date_strings A character vector of date strings.
+#' @param date_fmt The format of the date strings. E.g. "%Y-%m-%d".
+#' @return A Date vector.
+#' @keywords internal
+#'
+convert_to_date <- function(date_strings, date_fmt) {
+    fasttime_supported_formats <- c("%Y-%m-%d",
+                                    "%Y-%m-%d %H:%M:%S",
+                                    "%Y-%m-%d %H:%M:%OS")
+    have_fasttime <- requireNamespace("fasttime", quietly = TRUE)
+    dates <- c()
+    if (!is.null(date_fmt) && date_fmt %in% fasttime_supported_formats && have_fasttime) {
+        log_diag("Using fasttime to convert dates")
+        dates <- fasttime::fastDate(date_strings)
+    } else {
+        log_diag("Using base R to convert dates. If this is slow, consider installing the fasttime package and converting dates to yyyy-MM-dd.")
+        dates <- as.Date(date_strings, format = date_fmt)
+    }
+    if (NA %in% dates) {
+        msg <- "Some dates could not be parsed: "
+        msg <- paste(msg, date_strings[which(NA %in% dates)], collapse = ", ")
+        if (is.null(date_fmt)) {
+            msg <- paste0(msg, "\nNo date format was specified")
+        } else {
+            msg <- paste0(msg, "\nDate format: ", date_fmt)
+        }
+        log_error(msg)
+    }
+    return(dates)
+}
+
+#'
 #' Get a Field for CSV
 #'
 #'
@@ -193,28 +196,29 @@ filter_stainfo <- function(target_stainfo) {
 #' @param site_col The name of the column containing site names. Must specify this OR lat_col and lon_col.
 #' @param time_col The name of the column containing time data
 #' @param sites A character vector of site names to read. If NULL, read all sites.
-#' @param verbose A logical, set to true to give progress/debug information
+#' @param date_fmt The format of the date column. E.g. %Y-%m-%d.
 #' @return A list containing firstly the data.table containing the data, and secondly the STAInfo for the data that we have
 #' @keywords internal
 #'
 get_field_csv <- function(source,
                           quant,
                           layers = NULL,
-                          target.STAInfo,
+                          target.STAInfo = NULL,
                           file.name = NULL,
-                          verbose = FALSE,
                           lat_col = "Lat",
                           lon_col = "Lon",
                           site_col = NULL,
                           time_col = "date",
-                          sites = NULL) {
+                          sites = NULL,
+                          date_fmt) {
+
+    quant <- sanitise_variable(quant)
 
     log_diag("[get_field_csv] Called with source: ", source@dir,
              ", quant: ", quant@id,
              ", layers: ", layers,
-             ", target.STAInfo: ", target.STAInfo@spatial.extent.id,
+             ", target.STAInfo: ", target.STAInfo,
              ", file.name: ", file.name,
-             ", verbose: ", verbose,
              ", lat_col: ", lat_col,
              ", lon_col: ", lon_col,
              ", site_col: ", site_col,
@@ -237,7 +241,8 @@ get_field_csv <- function(source,
 
     verbose <- get_log_level() >= get_global("LOG_LEVEL_DIAGNOSTIC")
     dt <- data.table::fread(file_path, verbose = verbose, showProgress = verbose)
-    log_diag("[get_field_csv] Read ", nrow(dt), " rows")
+    initial_address <- data.table::address(dt)
+    log_diag("[get_field_csv] Read ", nrow(dt), " rows. Initial address: ", initial_address)
 
     if (!is.null(layers)) {
         is_named_layers <- !is.null(names(layers))
@@ -249,32 +254,62 @@ get_field_csv <- function(source,
             log_error("Some of the layers specified are not present in the file: ", paste0(missing_cols, collapse = ", "))
         }
 
-        layers_to_keep <- c(time_col)
+        cols_to_keep <- c(time_col, input_col_names)
         if (is.null(site_col)) {
-            layers_to_keep <- c(layers_to_keep, lat_col, lon_col)
+            cols_to_keep <- c(cols_to_keep, lat_col, lon_col)
         } else {
-            layers_to_keep <- c(layers_to_keep, site_col)
+            cols_to_keep <- c(cols_to_keep, site_col)
         }
-        layers_to_keep <- c(layers_to_keep, input_col_names)
-        dt <- dt[, ..layers_to_keep]
+        cols_to_remove <- setdiff(colnames(dt), cols_to_keep)
+        if (length(cols_to_remove) > 0) {
+            dt[, (cols_to_remove) := NULL]
+        }
+        log_diag("[get_field_csv] Address after column removal: ", data.table::address(dt))
 
         if (is_named_layers) {
             log_diag("[get_field_csv] Renaming layers.")
             data.table::setnames(dt, old = unname(layers), new = names(layers))
+            log_diag("[get_field_csv] Address after renaming layers: ", data.table::address(dt))
         }
     }
 
-    if (is.null(sites)) {
+    # Convert date column to Date object using fasttime.
+    dt[, (time_col) := convert_to_date(get(time_col), date_fmt)]
+    log_diag("[get_field_csv] Address after date conversion: ", data.table::address(dt))
+
+    if (is.null(sites) && !is.null(target.STAInfo)) {
         log_diag("[get_field_csv] No sites specified. Therefore, all sites will be read.")
         sites <- filter_stainfo(target.STAInfo)
-        log_diag("[get_field_csv] Found sites: ", paste0(sites$Name, collapse = ", "))
+        site_names <- paste0(sites$Name, collapse = ", ")
+        log_diag("[get_field_csv] Found sites: ", site_names)
     }
 
     if (!is.null(sites)) {
-        log_diag("[get_field_csv] Filtering by sites: ", paste0(sites$Name, collapse = ", "))
-        nrow <- nrow(dt)
-        dt <- filter_sites(dt, sites, lat_col, lon_col, site_col)
-        log_diag("[get_field_csv] Filtered from ", nrow, " to ", nrow(dt), " rows")
+        site_names <- paste0(sites, collapse = ", ")
+        log_diag("[get_field_csv] Filtering by sites: ", site_names)
+        n <- nrow(dt)
+
+        if (is.null(site_col)) {
+            site_col <- "site"
+            all_sites <- read_ozflux_sites()
+            dt[, (site_col) := get_site_names_by_coord(get(lat_col), get(lon_col), all_sites)]
+        }
+
+        # Now we can filter by site.
+        dt <- dt[get(site_col) %in% sites]
+        log_diag("[get_field_csv] Filtered from ", n, " to ", nrow(dt), " rows")
+        log_diag("[get_field_csv] Address after filter_sites: ", data.table::address(dt))
+    }
+
+    if (is.null(target.STAInfo)) {
+        first_year <- as.integer(format(min(dt[[time_col]]), "%Y"))
+        last_year <- as.integer(format(max(dt[[time_col]]), "%Y"))
+        target.STAInfo <- new("STAInfo",
+                              first.year = first_year,
+                              last.year = last_year,
+                              year.aggregate.method = "none",
+                              subannual.resolution = "none",
+                              subannual.original = "none")
     }
 
     field_id <- DGVMTools::makeFieldID(
@@ -289,6 +324,9 @@ get_field_csv <- function(source,
         quant = quant,
         source = source,
         target.STAInfo)
+    if (data.table::address(dt) != initial_address) {
+        log_warning("[get_field_csv] Address of data table changed during function execution. Run again with log_level = 3 to diagnose. This is not a huge problem, but indicates an inefficiency in the code.")
+    }
     return(fld)
 }
 
