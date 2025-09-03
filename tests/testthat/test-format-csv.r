@@ -4,8 +4,7 @@
 # run `devtools::load_all()` first to make sure all your package functions are loaded.
 # Mock S4 objects are defined in 'helper-mocks.r'
 
-test_that("get_site_name correctly identifies sites by coordinates", {
-
+test_that("get_site_names_by_coord correctly identifies sites by coordinates", {
     # 1. Setup: Create a sample data table of sites
     site_data <- data.table::data.table(
         Name = c("SiteA", "SiteB", "SiteC"),
@@ -13,25 +12,20 @@ test_that("get_site_name correctly identifies sites by coordinates", {
         Lon = c(148.0, 149.0, 150.0)
     )
 
-    # 2. Test cases
+    # 2. Define test coordinates
+    test_lats <- c(-35.0, -36.05, -40.0, -35.0000001)
+    test_lons <- c(148.0, 149.05, 150.0, 148.0000001)
 
-    # Case 1: Exact match
-    sitea <- get_site_name(lat = -35.0, lon = 148.0, all_sites = site_data)
-    expect_equal(sitea, "SiteA")
+    # 3. Run the vectorized function
+    site_names <- get_site_names_by_coord(test_lats, test_lons, all_sites = site_data)
 
-    # Case 2: Close match (within default max_distance of 0.1)
-    siteb <- get_site_name(lat = -36.05, lon = 149.05, all_sites = site_data)
-    expect_equal(siteb, "SiteB")
+    # 4. Check the results
+    # Expect: Exact match, close match, no match (NA), and near-exact match
+    expected_names <- c("SiteA", "SiteB", NA, "SiteA")
+    expect_equal(site_names, expected_names)
 
-    # Case 3: No match (too far away)
-    sitec <- get_site_name(lat = -40.0, lon = 150.0, all_sites = site_data)
-    expect_null(sitec)
-
-    # Case 4: Match with a smaller epsilon
-    sitea2 <- get_site_name(lat = -35.0000001,
-                            lon = 148.0000001,
-                            all_sites = site_data)
-    expect_equal(sitea2, "SiteA")
+    # Test with empty input
+    expect_equal(get_site_names_by_coord(numeric(0), numeric(0), site_data), character(0))
 })
 
 test_that("available_quantities_csv finds csv files", {

@@ -58,36 +58,52 @@ available_layers_csv <- function(source, quant) {
 #' @keywords internal
 #' @return Character string with site name or NULL if no site is within max_distance
 #'
-get_site_name <- function(lat, lon, all_sites, epsilon = 1e-6, max_distance = 0.1) {
-    all_sites <- as.data.table(all_sites)
+get_site_names_by_coord <- function(lats, lons, all_sites, max_distance = 0.1) {
 
-    # First try with epsilon comparison
-    result <- all_sites[abs(Lat - lat) < epsilon & abs(Lon - lon) < epsilon, .(Name)]
+    # Ensure all_sites is a data.table for the non-equi join.
+    all_sites <- data.table::as.data.table(all_sites)
+    # Create a data.table from the input coordinates with a unique ID.
+    coords_dt <- data.table::data.table(
+        temp_id = seq_along(lats),
+        lat_in = lats,
+        lon_in = lons
+    )
 
-    # If we found a match with epsilon
-    if (nrow(result) > 0) {
-        return(result[[1]])
+    # 1. Create search boundaries for each observation.
+    coords_dt[, `:=`(
+        min_lat = lat_in - max_distance, max_lat = lat_in + max_distance,
+        min_lon = lon_in - max_distance, max_lon = lon_in + max_distance
+    )]
+
+    # 2. Use a non-equi join to find candidate sites within the bounding box of
+    #    each coordinate.
+    candidates <- all_sites[coords_dt,
+        on = .(Lat >= min_lat, Lat <= max_lat, Lon >= min_lon, Lon <= max_lon),
+        nomatch = 0,
+        .(
+            site_name = x.Name,
+            temp_id = i.temp_id,
+            dist = sqrt((x.Lat - i.lat_in)^2 + (x.Lon - i.lon_in)^2)
+        )
+    ]
+
+    # 3. For each original coordinate, find the single closest candidate.
+    if (nrow(candidates) == 0) {
+        return(rep(NA_character_, nrow(coords_dt)))
     }
+    data.table::setorder(candidates, temp_id, dist)
+    nearest_sites <- candidates[, .SD[1], by = temp_id]
 
-    # If no match with epsilon, find the closest site by Euclidean distance
-    all_sites[, dist := sqrt((Lat - lat)^2 + (Lon - lon)^2)]
-    closest <- all_sites[order(dist)][1]
+    # 4. Join the results back to the original coordinates to ensure correct
+    #    order and length.
+    result_dt <- nearest_sites[coords_dt, on = .(temp_id)]
 
-    # Check if the closest site is within the maximum allowed distance
-    if (closest$dist > max_distance) {
-        # Remove the temporary distance column
-        all_sites[, dist := NULL]
-        log_warning("Site ", lat, ", ", lon, " is not close enough to any site in the gridlist (maximum distance: ", max_distance, ")")
-        return(NULL)  # No site is close enough
-    }
+    # 5. Set site name to NA if the closest site was still too far (a corner
+    #    case in the bounding box).
+    result_dt[dist > max_distance, site_name := NA_character_]
 
-    # Get the name of the closest site
-    closest_site_name <- closest$Name
-
-    # Remove the temporary distance column
-    all_sites[, dist := NULL]
-
-    return(closest_site_name)
+    # 6. Return the character vector of site names.
+    return(result_dt$site_name)
 }
 
 #'
@@ -127,7 +143,7 @@ filter_sites <- function(dt, sites, lat_col, lon_col, site_col) {
     if (is.null(site_col)) {
         site_col <- "site"
         all_sites <- read_ozflux_sites()
-        dt[, (site_col) := mapply(get_site_name, get(lat_col), get(lon_col), MoreArgs = list(all_sites = all_sites))]
+        dt[, (site_col) := get_site_names_by_coord(get(lat_col), get(lon_col), all_sites)]
     }
 
     # Now we can filter by site.
@@ -182,16 +198,16 @@ filter_stainfo <- function(target_stainfo) {
 #' @keywords internal
 #'
 get_field_csv <- function(source,
-                         quant,
-                         layers = NULL,
-                         target.STAInfo,
-                         file.name,
-                         verbose = FALSE,
-                         lat_col = "Lat",
-                         lon_col = "Lon",
-                         site_col = NULL,
-                         time_col = "date",
-                         sites = NULL) {
+                          quant,
+                          layers = NULL,
+                          target.STAInfo,
+                          file.name = NULL,
+                          verbose = FALSE,
+                          lat_col = "Lat",
+                          lon_col = "Lon",
+                          site_col = NULL,
+                          time_col = "date",
+                          sites = NULL) {
 
     log_diag("[get_field_csv] Called with source: ", source@dir,
              ", quant: ", quant@id,
@@ -205,7 +221,18 @@ get_field_csv <- function(source,
              ", time_col: ", time_col,
              ", sites: ", sites)
 
-    file_path <- get_file_path(source, quant)
+    if (is.null(file.name)) {
+        log_diag("[get_field_csv] No file name specified. Therefore, using default file name.")
+        file_path <- get_file_path(source, quant)
+    } else if (!file.exists(file.name)) {
+        file_path <- file.path(source@dir, file.name)
+        if (!file.exists(file_path)) {
+            log_info("[get_field_csv] File ", file.name, " does not exist. Therefore, file name will be inferred from quantity ID.")
+            file_path <- get_file_path(source, quant)
+        }
+    } else {
+        file_path <- file.name
+    }
     log_diag("[get_field_csv] Reading file ", file_path)
 
     verbose <- get_log_level() >= get_global("LOG_LEVEL_DIAGNOSTIC")
@@ -269,6 +296,7 @@ get_field_csv <- function(source,
 # CSV FORMAT
 ################################################################################
 
+#'
 #' @description \code{CSV} - a Format object defined here for reading CSV files.
 #'
 #' @format A \code{\linkS4class{Format}} object is an S4 class.
@@ -276,6 +304,7 @@ get_field_csv <- function(source,
 #' @rdname Format-class
 #' @keywords datasets
 #' @export
+#'
 CSV <- new("Format",
     # Unique ID.
     id = "CSV",
