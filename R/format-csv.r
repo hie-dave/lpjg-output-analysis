@@ -46,12 +46,11 @@ available_layers_csv <- function(source, quant) {
 }
 
 #'
-#' Get the name of a site from its latitude and longitude.
+#' Get site names from their latitudes and longitudes.
 #'
-#' @param lat The latitude of the site
-#' @param lon The longitude of the site
+#' @param lats The latitude of the sites
+#' @param lons The longitude of the sites
 #' @param all_sites A data.table containing the latitude, longitude and name of all sites
-#' @param epsilon Optional tolerance for floating point comparison (default: 1e-6)
 #' @param max_distance Maximum allowable distance between coordinates (default: 0.1 degrees)
 #'   If the closest site is farther than this distance, returns NULL
 #'
@@ -124,7 +123,7 @@ get_file_path <- function(source, quant) {
 #'
 #' Get the list of sites defined by a spatial extent.
 #'
-#' @param target.STAInfo An STAInfo object defining the spatial-temporal-annual extent over which we want the data
+#' @param target_stainfo An STAInfo object defining the spatial-temporal-annual extent over which we want the data
 #'
 #' @keywords internal
 #' @return A character vector of site names
@@ -197,7 +196,7 @@ get_lon <- function(site_name, all_sites) {
 #' @param quant A Quantity object to specify what quantity should be opened.
 #' @param layers A character string (or a vector of character strings) specifying which variables from the CSV file are to be read.
 #' NULL (default) means read all.
-#' @param target.sta.info An STAInfo object defining the spatial-temporal-annual extent over which we want the data
+#' @param target.STAInfo An STAInfo object defining the spatial-temporal-annual extent over which we want the data
 #' @param file.name Character string holding the name of the file.  This can be left blank, in which case the file name is automatically generated
 #' @param lat_col The name of the column containing latitude data
 #' @param lon_col The name of the column containing longitude data

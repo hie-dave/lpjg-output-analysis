@@ -7,9 +7,9 @@
 sanitise_spatial_extent_id(spatial_extent_id, sites)
 }
 \arguments{
-\item{spatial_extent_id:}{Name of the site specified by the user.}
+\item{spatial_extent_id}{Name of the site specified by the user.}
 
-\item{sites:}{List of valid sites.}
+\item{sites}{List of valid sites.}
 }
 \value{
 Returns the name of the ozflux site.

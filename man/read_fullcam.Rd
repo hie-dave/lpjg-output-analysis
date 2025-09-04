@@ -7,10 +7,10 @@
 read_fullcam(data_directory, highres = FALSE)
 }
 \arguments{
+\item{data_directory}{Base path to data files.}
+
 \item{highres}{True to read the high-resolution (0.0025°) dataset. False to
 read the low-resolution (1°) dataset.}
-
-\item{data_path}{Base path to data files.}
 }
 \value{
 Returns a \link[DGVMTools:Field]{DGVMTools::Field} object containing fullcam AGB data.

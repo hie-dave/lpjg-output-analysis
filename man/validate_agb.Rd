@@ -8,10 +8,10 @@ in the given data directory.}
 validate_agb(data_directory, highres = FALSE)
 }
 \arguments{
+\item{data_directory}{Base path to data files.}
+
 \item{highres}{True to read the high-resolution (0.0025°) dataset. False to
 read the low-resolution (1°) dataset.}
-
-\item{data_path}{Base path to data files.}
 }
 \description{
 Ensure that the required files for the Above-Ground Biomass benchmark exist

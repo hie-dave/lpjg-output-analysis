@@ -9,6 +9,8 @@ read_bom_lai(data_path, type = "rec")
 }
 \arguments{
 \item{data_path}{Path to the data directory}
+
+\item{type}{The type of LAI to read.Should be either "rec", "per", or "tot"}
 }
 \value{
 Returns a \link[DGVMTools:Field]{DGVMTools::Field} object containing the BoM LAI data

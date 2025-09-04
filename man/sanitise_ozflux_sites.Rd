@@ -7,7 +7,7 @@
 sanitise_ozflux_sites(sites, repo = NULL)
 }
 \arguments{
-\item{sites:}{One or more ozflux site identifiers. If NULL, all sites will be
+\item{sites}{One or more ozflux site identifiers. If NULL, all sites will be
 used. The sites may be expressed as:
 \itemize{
 \item Site names
@@ -15,7 +15,7 @@ used. The sites may be expressed as:
 \item A dataframe with (Lon, Lat, Name) columns, and one row per site
 }}
 
-\item{repo:}{Path to an LPJ-Guess DAVE repository. This will be used if the
+\item{repo}{Path to an LPJ-Guess DAVE repository. This will be used if the
 site is not in the standard site list, in which case its coordinates will be
 read from the gridlist file.}
 }

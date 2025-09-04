@@ -9,13 +9,13 @@ make_metric_table(benchmark, comparisons, simulations, ndigit = 3)
 \arguments{
 \item{benchmark}{A \link[DGVMTools:Benchmark]{DGVMTools::Benchmark} object containing metadata.}
 
+\item{comparisons}{A list of \link[DGVMTools:Comparison]{DGVMTools::Comparison} objects, typically the
+output of fullSpatialComparison()[\link{"Values"}], or the output of sequential
+calls to CompareLayers(), concatenated into a single list.}
+
 \item{simulations}{A list of \link[DGVMTools:Source]{DGVMTools::Source} objects.}
 
 \item{ndigit}{The number of decimal digits in the output table.}
-
-\item{comparison}{A list of \link[DGVMTools:Comparison]{DGVMTools::Comparison} objects, typically the
-output of fullSpatialComparison()[\link{"Values"}], or the output of sequential
-calls to CompareLayers(), concatenated into a single list.}
 }
 \value{
 \link{data.frame} A data table.

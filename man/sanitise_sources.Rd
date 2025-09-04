@@ -8,7 +8,7 @@ objects.}
 sanitise_sources(sources)
 }
 \arguments{
-\item{sources:}{A list of sources parsable by \link{sanitise_source}.}
+\item{sources}{A list of sources parsable by \link{sanitise_source}.}
 }
 \value{
 Returns a list of Sources.

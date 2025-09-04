@@ -2,8 +2,8 @@
 #'
 #' Compute r^2 value
 #'
-#' @param x: Observations
-#' @param y: Predictions
+#' @param x Observations
+#' @param y Predictions
 #'
 #' @keywords internal
 #'
@@ -37,8 +37,8 @@ compute_r2 <- function(x, y) {
 #'
 #' This is in the units of the variable.
 #'
-#' @param x: Observations
-#' @param y: Predictions
+#' @param x Observations
+#' @param y Predictions
 #'
 #' @keywords internal
 #'
@@ -63,8 +63,8 @@ compute_rmse <- function(x, y) {
 #' as the mean of the observed data. An efficiency of < 0 means that the mean of
 #' the observations is a better predictor than the model.
 #'
-#' @param x: Observations
-#' @param y: Predictions
+#' @param x Observations
+#' @param y Predictions
 #'
 #' @keywords internal
 #'
@@ -85,8 +85,8 @@ compute_nse <- function(x, y) {
 #'
 #' Value of 0 means 0 RMSE (ie perfect fit).
 #'
-#' @param x: Observations
-#' @param y: Predictions
+#' @param x Observations
+#' @param y Predictions
 #'
 #' @keywords internal
 #'
@@ -103,8 +103,8 @@ compute_rsr <- function(x, y) {
 #'
 #' Compute bias of predictions to observations.
 #'
-#' @param observations: Observed data.
-#' @param predictions: Predicted data.
+#' @param observations Observed data.
+#' @param predictions Predicted data.
 #'
 #' @keywords internal
 #'

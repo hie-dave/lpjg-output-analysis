@@ -7,9 +7,9 @@
 compute_r2(x, y)
 }
 \arguments{
-\item{x:}{Observations}
+\item{x}{Observations}
 
-\item{y:}{Predictions}
+\item{y}{Predictions}
 }
 \description{
 Compute r^2 value

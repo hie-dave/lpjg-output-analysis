@@ -7,13 +7,13 @@
 get_gridcell(data, lat, lon, site_name = NULL)
 }
 \arguments{
-\item{data:}{The input data as obtained from \link{read_data}}
+\item{data}{The input data as obtained from \link{read_data}}
 
-\item{lat:}{Latitude of the gridcell}
+\item{lat}{Latitude of the gridcell}
 
-\item{lon:}{Longitude of the gridcell.}
+\item{lon}{Longitude of the gridcell.}
 
-\item{site_name:}{Name of the ozflux site (optional).}
+\item{site_name}{Name of the ozflux site (optional).}
 }
 \value{
 Returns a \link[DGVMTools:Source]{DGVMTools::Source} object containing data only for the

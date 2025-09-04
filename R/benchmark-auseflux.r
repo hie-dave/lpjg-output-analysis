@@ -169,6 +169,7 @@ benchmark_auseflux <- function(var,
 #' Ensure that all data exists which is required for this benchmark.
 #'
 #' @param data_path Path to the data directory
+#' @param var Variable to read (see: [auseflux_sanitise_var])
 #'
 #' @export
 #'

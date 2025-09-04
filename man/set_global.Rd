@@ -7,9 +7,9 @@
 set_global(name, value)
 }
 \arguments{
-\item{name:}{Name of the variable.}
+\item{name}{Name of the variable.}
 
-\item{value:}{Value of the variable.}
+\item{value}{Value of the variable.}
 }
 \description{
 Set the package-internal global variable with the specified name.

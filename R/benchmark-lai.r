@@ -216,6 +216,7 @@ get_modis_data_path <- function(data_path) {
 #' no data file is provided.
 #'
 #' @param data_path Path to the data directory
+#' @param type The type of LAI to read.Should be either "rec", "per", or "tot"
 #'
 #' @return Returns a [DGVMTools::Field] object containing the BoM LAI data
 #' @import DGVMTools

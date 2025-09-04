@@ -79,9 +79,9 @@ available_quantities <- function(source, directory, names = TRUE) {
 #'
 #' List all available layers for a particular output.
 #'
-#' @param source: An OZFLUX source object.
-#' @param quant: The quantity (ie LPJ-Guess output) to query.
-#' @param sites: Optional list of site names to check. NULL means all sites.
+#' @param source An OZFLUX source object.
+#' @param quant The quantity (ie LPJ-Guess output) to query.
+#' @param sites Optional list of site names to check. NULL means all sites.
 #'
 #' @return Returns a list of all layers (ie plottable columns) available for
 #' this quantity (output).

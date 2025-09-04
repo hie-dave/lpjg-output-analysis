@@ -8,6 +8,8 @@ validate_auseflux(data_path, var)
 }
 \arguments{
 \item{data_path}{Path to the data directory}
+
+\item{var}{Variable to read (see: \link{auseflux_sanitise_var})}
 }
 \description{
 Ensure that all data exists which is required for this benchmark.

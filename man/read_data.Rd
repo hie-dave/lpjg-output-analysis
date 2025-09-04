@@ -15,23 +15,23 @@ read_data(
 )
 }
 \arguments{
-\item{sources:}{The data sources from which to read (see: \link{sanitise_source}).}
+\item{sources}{The data sources from which to read (see: \link{sanitise_source}).}
 
-\item{vars:}{The variables to be read (see: \link{sanitise_variable}).}
+\item{vars}{The variables to be read (see: \link{sanitise_variable}).}
 
-\item{sites:}{The ozflux sites for which data will be read (see:
+\item{sites}{The ozflux sites for which data will be read (see:
 \link{sanitise_ozflux_sites}).}
 
-\item{layers:}{Names of layers to be read.}
+\item{layers}{Names of layers to be read.}
 
-\item{correct_leaps:}{Never set to TRUE unless you know what you're doing.}
+\item{correct_leaps}{Never set to TRUE unless you know what you're doing.}
 
-\item{show_all_observations:}{If true, all observations will be returned (ie
+\item{show_all_observations}{If true, all observations will be returned (ie
 the predicted data may contain NA values). If
 false, only the observations which have a
 matching prediction will be returned.}
 
-\item{show_all_predictions:}{If true, all predictions will be returned (ie
+\item{show_all_predictions}{If true, all predictions will be returned (ie
 the observed data may contain NA values). If
 false, only the predictions which have a
 matching observation will be returned.}

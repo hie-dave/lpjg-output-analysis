@@ -38,8 +38,8 @@ read_ozflux_sites <- function() {
 #'
 #' Sanitise a single ozflux site name.
 #'
-#' @param site: Name of the site, or a (lon, lat) tuple.
-#' @param repo: Path to an LPJ-Guess DAVE repository. This will be used if the
+#' @param site Name of the site, or a (lon, lat) tuple.
+#' @param repo Path to an LPJ-Guess DAVE repository. This will be used if the
 #' site is not in the standard site list, in which case its coordinates will be
 #' read from the gridlist file.
 #'
@@ -90,12 +90,12 @@ sanitise_ozflux_site <- function(site, repo = NULL) {
 #'
 #' Sanitise the a site specifier.
 #'
-#' @param sites: One or more ozflux site identifiers. If NULL, all sites will be
+#' @param sites One or more ozflux site identifiers. If NULL, all sites will be
 #' used. The sites may be expressed as:
 #' - Site names
 #' - (lon, lat) tuples
 #' - A dataframe with (Lon, Lat, Name) columns, and one row per site
-#' @param repo: Path to an LPJ-Guess DAVE repository. This will be used if the
+#' @param repo Path to an LPJ-Guess DAVE repository. This will be used if the
 #' site is not in the standard site list, in which case its coordinates will be
 #' read from the gridlist file.
 #'
@@ -137,12 +137,12 @@ sanitise_ozflux_sites <- function(sites, repo = NULL) {
 #'
 #' This is an internal helper function and is not intended for external use.
 #'
-#' @param source: May be one of:
-#' - A [[DGVMTools::Source]] object
+#' @param source May be one of:
+#' - A [DGVMTools::Source] object
 #' - Path to an lpj-guess repository
 #' - Path to a directory containing LPJ-Guess output files
 #'
-#' @return Returns a list of [[DGVMTools::Source]] objects.
+#' @return Returns a list of [DGVMTools::Source] objects.
 #' @keywords internal
 #'
 sanitise_source <- function(source) {
@@ -178,7 +178,7 @@ sanitise_source <- function(source) {
 #'
 #' This is an internal helper function and is not intended for external use.
 #'
-#' @param sources: A list of sources parsable by [sanitise_source].
+#' @param sources A list of sources parsable by [sanitise_source].
 #'
 #' @return Returns a list of Sources.
 #' @keywords internal
@@ -268,11 +268,11 @@ readable_name <- function(name) {
 #'
 #' Sanitise a variable provided by the user.
 #'
-#' @param var: May be one of:
-#' - A [[DGVMTools::Quantity]] object (for full control over units/name/filename)
+#' @param var May be one of:
+#' - A [DGVMTools::Quantity] object (for full control over units/name/filename)
 #' - File name without extension of an lpj-guess output (e.g. lai)
 #'
-#' @return Returns a [[DGVMTools::Quantity]] object.
+#' @return Returns a [DGVMTools::Quantity] object.
 #' @keywords internal
 #'
 sanitise_variable <- function(var) {
@@ -300,7 +300,7 @@ sanitise_variable <- function(var) {
 #'
 #' Sanitise a list of variables provided by the user.
 #'
-#' @param vars: List of variables provided by the user (see: [sanitise_variable]).
+#' @param vars List of variables provided by the user (see: [sanitise_variable]).
 #'
 #' @return Returns a list of [DGVMTools::Quantity] objects.
 #' @keywords internal
@@ -319,8 +319,8 @@ sanitise_variables <- function(vars) {
 #' Return the name of the specified ozflux site, or raise an error if the site
 #' name is invalid.
 #'
-#' @param spatial_extent_id: Name of the site specified by the user.
-#' @param sites: List of valid sites.
+#' @param spatial_extent_id Name of the site specified by the user.
+#' @param sites List of valid sites.
 #'
 #' @return Returns the name of the ozflux site.
 #' @keywords internal
@@ -343,7 +343,7 @@ sanitise_spatial_extent_id <- function(spatial_extent_id, sites) {
 #' Return the name of the ozflux site specified by the given spatial extent.
 #' Raises an error if the site name is invalid.
 #'
-#' @param spatial_extent: The spatial extent representing the site, supplied as
+#' @param spatial_extent The spatial extent representing the site, supplied as
 #'                        a raster::extent object or an object from which a
 #'                        raster::extent object can be derived - eg. a Raster*
 #'                        object or another Field object.

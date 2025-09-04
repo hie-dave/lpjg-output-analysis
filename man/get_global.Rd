@@ -7,7 +7,7 @@
 get_global(name)
 }
 \arguments{
-\item{name:}{Name of the variable.}
+\item{name}{Name of the variable.}
 }
 \value{
 Returns the value of the variable

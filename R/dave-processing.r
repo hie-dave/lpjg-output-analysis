@@ -178,17 +178,17 @@ get_obs_layer <- function(quant) {
 #'
 #' Read data for the specified variable.
 #'
-#' @param sources: The data sources from which to read (see: [sanitise_source]).
-#' @param vars: The variables to be read (see: [sanitise_variable]).
-#' @param sites: The ozflux sites for which data will be read (see:
+#' @param sources The data sources from which to read (see: [sanitise_source]).
+#' @param vars The variables to be read (see: [sanitise_variable]).
+#' @param sites The ozflux sites for which data will be read (see:
 #'               [sanitise_ozflux_sites]).
-#' @param layers: Names of layers to be read.
-#' @param correct_leaps: Never set to TRUE unless you know what you're doing.
-#' @param show_all_observations: If true, all observations will be returned (ie
+#' @param layers Names of layers to be read.
+#' @param correct_leaps Never set to TRUE unless you know what you're doing.
+#' @param show_all_observations If true, all observations will be returned (ie
 #'                               the predicted data may contain NA values). If
 #'                               false, only the observations which have a
 #'                               matching prediction will be returned.
-#' @param show_all_predictions: If true, all predictions will be returned (ie
+#' @param show_all_predictions If true, all predictions will be returned (ie
 #'                              the observed data may contain NA values). If
 #'                              false, only the predictions which have a
 #'                              matching observation will be returned.
@@ -362,10 +362,10 @@ read_data <- function(sources
 #'
 #' Extract data for the specified gridcell.
 #'
-#' @param data: The input data as obtained from [read_data]
-#' @param lat: Latitude of the gridcell
-#' @param lon: Longitude of the gridcell.
-#' @param site_name: Name of the ozflux site (optional).
+#' @param data The input data as obtained from [read_data]
+#' @param lat Latitude of the gridcell
+#' @param lon Longitude of the gridcell.
+#' @param site_name Name of the ozflux site (optional).
 #'
 #' @return Returns a [DGVMTools::Source] object containing data only for the
 #' specified location.

@@ -8,15 +8,15 @@ objects.}
 sanitise_source(source)
 }
 \arguments{
-\item{source:}{May be one of:
+\item{source}{May be one of:
 \itemize{
-\item A [\link[DGVMTools:Source]{DGVMTools::Source}] object
+\item A \link[DGVMTools:Source]{DGVMTools::Source} object
 \item Path to an lpj-guess repository
 \item Path to a directory containing LPJ-Guess output files
 }}
 }
 \value{
-Returns a list of [\link[DGVMTools:Source]{DGVMTools::Source}] objects.
+Returns a list of \link[DGVMTools:Source]{DGVMTools::Source} objects.
 }
 \description{
 This is an internal helper function and is not intended for external use.

@@ -4,8 +4,8 @@
 #'
 #' Set the package-internal global variable with the specified name.
 #'
-#' @param name: Name of the variable.
-#' @param value: Value of the variable.
+#' @param name Name of the variable.
+#' @param value Value of the variable.
 #'
 #' @keywords internal
 #'
@@ -16,7 +16,7 @@ set_global <- function(name, value) {
 #'
 #' Get the package-internal global variable with the specified name.
 #'
-#' @param name: Name of the variable.
+#' @param name Name of the variable.
 #'
 #' @return Returns the value of the variable
 #'

@@ -172,17 +172,11 @@ get_reader <- function(id) {
 #' @return A character vector of reader IDs
 #' @export
 #'
-list_readers <- function() {
+get_reader_names <- function() {
     readers_env <- get_global("observation_readers")
     return(names(readers_env))
 }
 
-#'
-#' Get all registered observation readers.
-#'
-#' @return List of ObservationReader objects.
-#' @export
-#'
 #'
 #' Clear the observation reader registry
 #'
@@ -192,6 +186,12 @@ clear_observation_registry <- function() {
     set_global("observation_readers", new.env(parent = emptyenv()))
 }
 
+#'
+#' Get all registered observation readers.
+#'
+#' @return List of ObservationReader objects.
+#' @export
+#'
 list_all_readers <- function() {
     readers_env <- get_global("observation_readers")
     return(as.list(readers_env))

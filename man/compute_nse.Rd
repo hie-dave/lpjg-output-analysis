@@ -7,9 +7,9 @@
 compute_nse(x, y)
 }
 \arguments{
-\item{x:}{Observations}
+\item{x}{Observations}
 
-\item{y:}{Predictions}
+\item{y}{Predictions}
 }
 \description{
 This is one minus the ratio of the error variance in the predictions to the

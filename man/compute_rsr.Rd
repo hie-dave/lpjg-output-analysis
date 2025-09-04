@@ -7,9 +7,9 @@
 compute_rsr(x, y)
 }
 \arguments{
-\item{x:}{Observations}
+\item{x}{Observations}
 
-\item{y:}{Predictions}
+\item{y}{Predictions}
 }
 \description{
 Compute ratio of RMSE to standard deviation of observations (0 - Inf).

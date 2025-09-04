@@ -17,8 +17,8 @@
 #' @param use_plotly iff TRUE, graphs will be plotted using [plotly]
 #' @param common_yaxis iff TRUE, all plots in the panel will have the same y-axis
 #' range. No effect if only 1 site is being plotted.
-#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
-#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
+#' @param show_all_observations If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #'
 #' @return Returns either a single [ggplot2::ggplot] object (if separate is FALSE),
 #' or a list of [ggplot2::ggplot] objects (if separate is TRUE). If use_plotly
@@ -103,8 +103,8 @@ ozflux_plot <- function(
 #' @param use_plotly iff TRUE, generate [plotly] outputs, FALSE to use [ggplot2::ggplot]
 #' @param common_yaxis iff TRUE, use the same y-axis scales for all sites. FALSE
 #' otherwise
-#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
-#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
+#' @param show_all_observations If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
 #'
 #' @return Returns a single [ggplot2::ggplot] object if plotting one site, otherwise returns
 #' a list of [ggplot2::ggplot] objects of the same length as the number of sites to be
@@ -175,7 +175,7 @@ ozflux_panel <- function(
 #' file).
 #'
 #' @param sources Data sources to be plotted (see: [sanitise_source])
-#' @param vars The single variable to be plotted (see: [sanitise_variable])
+#' @param var The single variable to be plotted (see: [sanitise_variable])
 #' @param sites Sites to be plotted (see: [sanitise_ozflux_sites])
 #' @param layers The layers to be plotted. E.g. `paste0("sw_", 0:14)`
 #' @param title The desired panel titles
@@ -183,8 +183,10 @@ ozflux_panel <- function(
 #' draw all layers in a single plot
 #' @param use_plotly iff TRUE, generate [plotly] outputs, FALSE to use [ggplot2::ggplot]
 #' @param common_yaxis iff TRUE, use a common y-axis for all plots. False otherwise
-#' @param show_all_observations: If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
-#' @param show_all_predictions: If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
+#' @param show_all_observations If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
+#' @param show_all_predictions If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
+#' @param combine_sites iff TRUE, combine all sites into a single plot. False otherwise
+#' @param allow_points iff TRUE, allow points to be plotted for sparse datasets. FALSE will ensure that all data is plotted using lines.
 #'
 #' @return Returns a list of [ggplot2::ggplot] objects. If use_plotly is TRUE,
 #' returns [plotly] objects instead.

@@ -21,29 +21,35 @@ ozflux_benchmarks(
 )
 }
 \arguments{
-\item{use_plotly:}{Iff true, plots will be rendered using plotly. Note that
+\item{sources}{Data sources to be plotted (see: \link{sanitise_source})}
+
+\item{source_descriptions}{Descriptions of the data sources (see: \link{sanitise_source})}
+
+\item{use_plotly}{Iff true, plots will be rendered using plotly. Note that
 plotly plots are only interactive when rendering to HTML; therefore, we only
 turn on plotly when rendering to HTML.This can of course be overriden (e.g.
 for debugging).}
 
-\item{combined_graph:}{Iff true, plots will be rendered in 2x2 panels for
+\item{text_multiplier}{Multiplier for text size. Decrease for smaller text.}
+
+\item{combined_graph}{Iff true, plots will be rendered in 2x2 panels for
 each variable for each site.}
 
-\item{max_title:}{Maximum number of nested titles.}
+\item{max_title}{Maximum number of nested titles.}
 
-\item{marker_size:}{Marker size. Decrease for smaller markers.}
+\item{marker_size}{Marker size. Decrease for smaller markers.}
 
-\item{sites:}{List of names of ozflux sites to be plotted. If NULL, all ozflux sites will be processed.}
+\item{sites}{List of names of ozflux sites to be plotted. If NULL, all ozflux sites will be processed.}
 
-\item{vars:}{List of names of output variables to be plotted. If NULL, a standard set of outputs will be plotted. This should be, for example, \code{c("dave_lai", "dave_resp")}.}
+\item{vars}{List of names of output variables to be plotted. If NULL, a standard set of outputs will be plotted. This should be, for example, \code{c("dave_lai", "dave_resp")}.}
 
-\item{widget_dir:}{Directory to which plotly plots will be saved.}
+\item{widget_dir}{Directory to which plotly plots will be saved.}
 
-\item{aspect_ratio:}{Aspect ratio (width:height) used for plotly plots.}
+\item{aspect_ratio}{Aspect ratio (width:height) used for plotly plots.}
 
-\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+\item{show_all_observations}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
 
-\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
+\item{show_all_predictions}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 }
 \value{
 Returns a list of HTML tags if use_plotly is TRUE. Otherwise all

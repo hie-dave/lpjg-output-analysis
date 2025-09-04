@@ -7,14 +7,14 @@
 sanitise_variable(var)
 }
 \arguments{
-\item{var:}{May be one of:
+\item{var}{May be one of:
 \itemize{
-\item A [\link[DGVMTools:Quantity]{DGVMTools::Quantity}] object (for full control over units/name/filename)
+\item A \link[DGVMTools:Quantity]{DGVMTools::Quantity} object (for full control over units/name/filename)
 \item File name without extension of an lpj-guess output (e.g. lai)
 }}
 }
 \value{
-Returns a [\link[DGVMTools:Quantity]{DGVMTools::Quantity}] object.
+Returns a \link[DGVMTools:Quantity]{DGVMTools::Quantity} object.
 }
 \description{
 Sanitise a variable provided by the user.

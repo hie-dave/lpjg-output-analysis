@@ -7,7 +7,7 @@
 sanitise_variables(vars)
 }
 \arguments{
-\item{vars:}{List of variables provided by the user (see: \link{sanitise_variable}).}
+\item{vars}{List of variables provided by the user (see: \link{sanitise_variable}).}
 }
 \value{
 Returns a list of \link[DGVMTools:Quantity]{DGVMTools::Quantity} objects.

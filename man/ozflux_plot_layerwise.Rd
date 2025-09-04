@@ -22,6 +22,8 @@ ozflux_plot_layerwise(
 \arguments{
 \item{sources}{Data sources to be plotted (see: \link{sanitise_source})}
 
+\item{var}{The single variable to be plotted (see: \link{sanitise_variable})}
+
 \item{sites}{Sites to be plotted (see: \link{sanitise_ozflux_sites})}
 
 \item{layers}{The layers to be plotted. E.g. \code{paste0("sw_", 0:14)}}
@@ -31,15 +33,17 @@ ozflux_plot_layerwise(
 \item{separate_plots}{iff TRUE, draw each layer in a separate plot. FALSE to
 draw all layers in a single plot}
 
+\item{combine_sites}{iff TRUE, combine all sites into a single plot. False otherwise}
+
 \item{use_plotly}{iff TRUE, generate \link{plotly} outputs, FALSE to use \link[ggplot2:ggplot]{ggplot2::ggplot}}
 
 \item{common_yaxis}{iff TRUE, use a common y-axis for all plots. False otherwise}
 
-\item{vars}{The single variable to be plotted (see: \link{sanitise_variable})}
+\item{show_all_observations}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
 
-\item{show_all_observations:}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
+\item{show_all_predictions}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 
-\item{show_all_predictions:}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
+\item{allow_points}{iff TRUE, allow points to be plotted for sparse datasets. FALSE will ensure that all data is plotted using lines.}
 }
 \value{
 Returns a list of \link[ggplot2:ggplot]{ggplot2::ggplot} objects. If use_plotly is TRUE,

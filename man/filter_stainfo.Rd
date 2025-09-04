@@ -7,7 +7,7 @@
 filter_stainfo(target_stainfo)
 }
 \arguments{
-\item{target.STAInfo}{An STAInfo object defining the spatial-temporal-annual extent over which we want the data}
+\item{target_stainfo}{An STAInfo object defining the spatial-temporal-annual extent over which we want the data}
 }
 \value{
 A character vector of site names

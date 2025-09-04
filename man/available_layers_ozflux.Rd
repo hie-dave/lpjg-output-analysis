@@ -7,11 +7,11 @@
 available_layers_ozflux(source, quant, sites = NULL)
 }
 \arguments{
-\item{source:}{An OZFLUX source object.}
+\item{source}{An OZFLUX source object.}
 
-\item{quant:}{The quantity (ie LPJ-Guess output) to query.}
+\item{quant}{The quantity (ie LPJ-Guess output) to query.}
 
-\item{sites:}{Optional list of site names to check. NULL means all sites.}
+\item{sites}{Optional list of site names to check. NULL means all sites.}
 }
 \value{
 Returns a list of all layers (ie plottable columns) available for

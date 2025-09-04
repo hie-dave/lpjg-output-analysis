@@ -8,14 +8,15 @@ get_field_csv(
   source,
   quant,
   layers = NULL,
-  target.STAInfo,
-  file.name,
-  verbose = FALSE,
+  target.STAInfo = NULL,
+  file.name = NULL,
   lat_col = "Lat",
   lon_col = "Lon",
   site_col = NULL,
   time_col = "date",
-  sites = NULL
+  sites = NULL,
+  detect_ozflux_site = !is.null(site_col),
+  date_fmt
 )
 }
 \arguments{
@@ -26,9 +27,9 @@ get_field_csv(
 \item{layers}{A character string (or a vector of character strings) specifying which variables from the CSV file are to be read.
 NULL (default) means read all.}
 
-\item{file.name}{Character string holding the name of the file.  This can be left blank, in which case the file name is automatically generated}
+\item{target.STAInfo}{An STAInfo object defining the spatial-temporal-annual extent over which we want the data}
 
-\item{verbose}{A logical, set to true to give progress/debug information}
+\item{file.name}{Character string holding the name of the file.  This can be left blank, in which case the file name is automatically generated}
 
 \item{lat_col}{The name of the column containing latitude data}
 
@@ -40,7 +41,9 @@ NULL (default) means read all.}
 
 \item{sites}{A character vector of site names to read. If NULL, read all sites.}
 
-\item{target.sta.info}{An STAInfo object defining the spatial-temporal-annual extent over which we want the data}
+\item{detect_ozflux_site}{Whether to detect OzFlux site names in the data. If TRUE, will lookup site name based on either site column or longitude/latitude. This will normally be FALSE when not filtering by site, but can be manually be set to TRUE if the user knows the data is site-level data and that the site name can therefore be inferred.}
+
+\item{date_fmt}{The format of the date column. E.g. \%Y-\%m-\%d.}
 }
 \value{
 A list containing firstly the data.table containing the data, and secondly the STAInfo for the data that we have

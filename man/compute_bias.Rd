@@ -7,9 +7,9 @@
 compute_bias(observations, predictions)
 }
 \arguments{
-\item{observations:}{Observed data.}
+\item{observations}{Observed data.}
 
-\item{predictions:}{Predicted data.}
+\item{predictions}{Predicted data.}
 }
 \description{
 Compute bias of predictions to observations.

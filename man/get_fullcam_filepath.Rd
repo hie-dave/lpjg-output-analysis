@@ -7,10 +7,10 @@
 get_fullcam_filepath(data_directory, highres = FALSE)
 }
 \arguments{
+\item{data_directory}{Base path to data files.}
+
 \item{highres}{True to read the high-resolution (0.0025°) dataset. False to
 read the low-resolution (1°) dataset.}
-
-\item{data_path}{Base path to data files.}
 }
 \value{
 Returns a string containing the expected path to the fullcam AGB data

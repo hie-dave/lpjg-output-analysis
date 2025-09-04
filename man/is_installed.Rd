@@ -7,7 +7,7 @@
 is_installed(pkg)
 }
 \arguments{
-\item{pkg:}{Name of the package.}
+\item{pkg}{Name of the package.}
 }
 \value{
 Returns TRUE if the package is installed, otherwise FALSE.

@@ -7,7 +7,7 @@
 sanitise_spatial_extent(spatial_extent, sites)
 }
 \arguments{
-\item{spatial_extent:}{The spatial extent representing the site, supplied as
+\item{spatial_extent}{The spatial extent representing the site, supplied as
 a raster::extent object or an object from which a
 raster::extent object can be derived - eg. a Raster*
 object or another Field object.}

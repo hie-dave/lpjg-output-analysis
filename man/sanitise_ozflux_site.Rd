@@ -7,9 +7,9 @@
 sanitise_ozflux_site(site, repo = NULL)
 }
 \arguments{
-\item{site:}{Name of the site, or a (lon, lat) tuple.}
+\item{site}{Name of the site, or a (lon, lat) tuple.}
 
-\item{repo:}{Path to an LPJ-Guess DAVE repository. This will be used if the
+\item{repo}{Path to an LPJ-Guess DAVE repository. This will be used if the
 site is not in the standard site list, in which case its coordinates will be
 read from the gridlist file.}
 }

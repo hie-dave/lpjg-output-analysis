@@ -111,7 +111,7 @@ benchmark_agb <- function(params, settings, tables) {
 #'
 #' Read Fullcam potential AGB data from the specified data path.
 #'
-#' @param data_path Base path to data files.
+#' @param data_directory Base path to data files.
 #' @param highres True to read the high-resolution (0.0025°) dataset. False to
 #'                read the low-resolution (1°) dataset.
 #'
@@ -135,7 +135,7 @@ read_fullcam <- function(data_directory, highres = FALSE) {
 #'
 #' Get the path to the fullcam data file from the specified base data path.
 #'
-#' @param data_path Base path to data files.
+#' @param data_directory Base path to data files.
 #' @param highres True to read the high-resolution (0.0025°) dataset. False to
 #'                read the low-resolution (1°) dataset.
 #'
@@ -155,7 +155,7 @@ get_fullcam_filepath <- function(data_directory, highres = FALSE) {
 #' Ensure that the required files for the Above-Ground Biomass benchmark exist
 #' in the given data directory.
 #'
-#' @param data_path Base path to data files.
+#' @param data_directory Base path to data files.
 #' @param highres True to read the high-resolution (0.0025°) dataset. False to
 #'                read the low-resolution (1°) dataset.
 #' @name validate_agb
