@@ -108,7 +108,7 @@ test_that("get_field_csv reads and filters data correctly", {
         date_fmt = "%Y-%m-%d"
     )
     expect_equal(nrow(field_all@data), 4)
-    expect_equal(colnames(field_all@data), c("date", "Lat", "Lon", "GPP", "NPP"))
+    expect_equal(colnames(field_all@data), c("Lon", "Lat", "Year", "Day", "GPP", "NPP"))
 
     # --- Test Case 2: Filter by layers ---
     field_layers <- get_field_csv(
@@ -119,7 +119,7 @@ test_that("get_field_csv reads and filters data correctly", {
         date_fmt = "%Y-%m-%d"
     )
     # Expect time, site identifiers, and the selected layer
-    expect_equal(colnames(field_layers@data), c("date", "Lat", "Lon", "GPP"))
+    expect_equal(colnames(field_layers@data), c("Lon", "Lat", "Year", "Day", "GPP"))
 
     # --- Test Case 3: Filter by sites ---
     all_sites <- data.table::data.table(Name = c("SiteA", "SiteB"), Lat = c(-35.0, -36.0), Lon = c(148.0, 149.0))
@@ -159,7 +159,7 @@ test_that("get_field_csv reads and filters data correctly", {
         layers = c("GrossPrimaryProductivity" = "GPP"),
         date_fmt = "%Y-%m-%d"
     )
-    expect_equal(colnames(field_renamed@data), c("date", "Lat", "Lon", "GrossPrimaryProductivity"))
+    expect_equal(colnames(field_renamed@data), c("Lon", "Lat", "Year", "Day", "GrossPrimaryProductivity"))
 })
 
 test_that("get_file_path constructs correct path", {

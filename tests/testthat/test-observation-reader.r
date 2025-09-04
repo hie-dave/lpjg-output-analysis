@@ -73,7 +73,7 @@ test_that("create_csv_reader creates a functional reader", {
     mock_field <- new("Field", id = "mock_field")
 
     testthat::local_mocked_bindings(
-        get_field_csv = function(source, quant, layers, target.STAInfo, file.name, lat_col, lon_col, site_col, time_col, date_fmt, sites) {
+        get_field_csv = function(source, quant, layers, target.STAInfo, file.name, lat_col, lon_col, site_col, time_col, date_fmt, sites, detect_ozflux_site, ...) {
             # Check that the arguments passed from read_func are correct
             expect_equal(source@id, "test_csv")
             expect_equal(quant@id, "test_quant")
