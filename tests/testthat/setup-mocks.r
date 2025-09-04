@@ -5,6 +5,7 @@
 # require them. This avoids a hard dependency on DGVMTools being perfectly
 # installed and configured just to run unit tests on functions that use its
 # objects.
+
 setClass("Source", slots = list(dir = "character",
                                 id = "character",
                                 name = "character"))
@@ -20,6 +21,7 @@ setClass("STAInfo", slots = list(spatial.extent.id = "character",
                                  year.aggregate.method = "character",
                                  first.year = "numeric",
                                  last.year = "numeric",
+                                 spatial.extent = "character",
                                  spatial.aggregate.method = "character",
                                  subannual.resolution = "character",
                                  subannual.aggregate.method = "character",
@@ -28,6 +30,7 @@ setClass("STAInfo", slots = list(spatial.extent.id = "character",
                           year.aggregate.method = "none",
                           first.year = NA_real_,
                           last.year = NA_real_,
+                          spatial.extent = NA_character_,
                           spatial.aggregate.method = "none",
                           subannual.resolution = "none",
                           subannual.aggregate.method = "none"))
