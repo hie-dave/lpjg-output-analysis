@@ -87,7 +87,7 @@
 			"loadPackages": [
 				".",
 				"../../dgvmtools",
-				"../../ncdf4"
+				// "../../ncdf4"
 			]
 		},
 		{

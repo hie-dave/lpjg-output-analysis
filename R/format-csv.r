@@ -179,6 +179,14 @@ convert_to_date <- function(date_strings, date_fmt) {
     return(dates)
 }
 
+get_lat <- function(site_name, all_sites) {
+    return(all_sites$Lat[all_sites$Name == site_name])
+}
+
+get_lon <- function(site_name, all_sites) {
+    return(all_sites$Lon[all_sites$Name == site_name])
+}
+
 #'
 #' Get a Field for CSV
 #'
@@ -196,6 +204,7 @@ convert_to_date <- function(date_strings, date_fmt) {
 #' @param site_col The name of the column containing site names. Must specify this OR lat_col and lon_col.
 #' @param time_col The name of the column containing time data
 #' @param sites A character vector of site names to read. If NULL, read all sites.
+#' @param detect_ozflux_site Whether to detect OzFlux site names in the data. If TRUE, will lookup site name based on either site column or longitude/latitude. This will normally be FALSE when not filtering by site, but can be manually be set to TRUE if the user knows the data is site-level data and that the site name can therefore be inferred.
 #' @param date_fmt The format of the date column. E.g. %Y-%m-%d.
 #' @return A list containing firstly the data.table containing the data, and secondly the STAInfo for the data that we have
 #' @keywords internal
@@ -205,11 +214,12 @@ get_field_csv <- function(source,
                           layers = NULL,
                           target.STAInfo = NULL,
                           file.name = NULL,
-                          lat_col = "Lat",
-                          lon_col = "Lon",
+                          lat_col = ifelse(is.null(site_col), "Lat", NULL),
+                          lon_col = ifelse(is.null(site_col), "Lon", NULL),
                           site_col = NULL,
                           time_col = "date",
                           sites = NULL,
+                          detect_ozflux_site = !is.null(site_col),
                           date_fmt) {
 
     quant <- sanitise_variable(quant)
@@ -284,32 +294,90 @@ get_field_csv <- function(source,
         log_diag("[get_field_csv] Found sites: ", site_names)
     }
 
-    if (!is.null(sites)) {
+    if (!is.null(sites) || detect_ozflux_site) {
         site_names <- paste0(sites, collapse = ", ")
         log_diag("[get_field_csv] Filtering by sites: ", site_names)
         n <- nrow(dt)
 
+        all_sites <- read_ozflux_sites()
         if (is.null(site_col)) {
-            site_col <- "site"
-            all_sites <- read_ozflux_sites()
+            site_col <- "Site"
             dt[, (site_col) := get_site_names_by_coord(get(lat_col), get(lon_col), all_sites)]
+        } else if (!(site_col %in% colnames(dt))) {
+            log_error("Site column ", site_col, " not found in data file ", file_path)
+        } else {
+            # Data contains a site column. We should create Lon/Lat columns.
+            lat_col <- "Lat"
+            lon_col <- "Lon"
+            idx <- match(dt[[site_col]], all_sites$Name)
+            dt[, `:=`(
+                Lat = all_sites$Lat[idx],
+                Lon = all_sites$Lon[idx]
+            )]
         }
 
         # Now we can filter by site.
-        dt <- dt[get(site_col) %in% sites]
-        log_diag("[get_field_csv] Filtered from ", n, " to ", nrow(dt), " rows")
-        log_diag("[get_field_csv] Address after filter_sites: ", data.table::address(dt))
+        if (!is.null(sites)) {
+            dt <- dt[get(site_col) %in% sites]
+            log_diag("[get_field_csv] Filtered from ", n, " to ", nrow(dt), " rows")
+            log_diag("[get_field_csv] Address after filter_sites: ", data.table::address(dt))
+        }
     }
 
+    # Create Year column.
+    dt[, Year := as.integer(format(get(time_col), "%Y"))]
+
+    # Detect temporal resolution.
+    site_col_effective <- if (!is.null(site_col) && site_col %in% names(dt)) site_col else NULL
+
+    # Count records per site-year
+    if (is.null(site_col_effective)) {
+        per_site_year <- dt[, .N, by = .(Year)]
+    } else {
+        per_site_year <- dt[, .N, by = .(Year, site = get(site_col_effective))]
+    }
+
+    temporal_resolution <- "Year"
+    is_subannual <- any(per_site_year$N > 1, na.rm = TRUE)
+    if (is_subannual) {
+        log_diag("Data is not annual. Assuming subannual resolution.")
+
+        # Create Day (of year) column. Note: %j is 1-366.
+        dt[, Day := as.integer(format(get(time_col), "%j"))]
+        temporal_resolution <- "Day"
+    }
+
+    # Remove date column.
+    dt[, (time_col) := NULL]
+
+    # Rename Lat/Lon columns to their expected names.
+    base_cols <- c()
+    if (lat_col != "Lat") {
+        setnames(dt, old = lat_col, new = "Lat")
+    }
+    if (lon_col != "Lon") {
+        setnames(dt, old = lon_col, new = "Lon")
+    }
+
+    # Rename Site to its expected name.
+    if (!is.null(site_col_effective) && site_col_effective != "Site") {
+        setnames(dt, old = site_col_effective, new = "Site")
+    }
+
+    # Reorder columns to: Lon, Lat, Year, Day (if present), then the rest.
+    base_cols <- c("Lon", "Lat", "Year")
+    if ("Day" %in% names(dt)) base_cols <- c(base_cols, "Day")
+    if (!is.null(site_col_effective)) base_cols <- c(base_cols, "Site")
+    extra_cols <- setdiff(names(dt), base_cols)
+    data.table::setcolorder(dt, c(base_cols, extra_cols))
+
     if (is.null(target.STAInfo)) {
-        first_year <- as.integer(format(min(dt[[time_col]]), "%Y"))
-        last_year <- as.integer(format(max(dt[[time_col]]), "%Y"))
         target.STAInfo <- new("STAInfo",
-                              first.year = first_year,
-                              last.year = last_year,
+                              first.year = min(dt[["Year"]]),
+                              last.year = max(dt[["Year"]]),
                               year.aggregate.method = "none",
-                              subannual.resolution = "none",
-                              subannual.original = "none")
+                              subannual.resolution = temporal_resolution,
+                              subannual.original = temporal_resolution)
     }
 
     field_id <- DGVMTools::makeFieldID(

@@ -36,7 +36,7 @@ trim_dave <- function(text) {
 get_observed_source <- function() {
     obs_dir <- system.file("data", package = get_global("dave_pkgname"))
     log_debug("Loading observed source from dir: '", obs_dir, "'...")
-    return(DGVMTools::defineSource("obs", "Ozflux", format = DGVMTools::NetCDF
+    return(DGVMTools::defineSource(get_global("obs_lyr"), "Ozflux", format = DGVMTools::NetCDF
                                    , dir = obs_dir))
 }
 
@@ -239,6 +239,7 @@ read_data <- function(sources
         }
 
         # Find readers that support this variable using the registry
+        log_diag("Searching for readers which contain variable ", var_id)
         readers <- find_readers_for_var(var_id)
 
         if (length(readers) > 0) {

@@ -202,9 +202,9 @@ list_all_readers <- function() {
 #'
 #' @return An ObservationReader object for the default NetCDF file.
 #'
-#' @export
+#' @keywords internal
 #'
-create_netcdf_reader <- function() {
+create_flux_data_reader <- function() {
     # Get the path to the netcdf file
     obs_dir <- system.file("data", package = get_global("dave_pkgname"))
     file_path <- file.path(obs_dir, get_global("obs_file"))
@@ -245,6 +245,17 @@ create_netcdf_reader <- function() {
                                      layers = var_obj@id,
                                      file.name = get_global("obs_file"),
                                      verbose = verbose)
+
+        # Filter by sites if specified, as DGVMTools can't easily do this.
+        dt <- field@data
+        if (!is.null(sites)) {
+            all_sites <- read_ozflux_sites()
+            dt[, Site := get_site_names_by_coord(Lat, Lon, all_sites)]
+            dt <- dt[Site %in% sites]
+            dt[, Site := NULL]
+        }
+        field@data <- dt
+
         return(field)
     }
 
@@ -262,10 +273,18 @@ create_netcdf_reader <- function() {
 #'
 #' Create a CSV file reader.
 #'
+#' @param id Character. ID of the reader.
+#' @param name Character. Name of the reader.
 #' @param file_path Character. Path to the CSV file.
 #' @param quant Character vector. The quantity encapsulated by this file.
 #' @param layers Character vector. List of layers to read. If this is a named
 #' vector, the names are used as the variable IDs.
+#' @param lat_col Character. Name of the column containing latitude data.
+#' @param lon_col Character. Name of the column containing longitude data.
+#' @param site_col Character. Name of the column containing site names.
+#' @param time_col Character. Name of the column containing time data.
+#' @param infer_site Logical. Whether to infer site names from latitude and longitude or site_col.
+#' @param time_fmt Character. The format of the time column. E.g. %Y-%m-%d.
 #'
 #' @return An ObservationReader object.
 #' @export
@@ -279,6 +298,7 @@ create_csv_reader <- function(id,
                               lon_col = "Lon",
                               site_col = NULL,
                               time_col = "date",
+                              infer_site = FALSE,
                               time_fmt) {
     src <- defineSource(
         id = id,
@@ -292,7 +312,7 @@ create_csv_reader <- function(id,
         file_path = file_path,
         available_quantities = function() quant,
         available_layers = function() layers,
-        read_func = function(var_id, ...) {
+        read_func = function(var_id, sites = NULL, ...) {
             return(get_field_csv(
                 src,
                 sanitise_variable(var_id),
@@ -304,10 +324,73 @@ create_csv_reader <- function(id,
                 site_col = site_col,
                 time_col = time_col,
                 date_fmt = time_fmt,
+                sites = sites,
+                detect_ozflux_site = infer_site || !is.null(sites),
                 ...
             ))
         }
     ))
+}
+
+create_modis_reader <- function() {
+    obs_dir <- system.file("data", package = get_global("dave_pkgname"))
+    file_path <- file.path(obs_dir, "OzFlux-sites-LAI-MYD15A2H-006-results.csv.gz")
+    return(create_csv_reader(
+        "modis",
+        "MODIS LAI",
+        file_path,
+        "lai",
+        layers = c("lai" = "MYD15A2H_006_Lai_500m"),
+        lat_col = "Latitude",
+        lon_col = "Longitude",
+        time_col = "Date",
+        time_fmt = "%d/%m/%Y",
+        infer_site = TRUE
+    ))
+}
+
+create_smips_reader <- function(basename, var, model_variable) {
+    obs_dir <- system.file("data", package = get_global("dave_pkgname"))
+    filename <- paste0(basename, ".csv.gz")
+    file_path <- file.path(obs_dir, "smips", filename)
+    layers <- c(var)
+    names(layers) <- model_variable
+    return(create_csv_reader(
+        paste0("smips-", var),
+        paste("SMIPS", var),
+        file_path,
+        model_variable,
+        layers = layers,
+        site_col = "site",
+        lat_col = NULL,
+        lon_col = NULL,
+        time_col = "date",
+        time_fmt = "%Y-%m-%d",
+        infer_site = TRUE
+    ))
+}
+
+#'
+#' Populate the observation reader registry with a default set of readers.
+#'
+#' @keywords internal
+#'
+populate_registry <- function() {
+
+    # Register the default NetCDF reader for the flux data.
+    register_reader(create_flux_data_reader())
+
+    # MODIS LAI.
+    register_reader(create_modis_reader())
+
+    # SMIPS swindex.
+    register_reader(create_smips_reader("swindex", "SMindex", "wcont"))
+
+    # SMIPS sw (aka totalbucket).
+    register_reader(create_smips_reader("sw", "totalbucket", "swmm"))
+
+    # SMIPS ET.
+    register_reader(create_smips_reader("et", "ETa", "aet"))
 }
 
 # Initialize the registry and register the default readers on package load.
@@ -317,6 +400,5 @@ create_csv_reader <- function(id,
         set_global("observation_readers", new.env(parent = emptyenv()))
     }
 
-    # Register the default NetCDF reader
-    register_reader(create_netcdf_reader())
+    populate_registry()
 }

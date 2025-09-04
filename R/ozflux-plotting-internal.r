@@ -441,7 +441,12 @@ plot_timeseries <- function(
     }
 
     points <- FALSE
-    lyrs <- ifelse(is.null(layers), names(gc), layers)
+    non_data_layers <- c("Site")
+    if (is.null(layers)) {
+        lyrs <- setdiff(names(gc), non_data_layers)
+    } else {
+        lyrs <- layers
+    }
     if (allow_points) {
         POINTS_THRESHOLD <- 30
         for (lyr in lyrs) {
@@ -452,8 +457,7 @@ plot_timeseries <- function(
             }
         }
     }
-    lyrs <- ifelse(is.null(layers), names(gc), layers)
-    return(plot_temporal(gc, layers = layers, cols = colours
+    return(plot_temporal(gc, layers = lyrs, cols = colours
         , text.multiplier = text_multiplier, text.expression = FALSE
         , y.lim = ylim, x.label = xlab, y.label = ylab, subtitle = NULL
         , title = NULL))
@@ -475,7 +479,8 @@ plot_pvo <- function(
     # plt <- DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
     #     , layer.y = predicted_name, text.multiplier = text_multiplier)
     obs_name <- get_global("obs_lyr")
-    ynames <- setdiff(names(gc), obs_name)
+    ignored_names <- c("Site", obs_name)
+    ynames <- setdiff(names(gc), ignored_names)
 
     # alpha <- 1
     data <- gc@data
@@ -592,7 +597,8 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
 
     # Compute (and store) statistics).
     obs_lyr <- get_global("obs_lyr")
-    names <- names(gc)
+    ignored_names <- c("Site", obs_lyr)
+    names <- setdiff(names(gc), ignored_names)
     if (length(names) == 0) {
         log_error("Unable to plot: data contains no layers")
     }
@@ -603,20 +609,18 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     rsr <- list()
     bias <- list()
     # Compute stats for each source.
-    for (name in names(gc)) {
-        if (name != obs_lyr) {
-            df <- gc@data
-            df <- df[!is.na(df[[obs_lyr]]) & !is.na(df[[name]]), ]
-            obs <- df[[obs_lyr]]
-            pred <- df[[name]]
-            lyr_name <- get_stats_lyr_name(gc@quant@id, name)
+    for (name in names) {
+        df <- gc@data
+        df <- df[!is.na(df[[obs_lyr]]) & !is.na(df[[name]]), ]
+        obs <- df[[obs_lyr]]
+        pred <- df[[name]]
+        lyr_name <- get_stats_lyr_name(gc@quant@id, name)
 
-            r2[[lyr_name]] <- if (length(obs) > 0) compute_r2(obs, pred) else NA
-            rmse[[lyr_name]] <- if (length(obs) > 0) compute_rmse(obs, pred) else NA
-            nse[[lyr_name]] <- if (length(obs) > 0) compute_nse(obs, pred) else NA
-            rsr[[lyr_name]] <- if (length(obs) > 0) compute_rsr(obs, pred) else NA
-            bias[[lyr_name]] <- if (length(obs) > 0) compute_bias(obs, pred) else NA
-        }
+        r2[[lyr_name]] <- if (length(obs) > 0) compute_r2(obs, pred) else NA
+        rmse[[lyr_name]] <- if (length(obs) > 0) compute_rmse(obs, pred) else NA
+        nse[[lyr_name]] <- if (length(obs) > 0) compute_nse(obs, pred) else NA
+        rsr[[lyr_name]] <- if (length(obs) > 0) compute_rsr(obs, pred) else NA
+        bias[[lyr_name]] <- if (length(obs) > 0) compute_bias(obs, pred) else NA
     }
 
     # Apparently a variable name in the j value will be interpreted literally
@@ -625,7 +629,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     if (is.null(ylim)) {
         ymin <- min(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
         ymax <- max(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
-        for (lyr_name in names(gc)) {
+        for (lyr_name in names) {
             v <- gc@data[which(!is.na(gc@data[[lyr_name]])), ][[lyr_name]]
             ymin <- min(ymin, min(v))
             ymax <- max(ymax, max(v))
