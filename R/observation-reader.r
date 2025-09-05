@@ -370,6 +370,26 @@ create_smips_reader <- function(basename, var, model_variable) {
     ))
 }
 
+create_awra_reader <- function(var, name, model_variable, obs_dir) {
+    filename <- paste0(var, ".csv.gz")
+    file_path <- file.path(obs_dir, filename)
+    layers <- c(var)
+    names(layers) <- model_variable
+    return(create_csv_reader(
+        paste0("awra-", var),
+        name,
+        file_path,
+        model_variable,
+        layers = layers,
+        site_col = "Site",
+        lat_col = NULL,
+        lon_col = NULL,
+        time_col = "Time",
+        time_fmt = "%Y-%m-%d",
+        infer_site = TRUE
+    ))
+}
+
 #'
 #' Populate the observation reader registry with a default set of readers.
 #'
@@ -391,6 +411,25 @@ populate_registry <- function() {
 
     # SMIPS ET.
     register_reader(create_smips_reader("et", "ETa", "aet"))
+}
+
+#'
+#' Register supplementary observation readers for the "standard" set of
+#' observations which are not included in this package.
+#'
+#' @param obs_dir Character. Path to the observation directory.
+#' @export
+#'
+register_supplementary_observations <- function(obs_dir) {
+    # AWRA
+    awra_dir <- file.path(obs_dir, "awra")
+    if (dir.exists(awra_dir)) {
+        register_reader(create_awra_reader("s0", "AWRA Upper Soil Moisture (0-0.1m)", "swmm_10", awra_dir))
+        register_reader(create_awra_reader("ss", "AWRA Lower Soil Moisture (0.1-1m)", "swmm_100", awra_dir))
+        register_reader(create_awra_reader("sd", "AWRA Deep Soil Moisture (1-6m)", "swmm_600", awra_dir))
+    } else {
+        log_warning("AWRA directory not found: ", awra_dir, ". It's likely that you have not downloaded the full dataset, or you have used the wrong path when calling register_supplementary_observations().")
+    }
 }
 
 # Initialize the registry and register the default readers on package load.

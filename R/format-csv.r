@@ -161,6 +161,10 @@ convert_to_date <- function(date_strings, date_fmt) {
     if (!is.null(date_fmt) && date_fmt %in% fasttime_supported_formats && have_fasttime) {
         log_diag("Using fasttime to convert dates")
         dates <- fasttime::fastDate(date_strings)
+        if (NA %in% dates) {
+            log_warning("fasttime::fastDate failed, falling back to as.Date.")
+            dates <- as.Date(date_strings, format = date_fmt)
+        }
     } else {
         log_diag("Using base R to convert dates. If this is slow, consider installing the fasttime package and converting dates to yyyy-MM-dd.")
         dates <- as.Date(date_strings, format = date_fmt)

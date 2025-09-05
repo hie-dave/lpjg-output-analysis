@@ -46,7 +46,7 @@ ozflux_plot <- function(
 
     # Read data for this gridcell.
     data <- read_data(sources, vars, sites = sites,
-                       show_all_observations = show_all_observations,
+                      show_all_observations = show_all_observations,
                       show_all_predictions = show_all_predictions)
 
     # Get upper/lower limits of y-axis data.

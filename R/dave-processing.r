@@ -249,7 +249,7 @@ read_data <- function(sources
             for (reader_id in names(readers)) {
                 reader <- readers[[reader_id]]
 
-                log_debug("Reading field ", var_id, " using reader ", reader@id, "...")
+                log_debug("Reading field ", var_id, " using reader ", reader@src@id, "...")
 
                 # Read the observation data using the reader's read_func
                 # Use direct slot access to avoid S4 method dispatch issues
