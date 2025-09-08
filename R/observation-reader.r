@@ -251,7 +251,7 @@ create_flux_data_reader <- function() {
         if (!is.null(sites)) {
             all_sites <- read_ozflux_sites()
             dt[, Site := get_site_names_by_coord(Lat, Lon, all_sites)]
-            dt <- dt[Site %in% sites]
+            dt <- dt[Site %in% sites$Name]
             dt[, Site := NULL]
         }
         field@data <- dt
