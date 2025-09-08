@@ -468,7 +468,8 @@ plot_pvo <- function(
     ylim = NULL,
     text_multiplier = NULL,
     marker_size = 3,
-    colours = NULL) {
+    colours = NULL,
+    obs_name = NULL) {
 
     if (is.null(colours)) {
         colours <- get_colour_palette(length(names(gc)))
@@ -478,7 +479,9 @@ plot_pvo <- function(
     log_debug("[plot_pvo] names(gc) = ", paste(names(gc), collapse = ", "))
     # plt <- DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
     #     , layer.y = predicted_name, text.multiplier = text_multiplier)
-    obs_name <- get_global("obs_lyr")
+    if (is.null(obs_name)) {
+        obs_name <- get_global("obs_lyr")
+    }
     ignored_names <- c("Site", obs_name)
     ynames <- setdiff(names(gc), ignored_names)
 
@@ -593,10 +596,13 @@ get_stats_lyr <- function(var, src) {
 
 create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         , text_multiplier = NULL, do_timeseries = TRUE, do_pvo = TRUE
-        , do_subannual = TRUE, marker_size = 3, ylim = NULL) {
+        , do_subannual = TRUE, marker_size = 3, ylim = NULL
+        , obs_lyr = NULL) {
 
     # Compute (and store) statistics).
-    obs_lyr <- get_global("obs_lyr")
+    if (is.null(obs_lyr)) {
+        obs_lyr <- get_global("obs_lyr")
+    }
     ignored_names <- c("Site", obs_lyr)
     names <- setdiff(names(gc), ignored_names)
     if (length(names) == 0) {
@@ -656,7 +662,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     if (do_pvo) {
         log_diag("Creating predicted vs. observed scatter plot...")
         pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size,
-                        colours = colours)
+                        colours = colours, obs_name = obs_lyr)
         # On the subannual plots, we want the x-axis label (observed) as well
         # as the y-axis label (predicted), because these are not shared with any
         # other plots in the panel.

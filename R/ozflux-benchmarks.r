@@ -14,6 +14,7 @@ get_vars <- function() {
     , DGVMTools::defineQuantity("dave_aboveground_tree_biomass", "Above-Ground Biomass", "kg/m2")
     , DGVMTools::defineQuantity("dave_height", "Mean Canopy Height", "m")
     , DGVMTools::defineQuantity("dave_diameter", "Mean Stem Diameter", "m")
+    , DGVMTools::defineQuantity("dave_swmm_100", "Soil Moisture (0-90cm)", "mm")
     ))
 }
 
@@ -219,7 +220,14 @@ ozflux_benchmarks <- function(
             # Filter data to this site.
             gc <- get_gridcell(data, row$Lat, row$Lon, row$Name)
 
-            if (nrow(gc@data) == 0 || !(get_global("obs_lyr") %in% names(gc@data))) {
+            readers <- find_readers_for_var(trim_dave(var@id))
+            obs_name <- get_global("obs_lyr")
+            if (!obs_name %in% names(gc@data) && length(readers) > 0) {
+                obs_name <- names(readers)[1]
+                log_debug("Using reader ", obs_name, " as default for site ", row$Name)
+            }
+
+            if (nrow(gc@data) == 0 || !(obs_name %in% names(gc@data))) {
                 msg <- paste0("No ", var@name, " data for site ", row$Name, "; skipping...")
                 log_warning(msg)
                 warning(msg)
@@ -241,7 +249,7 @@ ozflux_benchmarks <- function(
             res <- create_plots(gc, var@name, use_plotly = use_plotly
             , text_multiplier = text_multiplier, ncol = 2
             , marker_size = marker_size, do_timeseries = TRUE, do_pvo = TRUE
-            , do_subannual = TRUE)
+            , do_subannual = TRUE, obs_lyr = obs_name)
 
             for (source in sources) {
                 lyr_name <- get_stats_lyr(var, source)
