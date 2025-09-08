@@ -407,7 +407,7 @@ populate_registry <- function() {
     register_reader(create_smips_reader("swindex", "SMindex", "wcont"))
 
     # SMIPS sw (aka totalbucket).
-    register_reader(create_smips_reader("sw", "totalbucket", "swmm"))
+    register_reader(create_smips_reader("sw", "totalbucket", "swmm_100"))
 
     # SMIPS ET.
     register_reader(create_smips_reader("et", "ETa", "aet"))
