@@ -354,6 +354,11 @@ read_data <- function(sources
         }
     }
 
+    # Remove day column if all values are last day of year.
+    if ("Day" %in% names(data@data) && all(data@data$day == 364)) {
+        data@data$Day <- NULL
+    }
+
     log_debug("Successfully read all data")
 
     return(data)
