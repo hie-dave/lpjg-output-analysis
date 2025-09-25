@@ -482,6 +482,13 @@ plot_pvo <- function(
     if (is.null(obs_name)) {
         obs_name <- get_global("obs_lyr")
     }
+
+    readers <- find_readers_for_var(gc@quant@id)
+    if (!obs_name %in% names(gc@data) && length(readers) > 0) {
+        obs_name <- names(readers)[1]
+        log_debug("Using reader ", obs_name, " as default for site ", row$Name)
+    }
+
     ignored_names <- c("Site", obs_name)
     ynames <- setdiff(names(gc), ignored_names)
 
