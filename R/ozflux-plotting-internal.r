@@ -551,7 +551,16 @@ plot_subannual <- function(
            ggplot2::theme_bw() +
            ggplot2::labs(x = "Day") +
            ggplot2::scale_color_manual(values = colours)
-    
+
+    # Filter data down to only those dates for which all layers are available.
+    # Otherwise, we will be plotting over different time periods for each layer.
+    filtered <- gc@data[complete.cases(gc@data), ]
+    if (nrow(filtered) == 0) {
+        log_warning("[plot_subannual] When plotting ", gc@quant@name, ", the available layers (", paste(names(gc), collapse = ", "), ") do not cover the same time period. In other words, there is no date on which all layers have a value. The resultant subannual plot will therefore not be filtered by date, so you must be careful when interpreting it, because the subannual pattern that is rendered will have a different 'meaning' for each layer, because the timeseries cover different time periods.")
+    } else {
+        gc@data <- filtered
+    }
+
     # Process and plot each layer separately
     for (layer_name in names(gc)) {
         # Create a temporary gc with just this layer
