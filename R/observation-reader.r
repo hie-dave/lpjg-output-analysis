@@ -401,7 +401,7 @@ populate_registry <- function() {
     register_reader(create_flux_data_reader())
 
     # MODIS LAI.
-    register_reader(create_modis_reader())
+    # register_reader(create_modis_reader())
 
     # SMIPS swindex.
     register_reader(create_smips_reader("swindex", "SMindex", "wcont"))
