@@ -12,6 +12,7 @@ params:
   source_label: "MRS-NewCode"
   site: "CumberlandPlain"
   pft: "MRS"
+  description: "A description of the simulations. If you're seeing this in a rendered .html file, then someone forgot to set the description when rendering the document. This can be done with `rmarkdown::render(\"site_budget.rmd\", params = list(description = \"A description of the simulations\"))`"
   aspect_ratio: 0.6
   image_fmt: "svg"
   fig_width: 20
@@ -128,8 +129,9 @@ read_cton_live <- function(sources, pool, sites) {
 
 ## Overview {.tabset}
 
-The simulations in this document are based on the model before any changes were
-made to the code, running TeBE only, limited to 1 cohort/1 patch.
+```{r, results="asis"}
+cat(params$description, "\n")
+```
 
 ### LAI
 
