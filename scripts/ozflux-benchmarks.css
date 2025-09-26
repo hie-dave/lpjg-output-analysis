@@ -1,3 +1,12 @@
 div.main-container {
   max-width: 1600px !important;
 }
+
+.rmd-figure img,
+.rmd-figure svg,
+.figure img,
+.figure svg {
+  width: 100% !important;
+  height: auto;
+  max-width: 100%;
+}
