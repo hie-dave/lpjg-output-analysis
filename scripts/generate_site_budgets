@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Get directory containing this script.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd -P)"
+
+################################################################################
+# Configuration
+################################################################################
+
+SITES="AliceSpringsMulga
+Boyagin
+Calperum
+CumberlandPlain
+GreatWesternWoodlands
+RobsonCreek
+Tumbarumba
+Warra
+Whroo
+WombatStateForest"
+
+REPO="${HOME}/code/lpj-guess/dave"
+PFT="MRS"
+SOURCE_ID="new"
+SOURCE_LABEL="MRS-NewCode"
+DESCRIPTION="The simulations in this document are based on the model after all changes were made to the code, running the parameterised MRS only, limited to 1 cohort/1 patch."
+OUT_DIR="${DIR}/site_budgets"
+
+################################################################################
+# Helper Functions
+################################################################################
+
+# Get number of available processors.
+NP=4
+if which nproc >/dev/null 2>&1
+then
+	NP=`nproc`
+elif which sysctl >/dev/null 2>&1
+then
+	# nproc not installed by default on MacOS (usually?), use sysctl instead.
+	NP=`sysctl -n hw.logicalcpu`
+fi
+
+# Set maximum number of processors to use.
+NPROC_MAX=${NP}
+
+wait_for_jobs() {
+    while [ $(jobs -p | wc -l) -ge ${NPROC_MAX} ]
+    do
+        sleep 1
+    done
+}
+
+die() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+################################################################################
+# Input Validation
+################################################################################
+
+RMD_FILE="${DIR}/site_budget.rmd"
+
+if [ ! -f "${RMD_FILE}" ]; then die "RMD file not found: ${RMD_FILE}"; fi
+if [ ! -d "${REPO}" ]; then die "Repository directory not found: ${REPO}"; fi
+
+################################################################################
+# Processing
+################################################################################
+
+# Map PIDs to site and log for post-run reporting
+declare -A PID_TO_SITE
+declare -A PID_TO_LOG
+
+for SITE in ${SITES}
+do
+    mkdir -p "${OUT_DIR}"
+    OUT_FILE="${OUT_DIR}/${SITE}.html"
+    LOG_FILE="${OUT_DIR}/${SITE}.log"
+    wait_for_jobs
+    echo "Rendering ${SITE} budget..."
+    Rscript -e "rmarkdown::render('${RMD_FILE}',
+        params = list(
+            repo = '${REPO}',
+            site = '${SITE}',
+            pft = '${PFT}',
+            source_id = '${SOURCE_ID}',
+            source_label = '${SOURCE_LABEL}',
+            description = '${DESCRIPTION}'),
+        output_file = '${OUT_FILE}')" >"${LOG_FILE}" 2>&1 &
+    PID=$!
+    PID_TO_SITE["${PID}"]="${SITE}"
+    PID_TO_LOG["${PID}"]="${LOG_FILE}"
+done
+
+# Wait for all jobs and report failures with context
+FAIL=0
+for PID in "${!PID_TO_SITE[@]}"; do
+    SITE="${PID_TO_SITE[$PID]}"
+    LOG="${PID_TO_LOG[$PID]}"
+    if ! wait "$PID"; then
+        echo "ERROR: Rendering failed for ${SITE} (PID ${PID}). See log: ${LOG}" >&2
+        # Show the tail of the log for quick triage
+        if [ -f "${LOG}" ]; then
+            echo "---- Last 50 lines of ${LOG} ----" >&2
+            tail -n 50 "${LOG}" >&2 || true
+            echo "---------------------------------" >&2
+        fi
+        FAIL=1
+    else
+        echo "OK: ${SITE} completed successfully." 
+    fi
+done
+
+exit $FAIL
