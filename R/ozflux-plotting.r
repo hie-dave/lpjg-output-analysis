@@ -33,7 +33,8 @@ ozflux_plot <- function(
         use_plotly = FALSE,
         common_yaxis = FALSE,
         show_all_observations = TRUE,
-        show_all_predictions = TRUE) {
+        show_all_predictions = TRUE,
+        show_obs = TRUE) {
 
     # Sanitise data sources.
     sources <- sanitise_sources(sources)
@@ -47,7 +48,8 @@ ozflux_plot <- function(
     # Read data for this gridcell.
     data <- read_data(sources, vars, sites = sites,
                       show_all_observations = show_all_observations,
-                      show_all_predictions = show_all_predictions)
+                      show_all_predictions = show_all_predictions,
+                      read_obs = show_obs)
 
     # Get upper/lower limits of y-axis data.
     if (common_yaxis) {
@@ -204,7 +206,8 @@ ozflux_plot_layerwise <- function(
     common_yaxis = FALSE,
     show_all_observations = TRUE,
     show_all_predictions = TRUE,
-    allow_points = TRUE) {
+    allow_points = TRUE,
+    show_obs = TRUE) {
     # TODO: refactor this function out of the package. The layers should be an
     # optional argument to ozflux_plot(). If absent, they're determined using
     # the current algorithm (ie try total/mean). If present, there should be
@@ -229,7 +232,8 @@ ozflux_plot_layerwise <- function(
     }
     data <- read_data(sources, list(var), sites = sites, layers = layers,
                       show_all_observations = show_all_observations,
-                      show_all_predictions = show_all_predictions)
+                      show_all_predictions = show_all_predictions,
+                      read_obs = show_obs)
 
     panels <- list()
     nsite <- nrow(sites)

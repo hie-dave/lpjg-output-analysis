@@ -206,14 +206,15 @@ read_data <- function(sources
                        , layers = NULL
                        , correct_leaps = FALSE
                        , show_all_observations = TRUE
-                       , show_all_predictions = TRUE) {
+                       , show_all_predictions = TRUE
+                       , read_obs = TRUE) {
 
     log_debug("[read_data] Sanitising input sources...")
     sources <- sanitise_sources(sources)
     log_debug("[read_data] Sanitising input quantities...")
     vars <- sanitise_variables(vars)
     log_debug("[read_data] Sanitising input sites...")
-    site <- sanitise_ozflux_sites(sites, sources[[1]]@dir)
+    sites <- sanitise_ozflux_sites(sites, sources[[1]]@dir)
 
     # if (is.data.frame(site)) {
     #     if (nrow(site) == 1) {
@@ -242,7 +243,7 @@ read_data <- function(sources
         log_diag("Searching for readers which contain variable ", var_id)
         readers <- find_readers_for_var(var_id)
 
-        if (length(readers) > 0) {
+        if (read_obs && length(readers) > 0) {
             log_debug("Found ", length(readers), " reader(s) for variable ", var_id)
 
             # Process all readers that support this variable
@@ -253,14 +254,26 @@ read_data <- function(sources
 
                 # Read the observation data using the reader's read_func
                 # Use direct slot access to avoid S4 method dispatch issues
-                obs_field <- reader@read_func(var_id, sites = sites)
+                obs_field <- reader@read_func(var_id, sites = sites$Name)
 
                 # For now, use reader_id as the layer name. Should revisit this.
                 if (is.null(data)) {
                     data <- obs_field
-                    DGVMTools::renameLayers(data, layers, reader_id)
+                    if (layers %in% names(data)) {
+                        DGVMTools::renameLayers(data, layers, reader_id)
+                    } else {
+                        # Get first layer that's not "Site"
+                        lyrs <- names(data)[names(data) != "Site"]
+                        if (length(lyrs) > 0) {
+                            DGVMTools::renameLayers(data, lyrs[1], reader_id)
+                        }
+                    }
                 } else {
-                    data <- DGVMTools::copyLayers(obs_field, data, layers
+                    layers_old <- layers
+                    if (!(layers_old %in% names(obs_field))) {
+                        layers_old <- names(obs_field)[names(obs_field) != "Site"][1]
+                    }
+                    data <- DGVMTools::copyLayers(obs_field, data, layers_old
                         , new.layer.names = reader_id
                         , tolerance = get_global("merge_tol"), keep.all.from = show_all_observations
                         , keep.all.to = show_all_observations)#, allow.cartesian = TRUE
@@ -275,7 +288,7 @@ read_data <- function(sources
 
         layers <- original_layer
         if (is.null(layers)) {
-            layers <- get_default_layers(sources[[1]], var, site$Name)
+            layers <- get_default_layers(sources[[1]], var, sites$Name)
         }
         log_diag("Reading data for layers: ", layers)
 
@@ -293,12 +306,12 @@ read_data <- function(sources
                 args$decimal.places <- num_decimal_places
             }
             args$verbose <- FALSE
-            if (!is.null(site)) {
-                if (is.data.frame(site) && source@format@id == "OZFLUX") {
-                    args$sites <- site
+            if (!is.null(sites)) {
+                if (is.data.frame(sites) && source@format@id == "OZFLUX") {
+                    args$sites <- sites
                 } else {
-                    args$spatial.extent.id <- site$Name
-                    args$spatial.extent <- c(site$Lon, site$Lat)
+                    args$spatial.extent.id <- sites$Name
+                    args$spatial.extent <- c(sites$Lon, sites$Lat)
                 }
             }
             predictions <- do.call(DGVMTools::getField, args)
@@ -324,7 +337,7 @@ read_data <- function(sources
             if (is.null(data)) {
                 # IE no observations
                 data <- predictions
-                if (length(sources) > 1) {
+                if (length(sources) > 1 || length(vars) > 1) {
                     DGVMTools::renameLayers(data, layers, layer_names)
                 }
             } else {
@@ -342,7 +355,7 @@ read_data <- function(sources
                 if ( (nrow(data@data) == 0 && nr > 0 && nrow(predictions@data) > 0) ||
                      any(is.na(data@data$Lon)) ) {
                     # No observations for this site.
-                    log_warning("No observations found for site ", site$Name)
+                    log_warning("No observations found for site ", sites$Name)
                     data <- predictions
                     if (length(source) > 1) {
                         DGVMTools::renameLayers(data, layers, layer_names)
@@ -355,7 +368,7 @@ read_data <- function(sources
     }
 
     # Remove day column if all values are last day of year.
-    if ("Day" %in% names(data@data) && all(data@data$day == 364)) {
+    if ("Day" %in% names(data@data) && all(data@data$Day == 364)) {
         data@data$Day <- NULL
     }
 

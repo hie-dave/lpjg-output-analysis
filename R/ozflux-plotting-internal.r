@@ -45,14 +45,14 @@ create_panel <- function(
     plots <- list(...)
     log_diag("Creating panel with ", length(plots), " plots")
     nplot <- length(plots)
-    
+
     # Set default colspans if not provided
     if (is.null(colspans)) {
         colspans <- rep(1, nplot)
     } else if (length(colspans) != nplot) {
         stop("Length of colspans (", length(colspans), ") must match the number of plots (", nplot, ")")
     }
-    
+
     if (use_plotly) {
         fix_legend <- function(p) {
             return(plotly::layout(p, legendgroup = "Layout"))
@@ -60,12 +60,12 @@ create_panel <- function(
         for (plot in plots) {
             plot <- fix_legend(plot)
         }
-        
+
         # Custom colspans not supported for plotly yet
         if (any(colspans != 1)) {
             warning("Custom colspans not supported for plotly. Using default layout.")
         }
-        
+
         nrow <- as.integer(ceiling(nplot / ncol))
         args <- c(plots, nrows = nrow, shareY = TRUE)
         plt <- do.call(plotly::subplot, args)
@@ -97,21 +97,21 @@ create_panel <- function(
             while (plot_index <= nplot) {
                 row_plots[[row_index]] <- list()
                 cols_used <- 0
-                
+
                 # Add plots to this row until we run out of columns or plots
                 while (plot_index <= nplot && cols_used + colspans[plot_index] <= total_cols) {
                     row_plots[[row_index]] <- c(row_plots[[row_index]], list(plots[[plot_index]]))
                     cols_used <- cols_used + colspans[plot_index]
                     plot_index <- plot_index + 1
                 }
-                
+
                 row_index <- row_index + 1
             }
-            
+
             # Now create each row as a separate ggarrange
             row_panels <- list()
             plot_tracker <- 1
-            
+
             for (i in seq_along(row_plots)) {
                 row_size <- length(row_plots[[i]])
                 if (row_size > 0) {
@@ -119,17 +119,17 @@ create_panel <- function(
                     row_indices <- seq(plot_tracker, length.out = row_size)
                     row_colspans <- colspans[row_indices]
                     widths <- row_colspans / sum(row_colspans) * length(row_colspans)
-                    
+
                     # Create this row's panel
                     row_panels[[i]] <- ggpubr::ggarrange(
                         plotlist = row_plots[[i]],
-                        ncol = length(row_plots[[i]]), 
+                        ncol = length(row_plots[[i]]),
                         widths = widths,
                         common.legend = FALSE,
                         legend = "none",
                         align = "h"
                     )
-                    
+
                     # Update the plot tracker
                     plot_tracker <- plot_tracker + row_size
                 }
@@ -193,7 +193,7 @@ set_text_multiplier <- function(plt, text_multiplier = NULL) {
 #' @keywords internal
 #' @return A ggplot
 #'
-plot_temporal <- function(fields, 
+plot_temporal <- function(fields,
                          layers = NULL,
                          gridcells = NULL,
                          title = character(0),
@@ -547,7 +547,7 @@ plot_subannual <- function(
     }
 
     # Create the base plot
-    plt <- ggplot2::ggplot() + 
+    plt <- ggplot2::ggplot() +
            ggplot2::theme_bw() +
            ggplot2::labs(x = "Day") +
            ggplot2::scale_color_manual(values = colours)
@@ -565,23 +565,23 @@ plot_subannual <- function(
     for (layer_name in names(gc)) {
         # Create a temporary gc with just this layer
         temp_gc <- DGVMTools::selectLayers(gc, layer_name)
-        
+
         # Remove rows with NA values for this layer
         temp_gc@data <- temp_gc@data[!is.na(temp_gc@data[[layer_name]]), ]
-        
+
         # Only proceed if we have data
         if (nrow(temp_gc@data) > 0) {
             # Aggregate this layer
             agg_result <- DGVMTools::aggregateYears(temp_gc)
-            
+
             # Convert to long format for this layer only
             df_layer <- tidyr::pivot_longer(
-                agg_result@data, 
+                agg_result@data,
                 cols = layer_name,
                 names_to = "variable",
                 values_to = "value"
             )
-            
+
             # Add this layer to the plot
             plt <- plt + ggplot2::geom_line(
                 data = df_layer,
