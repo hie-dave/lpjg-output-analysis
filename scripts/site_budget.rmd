@@ -96,7 +96,6 @@ plot_sompool <- function(file, ylab, title, xlab = "Date") {
     ggplot(data_long) +
         geom_line(aes(x = date, y = value, color = pool)) +
         facet_wrap(~ pool, scales = "free_y") +
-        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
         xlab(xlab) +
         ylab(ylab) +
         labs(title = paste(site, title)) +
@@ -202,7 +201,6 @@ data_long <- pivot_longer(data, cols = renamed, names_to = "layer",
 ggplot(data_long) +
     geom_line(aes(x = Year, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Carbon Flux (kgC/m2/year)") +
     labs(title = paste(site, "Carbon Fluxes")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -289,7 +287,6 @@ ggplot(data_long) +
         ncol = 2,
         labeller = as_labeller(labeller)
     ) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     xlab("Date") +
     ylab("Carbon Flux (gC/m2/day)") +
     labs(title = paste(site, "Daily Carbon Fluxes"), color = "Type") +
@@ -304,15 +301,14 @@ ggplot(data_long) +
 ### Annual Carbon Pools
 
 ```{r carbon_pools_annual}
-cpool_layers <- c("VegC", "LitterC", "SoilC", "Total")
-data <- read_data(src, "cpool", site, layers = cpool_layers)@data
+cpool_layers <- c("VegC", "StandingC", "LitterC", "SoilC", "total")
+data <- read_data(src, "dave_acpool", site, layers = cpool_layers)@data
 data_long <- pivot_longer(data, cols = cpool_layers, names_to = "layer",
                           values_to = "value") %>%
     dplyr::mutate(layer = factor(layer, levels = cpool_layers))
 ggplot(data_long) +
     geom_line(aes(x = Year, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("C Mass (kgC/m2)") +
     labs(title = paste(site, "Carbon Pools")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -321,7 +317,7 @@ ggplot(data_long) +
 ### Daily Carbon Pools
 
 ```{r carbon_pools_daily}
-cpool_layers <- c("VegC", "LitterC", "SoilC", "total")
+cpool_layers <- c("VegC", "StandingC", "LitterC", "SoilC", "total")
 data <- read_data(src, "dave_cpool", site, layers = cpool_layers)@data
 data$date <- calc_date(data$Year, data$Day)
 data_long <- pivot_longer(data, cols = cpool_layers, names_to = "layer",
@@ -331,11 +327,72 @@ data_long <- pivot_longer(data, cols = cpool_layers, names_to = "layer",
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     xlab("Date") +
     ylab("C Mass (kgC/m2)") +
     labs(title = paste(site, "Carbon Pools")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+### Daily Carbon in Litter
+
+```{r clitter}
+layers <- c("SURFMETA", "SURFSTRUCT", "SURFCWD", "SURFFWD")
+data <- read_data(src, "dave_clitter", site, layers = layers)@data
+data$date <- calc_date(data$Year, data$Day)
+data_long <- pivot_longer(data, cols = layers, names_to = "layer",
+                          values_to = "value") %>%
+    dplyr::mutate(layer = factor(layer, levels = layers))
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = layer)) +
+    facet_wrap(~ layer, scales = "free_y") +
+    xlab("Date") +
+    ylab("C Mass (kgC/m2)") +
+    labs(title = paste(site, "Litter C Mass")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+### Daily Standing Dead Biomass
+
+```{r standing_dead_biomass}
+cmass_litter_leaf <- read_data(src, "dave_cmass_standing_dead_leaf", site,
+                               layers = pft)@data
+cmass_litter_root <- read_data(src, "dave_cmass_standing_dead_root", site,
+                               layers = pft)@data
+cmass_litter_sap <- read_data(src, "dave_cmass_standing_dead_sap", site,
+                              layers = pft)@data
+cmass_litter_heart <- read_data(src, "dave_cmass_standing_dead_heart", site,
+                                layers = pft)@data
+cmass_litter_repr <- read_data(src, "dave_cmass_standing_dead_repr", site,
+                               layers = pft)@data
+
+# Drop Lon/Lat cols.
+cmass_litter_leaf <- select(cmass_litter_leaf, -Lon, -Lat)
+cmass_litter_root <- select(cmass_litter_root, -Lon, -Lat)
+cmass_litter_sap <- select(cmass_litter_sap, -Lon, -Lat)
+cmass_litter_heart <- select(cmass_litter_heart, -Lon, -Lat)
+cmass_litter_repr <- select(cmass_litter_repr, -Lon, -Lat)
+
+# Rename pft column to litter_X
+names(cmass_litter_leaf) <- gsub(pft, "leaf", names(cmass_litter_leaf))
+names(cmass_litter_root) <- gsub(pft, "root", names(cmass_litter_root))
+names(cmass_litter_sap) <- gsub(pft, "sap", names(cmass_litter_sap))
+names(cmass_litter_heart) <- gsub(pft, "heart", names(cmass_litter_heart))
+names(cmass_litter_repr) <- gsub(pft, "repr", names(cmass_litter_repr))
+
+data <- merge(cmass_litter_leaf, cmass_litter_root, by = c("Year", "Day"))
+data <- merge(data, cmass_litter_sap, by = c("Year", "Day"))
+data <- merge(data, cmass_litter_heart, by = c("Year", "Day"))
+data <- merge(data, cmass_litter_repr, by = c("Year", "Day"))
+data$date <- calc_date(data$Year, data$Day)
+pools <- c("leaf", "root", "sap", "heart", "repr")
+data_long <- pivot_longer(data, cols = pools, names_to = "pool",
+                          values_to = "value")
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = pool)) +
+    xlab("Date") +
+    ylab("C Mass (kgC/m2)") +
+    labs(title = paste(site, "Standing Dead Biomass")) +
+    theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ### Respiration
@@ -349,7 +406,6 @@ data_long <- pivot_longer(data, cols = vars, names_to = "respiration",
                           values_to = "value")
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = respiration)) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     xlab("Date") +
     ylab("Respiration (gC/m2/day)") +
     labs(title = paste(site, "Respiration")) +
@@ -372,7 +428,6 @@ data_long <- pivot_longer(data, cols = c("maintenance", "growth", "gpp"),
                           names_to = "flux", values_to = "value")
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = flux)) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     xlab("Date") +
     ylab("Flux (gC/m2/day)") +
     labs(title = paste(site, "Combined Carbon Fluxes")) +
@@ -392,7 +447,6 @@ data_long <- pivot_longer(data, cols = pools, names_to = "pool",
                           values_to = "value")
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = pool)) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     xlab("Date") +
     ylab("Respiration (gC/m2/day)") +
     labs(title = paste(site, "Maintenance Respiration")) +
@@ -477,7 +531,7 @@ dnflux_data <- data
 ### Daily Nitrogen Pools
 
 ```{r npool_daily}
-npool_cols <- c("VegN", "LitterN", "SoilN", "AvailN")
+npool_cols <- c("VegN", "StandingN", "LitterN", "SoilN", "AvailN")
 data <- read_data(src, "dave_dnpool", site, layers = npool_cols)@data
 data$date <- calc_date(data$Year, data$Day)
 
@@ -491,16 +545,34 @@ df_long <- pivot_longer(data, cols = npool_cols, names_to = "layer",
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Nitrogen Pool (gN/m2)") +
     labs(title = paste(site, "Nitrogen Pools")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+### Daily Nitrogen in Litter
+
+```{r clitter}
+layers <- c("SURFMETA", "SURFSTRUCT", "SURFCWD", "SURFFWD")
+data <- read_data(src, "dave_nlitter", site, layers = layers)@data
+data$date <- calc_date(data$Year, data$Day)
+data_long <- pivot_longer(data, cols = layers, names_to = "layer",
+                          values_to = "value") %>%
+    dplyr::mutate(layer = factor(layer, levels = layers))
+# Convert kgN/m2 to gN/m2
+data_long$value <- data_long$value * 1000
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = layer)) +
+    facet_wrap(~ layer, scales = "free_y") +
+    xlab("Date") +
+    ylab("Litter N (gN/m2)") +
+    labs(title = paste(site, "Nitrogen in Litter")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 
 ### Annual Nitrogen Fluxes
 
 ```{r anflux_avail}
-
 # Convert all layers from kgN to gN by multiplying by 1000.
 for (col in anflux_layers) {
     anflux_data[, (col) := (get(col)) * 1000]
@@ -511,7 +583,6 @@ df_long <- pivot_longer(anflux_data, cols = anflux_layers, names_to = "layer",
 ggplot(df_long) +
     geom_line(aes(x = Year, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Nitrogen Flux (gN/m2/year)") +
     labs(title = paste(site, "Annual Nitrogen Fluxes")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -555,7 +626,6 @@ df_long <- pivot_longer(data, cols = anflux_layers, names_to = "layer",
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Nitrogen Flux (gN/m2/day)") +
     labs(title = paste(site, "Nitrogen Fluxes")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -580,7 +650,6 @@ ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer,
                labeller = as_labeller(labeller)) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Soil Moisture (0=Wilting Point, 1=Field Capacity)") +
     labs(title = paste(site, "Soil Moisture")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -588,6 +657,36 @@ ggplot(df_long) +
 # - wscal
 # - layerwise soil moisture
 # - fluxes ()
+```
+
+### Layerwise Soil Water Potential
+
+```{r soil_water_potential}
+layers <- paste0("soil_psi", 0:14)
+data <- read_data(src, "dave_soil_psi_layer", site, layers = layers)@data
+data$date <- calc_date(data$Year, data$Day)
+df_long <- pivot_longer(data, cols = layers, names_to = "layer",
+                        values_to = "value")
+df_long$layer_num <- as.integer(sub("^soil_psi", "", df_long$layer))
+df_long$layer <- factor(df_long$layer,
+                        levels = paste0("soil_psi", sort(unique(df_long$layer_num))))
+labeller <- function(s) paste("layer", as.integer(sub("^soil_psi", "", s)))
+ggplot(df_long) +
+    geom_line(aes(x = date, y = value, color = layer)) +
+    facet_wrap(~ layer,
+               labeller = as_labeller(labeller)) +
+    ylab("Soil Water Potential (MPa)") +
+    labs(title = paste(site, "Soil Water Potential")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+### Weighted Soil Water Potential
+
+```{r weighted_soil_water_potential}
+ozflux_plot_layerwise(src, "dave_weighted_psi", site, layers = pft) +
+    ylab("Weighted Soil Water Potential (MPa)") +
+    labs(title = paste(site, "Weighted Soil Water Potential")) +
+    theme(legend.position = "none")
 ```
 
 ### Annual Water Fluxes
@@ -603,7 +702,6 @@ data_long$layer <- factor(data_long$layer, levels = wflux_layers)
 ggplot(data_long) +
     geom_line(aes(x = Year, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Water Flux (mm/year)") +
     labs(title = paste(site, "Water Fluxes")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -621,7 +719,6 @@ df_long$layer <- factor(df_long$layer, levels = wflux_layers)
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Water Flux (mm/day)") +
     labs(title = paste(site, "Water Fluxes")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -704,7 +801,6 @@ ggplot(data_long) +
     geom_hline(data = thresholds, aes(yintercept = value), linetype = "dotted",
                color = "black") +
     facet_wrap(~ pool, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("C:N ratio") +
     labs(title = paste(site, "SOM Pool C:N Ratios")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -749,7 +845,6 @@ data_long$pool <- factor(data_long$pool, levels = sort(som_pools))
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = pool)) +
     facet_wrap(~ pool, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Net Mineralisation (gN/m2)") +
     labs(title = paste(site, "Net Mineralisation")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -761,7 +856,6 @@ ggplot(data_long) +
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = pool)) +
     facet_wrap(~ pool) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Net Mineralisation (gN/m2)") +
     labs(title = paste(site, "Net Mineralisation")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -823,7 +917,6 @@ df_long <- pivot_longer(df, cols = names, names_to = "layer",
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = type)) +
     facet_wrap(~ component, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     scale_color_manual(values = daveanalysis:::get_colour_palette(2),
                        labels = c("actual", "limit")) +
     theme(legend.position = "none")
@@ -924,7 +1017,6 @@ data_long <- pivot_longer(data, cols = layers, names_to = "pool",
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = pool)) +
     facet_wrap(~ pool, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Carbon Mass (kgC/m2)") +
     labs(title = paste(site, "Vegetation Carbon Pools")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -945,7 +1037,6 @@ data_long <- pivot_longer(data, cols = layers, names_to = "pool",
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = pool)) +
     facet_wrap(~ pool, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Nitrogen Mass (kgN/m2)") +
     labs(title = paste(site, "Vegetation Nitrogen Pools")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -1039,7 +1130,6 @@ data_long <- pivot_longer(data, cols = var_names, names_to = "variable",
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = variable)) +
     facet_wrap(~ variable, scales = "free_y") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab("Value (m)") +
     labs(title = paste(site, "Allometry")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
@@ -1057,7 +1147,6 @@ data_long <- pivot_longer(data, cols = newnames, names_to = "variable",
                           values_to = "value")
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = variable)) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ylab(NULL) +
     labs(title = paste(site, "Diagnostics")) +
     theme(plot.title = element_text(hjust = 0.5))
