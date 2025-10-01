@@ -60,6 +60,14 @@ theme_set(theme_bw(base_size = 16))
 ```
 
 ```{r helper_functions}
+read_data <- function(vars, layers = NULL, ...) {
+    data <- daveanalysis::read_data(src, vars, site, layers = layers, ...)
+    data <- data@data
+    # Remove Lon/Lat columns, which are redundant when dealing with one site.
+    data <- select(data, -c("Lon", "Lat"))
+    return(data)
+}
+
 use_colour <- function(plot, index, name) {
     colour <- daveanalysis:::get_colour_palette(index)[index]
     plot + scale_color_manual(values = colour, labels = c(name))
@@ -69,16 +77,11 @@ calc_date <- function(year, day) {
     return(as.Date(paste0(year, "-", day), format = "%Y-%j"))
 }
 
-rename_column <- function(df, old, new) {
-    return(setNames(df, gsub(old, new, names(df))))
-}
-
 som_pools <- c("SURFSTRUCT", "SOILSTRUCT", "SOILMICRO", "SURFHUMUS",
                "SURFMICRO", "SURFMETA", "SURFFWD", "SURFCWD", "SOILMETA",
                "SLOWSOM", "PASSIVESOM", "total")
 plot_sompool <- function(file, ylab, title, xlab = "Date") {
-    library("ggplot2")
-    data <- read_data(src, file, site, layers = som_pools)@data
+    data <- read_data(file, layers = som_pools)
     if ("Day" %in% names(data)) {
         data$date <- calc_date(data$Year, data$Day)
     } else {
@@ -102,18 +105,18 @@ plot_sompool <- function(file, ylab, title, xlab = "Date") {
         theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 }
 
-read_cton_live <- function(sources, pool, sites) {
-    cmass <- read_data(sources, paste0("dave_cmass_", pool), sites)@data
-    nmass <- read_data(sources, paste0("dave_nmass_", pool), sites)@data
+read_cton_live <- function(pool) {
+    cmass <- read_data(paste0("dave_cmass_", pool))
+    nmass <- read_data(paste0("dave_nmass_", pool))
 
-    cton_min <- read_data(sources, paste0("dave_cton_", pool, "_min"), sites)
-    cton_max <- read_data(sources, paste0("dave_cton_", pool, "_max"), sites)
+    cton_min <- read_data(paste0("dave_cton_", pool, "_min"))
+    cton_max <- read_data(paste0("dave_cton_", pool, "_max"))
 
-    cton_min <- min(cton_min@data[[pft]])
-    cton_max <- max(cton_max@data[[pft]])
+    cton_min <- min(cton_min[[pft]])
+    cton_max <- max(cton_max[[pft]])
 
-    df <- merge(cmass, nmass, by = c("Lon", "Lat", "Year", "Day"))
-    df <- setNames(df, c("Lon", "Lat", "Year", "Day", "cmass", "nmass"))
+    df <- merge(cmass, nmass, by = c("Year", "Day"))
+    df <- setNames(df, c("Year", "Day", "cmass", "nmass"))
 
     df$cton_min <- cton_min
     df$cton_max <- cton_max
@@ -183,6 +186,22 @@ ozflux_panel(src, "dave_diameter", site)
 ### Soil Moisture
 
 ```{r benchmark_soil_moisture}
+# Register an observation reader for EucFACE soil moisture.
+eucface_path <- "~/code/lpj-guess/scripts/ozflux-lpjg/data/eucface"
+eucface_file <- file.path(eucface_path, "EucFACE_soil_moisture_1m_sitecol.csv")
+eucface_reader <- create_csv_reader("EucFACE_soil_moisture_1m",
+                                    "EucFACE_soil_moisture_1m",
+                                    eucface_file,
+                                    "swmm_100",
+                                    layers = list("swmm_100" = "swc.sum"),
+                                    site_col = "site",
+                                    lat_col = NULL,
+                                    lon_col = NULL,
+                                    time_col = "Date",
+                                    time_fmt = "%Y-%m-%d",
+                                    infer_site = TRUE)
+register_reader(eucface_reader)
+
 ozflux_panel(src, "dave_swmm_100", site)
 ```
 
@@ -193,9 +212,9 @@ ozflux_panel(src, "dave_swmm_100", site)
 ```{r carbon_fluxes_annual}
 # GPP, NPP, NEE, Respiration
 acflux_vars <- c("dave_anee", "dave_anpp", "dave_agpp", "dave_aresp")
-data <- read_data(src, acflux_vars, site)@data
+data <- read_data(acflux_vars)
 renamed <- c("NEE", "NPP", "GPP", "Resp")
-names(data) <- c("Lon", "Lat", "Year", renamed)
+names(data) <- c("Year", renamed)
 data_long <- pivot_longer(data, cols = renamed, names_to = "layer",
                           values_to = "value")
 ggplot(data_long) +
@@ -210,10 +229,10 @@ ggplot(data_long) +
 
 ```{r carbon_fluxes_daily}
 # TODO: break down respiration into growth/maintenance/etc
-nee_data <- read_data(src, "dave_nee", site)@data
-npp_data <- read_data(src, "dave_npp", site)@data
-gpp_data <- read_data(src, "dave_gpp", site)@data
-resp_data <- read_data(src, "dave_resp", site)@data
+nee_data <- read_data("dave_nee")
+npp_data <- read_data("dave_npp")
+gpp_data <- read_data("dave_gpp")
+resp_data <- read_data("dave_resp")
 
 # Rename observed -> observed_flux and dave@name -> flux for all fluxes.
 fix_names <- function(names, flux) {
@@ -225,12 +244,6 @@ names(nee_data) <- fix_names(names(nee_data), "nee")
 names(npp_data) <- fix_names(names(npp_data), "npp")
 names(gpp_data) <- fix_names(names(gpp_data), "gpp")
 names(resp_data) <- fix_names(names(resp_data), "resp")
-
-# Drop Lon/Lat columns, as the data are already filtered by site.
-nee_data <- select(nee_data, -Lon, -Lat)
-npp_data <- select(npp_data, -Lon, -Lat)
-gpp_data <- select(gpp_data, -Lon, -Lat)
-resp_data <- select(resp_data, -Lon, -Lat)
 
 data <- merge(nee_data, npp_data, by = c("Year", "Day"))
 data <- merge(data, gpp_data, by = c("Year", "Day"))
@@ -302,10 +315,10 @@ ggplot(data_long) +
 
 ```{r carbon_pools_annual}
 cpool_layers <- c("VegC", "StandingC", "LitterC", "SoilC", "total")
-data <- read_data(src, "dave_acpool", site, layers = cpool_layers)@data
+data <- read_data("dave_acpool", layers = cpool_layers)
 data_long <- pivot_longer(data, cols = cpool_layers, names_to = "layer",
                           values_to = "value") %>%
-    dplyr::mutate(layer = factor(layer, levels = cpool_layers))
+    mutate(layer = factor(layer, levels = cpool_layers))
 ggplot(data_long) +
     geom_line(aes(x = Year, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
@@ -318,11 +331,11 @@ ggplot(data_long) +
 
 ```{r carbon_pools_daily}
 cpool_layers <- c("VegC", "StandingC", "LitterC", "SoilC", "total")
-data <- read_data(src, "dave_cpool", site, layers = cpool_layers)@data
+data <- read_data("dave_cpool", layers = cpool_layers)
 data$date <- calc_date(data$Year, data$Day)
 data_long <- pivot_longer(data, cols = cpool_layers, names_to = "layer",
                           values_to = "value") %>%
-    dplyr::mutate(layer = factor(layer, levels = cpool_layers))
+    mutate(layer = factor(layer, levels = cpool_layers))
 
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
@@ -337,11 +350,11 @@ ggplot(data_long) +
 
 ```{r clitter}
 layers <- c("SURFMETA", "SURFSTRUCT", "SURFCWD", "SURFFWD")
-data <- read_data(src, "dave_clitter", site, layers = layers)@data
+data <- read_data("dave_clitter", layers = layers)
 data$date <- calc_date(data$Year, data$Day)
 data_long <- pivot_longer(data, cols = layers, names_to = "layer",
                           values_to = "value") %>%
-    dplyr::mutate(layer = factor(layer, levels = layers))
+    mutate(layer = factor(layer, levels = layers))
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
@@ -354,37 +367,20 @@ ggplot(data_long) +
 ### Daily Standing Dead Biomass
 
 ```{r standing_dead_biomass}
-cmass_litter_leaf <- read_data(src, "dave_cmass_standing_dead_leaf", site,
-                               layers = pft)@data
-cmass_litter_root <- read_data(src, "dave_cmass_standing_dead_root", site,
-                               layers = pft)@data
-cmass_litter_sap <- read_data(src, "dave_cmass_standing_dead_sap", site,
-                              layers = pft)@data
-cmass_litter_heart <- read_data(src, "dave_cmass_standing_dead_heart", site,
-                                layers = pft)@data
-cmass_litter_repr <- read_data(src, "dave_cmass_standing_dead_repr", site,
-                               layers = pft)@data
-
-# Drop Lon/Lat cols.
-cmass_litter_leaf <- select(cmass_litter_leaf, -Lon, -Lat)
-cmass_litter_root <- select(cmass_litter_root, -Lon, -Lat)
-cmass_litter_sap <- select(cmass_litter_sap, -Lon, -Lat)
-cmass_litter_heart <- select(cmass_litter_heart, -Lon, -Lat)
-cmass_litter_repr <- select(cmass_litter_repr, -Lon, -Lat)
-
-# Rename pft column to litter_X
-names(cmass_litter_leaf) <- gsub(pft, "leaf", names(cmass_litter_leaf))
-names(cmass_litter_root) <- gsub(pft, "root", names(cmass_litter_root))
-names(cmass_litter_sap) <- gsub(pft, "sap", names(cmass_litter_sap))
-names(cmass_litter_heart) <- gsub(pft, "heart", names(cmass_litter_heart))
-names(cmass_litter_repr) <- gsub(pft, "repr", names(cmass_litter_repr))
-
-data <- merge(cmass_litter_leaf, cmass_litter_root, by = c("Year", "Day"))
-data <- merge(data, cmass_litter_sap, by = c("Year", "Day"))
-data <- merge(data, cmass_litter_heart, by = c("Year", "Day"))
-data <- merge(data, cmass_litter_repr, by = c("Year", "Day"))
-data$date <- calc_date(data$Year, data$Day)
 pools <- c("leaf", "root", "sap", "heart", "repr")
+data <- NULL
+for (pool in pools) {
+    var <- paste0("dave_cmass_standing_dead_", pool)
+    pool_data <- read_data(var, layers = pft)
+    pool_data <- rename(pool_data, !!pool := all_of(pft))
+    if (is.null(data)) {
+        data <- pool_data
+    } else {
+        data <- merge(data, pool_data, by = c("Year", "Day"))
+    }
+}
+
+data$date <- calc_date(data$Year, data$Day)
 data_long <- pivot_longer(data, cols = pools, names_to = "pool",
                           values_to = "value")
 ggplot(data_long) +
@@ -399,7 +395,7 @@ ggplot(data_long) +
 
 ```{r respiration}
 vars <- c("maintenance", "growth")
-data <- read_data(src, paste0("dave_resp_", vars), site)@data
+data <- read_data(paste0("dave_resp_", vars))
 data$date <- calc_date(data$Year, data$Day)
 names(data) <- gsub(paste0(src@name, "_resp_"), "", names(data))
 data_long <- pivot_longer(data, cols = vars, names_to = "respiration",
@@ -418,9 +414,7 @@ resp_data <- data
 
 
 ```{r combined_fluxes}
-gpp_data <- read_data(src, "dave_gpp", site, read_obs = FALSE)@data
-gpp_data$Lon <- NULL
-gpp_data$Lat <- NULL
+gpp_data <- read_data("dave_gpp", read_obs = FALSE)
 data <- merge(resp_data, gpp_data, by = c("Year", "Day"))
 data$date <- calc_date(data$Year, data$Day)
 
@@ -440,7 +434,7 @@ ggplot(data_long) +
 ```{r resp_maintenance}
 pools <- c("leaf", "root", "sap")
 outputs <- paste0("dave_resp_", pools)
-data <- read_data(src, outputs, site)@data
+data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
 names(data) <- gsub(paste0(src@name, "_resp_"), "", names(data))
 data_long <- pivot_longer(data, cols = pools, names_to = "pool",
@@ -477,8 +471,7 @@ anflux_layers <- c("deposition", "fixation", "gross_mineralisation",
                    "immobilisation", "net_mineralisation", "min_leach",
                    "org_leach", "volatilisation", "gas_emissions", "flux",
                    "nuptake", "avail")
-data <- read_data(src, "dave_nitrogen_budget_annual", site,
-                  layers = anflux_layers)@data
+data <- read_data("dave_nitrogen_budget_annual", layers = anflux_layers)
 
 data[, nmass_prev := data.table::shift(avail, 1)]
 data[, nmass_expected := nmass_prev + flux]
@@ -508,7 +501,7 @@ correctly, this should be a 1:1 line.
 nflux_cols <- c("dNO3dep", "dNH4dep", "dnfix", "nmin_gross", "nimmob",
                 "nmin_net", "norg_leach", "nmin_leach", "nvolatilisation",
                 "nloss_gas", "flux", "nuptake", "avail")
-data <- read_data(src, "dave_soil_nflux", site, layers = nflux_cols)@data
+data <- read_data("dave_soil_nflux", layers = nflux_cols)
 data$date <- calc_date(data$Year, data$Day)
 
 data[, nmass_prev := data.table::shift(avail, 1)]
@@ -532,7 +525,7 @@ dnflux_data <- data
 
 ```{r npool_daily}
 npool_cols <- c("VegN", "StandingN", "LitterN", "SoilN", "AvailN")
-data <- read_data(src, "dave_dnpool", site, layers = npool_cols)@data
+data <- read_data("dave_dnpool", layers = npool_cols)
 data$date <- calc_date(data$Year, data$Day)
 
 # Convert all layers from kgN to gN by multiplying by 1000.
@@ -554,7 +547,7 @@ ggplot(df_long) +
 
 ```{r clitter}
 layers <- c("SURFMETA", "SURFSTRUCT", "SURFCWD", "SURFFWD")
-data <- read_data(src, "dave_nlitter", site, layers = layers)@data
+data <- read_data("dave_nlitter", layers = layers)
 data$date <- calc_date(data$Year, data$Day)
 data_long <- pivot_longer(data, cols = layers, names_to = "layer",
                           values_to = "value") %>%
@@ -573,13 +566,11 @@ ggplot(data_long) +
 ### Annual Nitrogen Fluxes
 
 ```{r anflux_avail}
-# Convert all layers from kgN to gN by multiplying by 1000.
-for (col in anflux_layers) {
-    anflux_data[, (col) := (get(col)) * 1000]
-}
-
 df_long <- pivot_longer(anflux_data, cols = anflux_layers, names_to = "layer",
                         values_to = "value")
+
+# Convert all layers from kgN to gN by multiplying by 1000.
+df_long$value <- df_long$value * 1000
 ggplot(df_long) +
     geom_line(aes(x = Year, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
@@ -603,26 +594,25 @@ data[, dNH4dep := NULL]
 nflux_cols <- setdiff(nflux_cols, c("dNO3dep", "dNH4dep"))
 nflux_cols <- c("deposition", nflux_cols)
 
-# Convert all layers from kgN to gN by multiplying by 1000.
-for (col in nflux_cols) {
-    data[, (col) := (get(col)) * 1000]
-}
-
 # Rename columns to be consistent with annual nitrogen outputs.
-data <- rename_column(data, "dnfix", "fixation")
-data <- rename_column(data, "nmin_gross", "gross_mineralisation")
-data <- rename_column(data, "nimmob", "immobilisation")
-data <- rename_column(data, "nmin_net", "net_mineralisation")
-data <- rename_column(data, "norg_leach", "org_leach")
-data <- rename_column(data, "nmin_leach", "min_leach")
-data <- rename_column(data, "nvolatilisation", "volatilisation")
-data <- rename_column(data, "nloss_gas", "gas_emissions")
-data <- rename_column(data, "avail", "avail")
+data <- rename(data, fixation = "dnfix",
+               gross_mineralisation = "nmin_gross",
+               immobilisation = "nimmob",
+               net_mineralisation = "nmin_net",
+               org_leach = "norg_leach",
+               min_leach = "nmin_leach",
+               volatilisation = "nvolatilisation",
+               gas_emissions = "nloss_gas",
+               avail = "avail")
 
 # Plot fluxes
 df_long <- pivot_longer(data, cols = anflux_layers, names_to = "layer",
                         values_to = "value") %>%
     dplyr::mutate(layer = factor(layer, levels = sort(anflux_layers)))
+
+# Convert all layers from kgN to gN by multiplying by 1000.
+df_long$value <- df_long$value * 1000
+
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer, scales = "free_y") +
@@ -638,7 +628,7 @@ rm(dnflux_data)
 
 ```{r soil_moisture}
 sw_layers <- paste0("sw_", 0:14)
-data <- read_data(src, "dave_sw", site, layers = sw_layers)@data
+data <- read_data("dave_sw", layers = sw_layers)
 data$date <- calc_date(data$Year, data$Day)
 df_long <- pivot_longer(data, cols = sw_layers, names_to = "layer",
                         values_to = "value")
@@ -653,23 +643,21 @@ ggplot(df_long) +
     ylab("Soil Moisture (0=Wilting Point, 1=Field Capacity)") +
     labs(title = paste(site, "Soil Moisture")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-# Plots to make:
-# - wscal
-# - layerwise soil moisture
-# - fluxes ()
+sw_data <- data
 ```
 
 ### Layerwise Soil Water Potential
 
 ```{r soil_water_potential}
 layers <- paste0("soil_psi", 0:14)
-data <- read_data(src, "dave_soil_psi_layer", site, layers = layers)@data
+data <- read_data("dave_soil_psi_layer", layers = layers)
 data$date <- calc_date(data$Year, data$Day)
 df_long <- pivot_longer(data, cols = layers, names_to = "layer",
                         values_to = "value")
 df_long$layer_num <- as.integer(sub("^soil_psi", "", df_long$layer))
 df_long$layer <- factor(df_long$layer,
-                        levels = paste0("soil_psi", sort(unique(df_long$layer_num))))
+                        levels = paste0("soil_psi",
+                                        sort(unique(df_long$layer_num))))
 labeller <- function(s) paste("layer", as.integer(sub("^soil_psi", "", s)))
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
@@ -677,6 +665,42 @@ ggplot(df_long) +
                labeller = as_labeller(labeller)) +
     ylab("Soil Water Potential (MPa)") +
     labs(title = paste(site, "Soil Water Potential")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+psi_data <- data
+```
+
+### Layerwise SWC vs SWP
+
+```{r layerwise_swc_vs_swp}
+# sw_data and psi_data read in above chunks
+layers <- 0:14
+sw_layers <- paste0("sw_", layers)
+psi_layers <- paste0("soil_psi", layers)
+
+names(psi_data) <- gsub("soil_psi", "psi_", names(psi_data))
+
+# Long form with a common integer 'layer' index
+sw_long <- pivot_longer(sw_data, cols = all_of(sw_layers), names_to = "layer",
+                        values_to = "swc") %>%
+    mutate(layer = as.integer(sub("^sw_", "", layer)))
+
+psi_long <- pivot_longer(psi_data, cols = all_of(paste0("psi_", layers)),
+                         names_to = "layer", values_to = "psi") %>%
+    mutate(layer = as.integer(sub("^psi_", "", layer)))
+
+# Join by Year/Day/layer
+plot_df <- dplyr::inner_join(sw_long, psi_long, by = c("Year", "Day", "layer"))
+
+layer_names <- paste0("layer ", sort(unique(plot_df$layer)))
+plot_df$layer_f <- factor(paste0("layer ", plot_df$layer), levels = layer_names)
+
+# Scatter: SWC (x) vs SWP (y), faceted by layer
+ggplot(plot_df, aes(x = swc, y = psi)) +
+    geom_point(alpha = 0.4, size = 0.8, color = "#0072B2") +
+    facet_wrap(~ layer_f) +
+    xlab("Soil Moisture (0–1)") +
+    ylab("Soil Water Potential (MPa)") +
+    labs(title = paste(site, "Water Potential vs Water Content")) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 
@@ -694,8 +718,7 @@ ozflux_plot_layerwise(src, "dave_weighted_psi", site, layers = pft) +
 ```{r awflux}
 wflux_layers <- c("precip", "evap", "transp", "interception", "surfrunoff",
                   "drainrunoff", "baserunoff", "flux")
-data <- read_data(src, "dave_water_budget_annual", site,
-                  layers = wflux_layers)@data
+data <- read_data("dave_water_budget_annual", layers = wflux_layers)
 data_long <- pivot_longer(data, cols = wflux_layers, names_to = "layer",
                           values_to = "value")
 data_long$layer <- factor(data_long$layer, levels = wflux_layers)
@@ -710,8 +733,7 @@ ggplot(data_long) +
 ### Daily Water Fluxes
 
 ```{r water_fluxes}
-data <- read_data(src, "dave_water_budget_daily", site, layers = wflux_layers)
-data <- data@data
+data <- read_data("dave_water_budget_daily", layers = wflux_layers)
 data$date <- calc_date(data$Year, data$Day)
 df_long <- pivot_longer(data, cols = wflux_layers, names_to = "layer",
                         values_to = "value")
@@ -724,25 +746,105 @@ ggplot(df_long) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 
-## SOM Pools {.tabset}
+### Water Stress
 
-### Annual SOM Carbon
+```{r water_stress_breakdown}
+# sw_data read in a previous chunk
+sw_layers <- paste0("sw_", 0:14)
+# sw_data <- read_data("dave_sw", layers = sw_layers)
 
-```{r asompool_c}
-plot_sompool("dave_sompool_acmass", "Carbon Mass (gC/m2)", "SOM Carbon Mass")
+wscal <- read_data("dave_wscal", layers = pft)
+wcont <- sw_data
+
+wscal <- rename(wscal, wscal = all_of(pft))
+
+data <- merge(wscal, wcont, by = c("Year", "Day"))
+data$date <- calc_date(data$Year, data$Day)
+
+data$sw_mean <- rowMeans(data[, ..sw_layers], na.rm = TRUE)
+data$sw_min  <- do.call(pmin, c(as.list(data[, ..sw_layers]),
+                                list(na.rm = TRUE)))
+data$sw_max  <- do.call(pmax, c(as.list(data[, ..sw_layers]),
+                                list(na.rm = TRUE)))
+
+lines_long <- pivot_longer(
+    data,
+    cols = c("wscal", "sw_mean"),
+    names_to = "series",
+    values_to = "value"
+)
+
+ggplot(data, aes(x = date)) +
+    geom_ribbon(aes(ymin = sw_min, ymax = sw_max), fill = "#56B1F7",
+                alpha = 0.25) +
+    geom_line(data = lines_long, aes(y = value, color = series),
+              linewidth = 0.6) +
+    scale_color_manual(
+        values = c(wscal = "#D55E00", sw_mean = "#0072B2"),
+        labels = c(wscal = "Water stress (wscal)",
+                   sw_mean = "Mean soil moisture")
+    ) +
+    xlab("Date") +
+    ylab("Water Stress/Content (0–1)") +
+    labs(
+        title = paste(site, "Water stress vs soil moisture"),
+        color = ""
+    ) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
 ```
+
+### Water Stress vs. Soil Moisture
+
+```{r water_stress_vs_soil_moisture}
+# Using data from previous chunk.
+ggplot(data, aes(x = sw_mean, y = wscal)) +
+    geom_point(color = "#0072B2") +
+    xlab("Non-weighted Mean Soil Moisture (0-1)") +
+    ylab("Water Stress (0-1)") +
+    xlim(0, 1) +
+    labs(title = paste(site, "Water stress vs soil moisture")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Water Stress vs. Weighted Soil Water Potential
+
+```{r water_stress_vs_soil_water_potential}
+weighted_psi <- read_data("dave_weighted_psi", layers = pft)
+weighted_psi <- rename(weighted_psi, "weighted_psi" = pft)
+
+data <- merge(data, weighted_psi, by = c("Year", "Day"))
+ggplot(data, aes(x = weighted_psi, y = wscal)) +
+    geom_point(color = "#0072B2") +
+    xlab("Weighted Soil Water Potential (MPa)") +
+    ylab("Water Stress (0-1)") +
+    labs(title = paste(site, "Water stress vs weighted soil water potential")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Water Stress vs. Mean Soil Water Potential
+
+```{r water_stress_vs_soil_water_potential}
+psi_layers <- paste0("psi_", 0:14)
+psi_data$psi_mean <- rowMeans(psi_data[, ..psi_layers], na.rm = TRUE)
+
+data <- merge(data, psi_data[, c("Year", "Day", "psi_mean")], by = c("Year", "Day"))
+ggplot(data, aes(x = psi_mean, y = wscal)) +
+    geom_point(color = "#0072B2") +
+    xlab("Weighted Soil Water Potential (MPa)") +
+    ylab("Water Stress (0-1)") +
+    labs(title = paste(site, "Water stress vs unweighted mean soil water potential")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+## SOM Pools {.tabset}
 
 ### Daily SOM Carbon
 
 ```{r sompool_c}
+# Note: we could plot annual SOM pools, but there's not much point. They don't
+# really tell us anything that the daily plots don't, and they certainly
+# obfuscate the seasonal patterns.
 plot_sompool("dave_sompool_cmass", "Carbon Mass (gC/m2)", "SOM Carbon Mass")
-```
-
-### Annual SOM Nitrogen
-
-```{r asompool_n}
-plot_sompool("dave_sompool_anmass", "Nitrogen Mass (gN/m2)",
-             "SOM Nitrogen Mass")
 ```
 
 ### Daily SOM Nitrogen
@@ -755,10 +857,10 @@ plot_sompool("dave_sompool_nmass", "Nitrogen Mass (gN/m2)",
 ### SOM Stoichiometry
 
 ```{r sompool_stoich}
-cmass <- read_data(src, "dave_sompool_cmass", site, layers = som_pools)@data
-nmass <- read_data(src, "dave_sompool_nmass", site, layers = som_pools)@data
+cmass <- read_data("dave_sompool_cmass", layers = som_pools)
+nmass <- read_data("dave_sompool_nmass", layers = som_pools)
 
-data <- merge(cmass, nmass, by = c("Lon", "Lat", "Year", "Day"),
+data <- merge(cmass, nmass, by = c("Year", "Day"),
               suffixes = c("_cmass", "_nmass"))
 data$date <- calc_date(data$Year, data$Day)
 
@@ -824,11 +926,9 @@ plot_sompool("dave_sompool_nmin_gross", "Mineralisation (gN/m2)",
 
 ```{r sompool_nmin_net}
 # Net mineralisation = gross mineralisation - immobilisation
-nmin_gross <- read_data(src, "dave_sompool_nmin_gross", site,
-                        layers = som_pools)@data
-nmin_immob <- read_data(src, "dave_sompool_nimmob", site,
-                        layers = som_pools)@data
-data <- merge(nmin_gross, nmin_immob, by = c("Lon", "Lat", "Year", "Day"),
+nmin_gross <- read_data("dave_sompool_nmin_gross", layers = som_pools)
+nmin_immob <- read_data("dave_sompool_nimmob", layers = som_pools)
+data <- merge(nmin_gross, nmin_immob, by = c("Year", "Day"),
               suffixes = c("_gross", "_immob"))
 for (pool in som_pools) {
     gross_col <- paste0(pool, "_gross")
@@ -902,8 +1002,8 @@ layers <- c("dave_cmass_leaf", "dave_cmass_leaf_limit",
             "dave_cgrow_leaf", "dave_cgrow_root",
             "dave_cgrow_sap", "dave_cgrow_storage")
 
-df <- read_data(src, layers, site, layers = pft)@data
-df$date <- as.Date(paste0(df$Year, "-", df$Day), format = "%Y-%j")
+df <- read_data(layers, layers = pft)
+df$date <- calc_date(df$Year, df$Day)
 # Replace e.g. "dave_cmass_leaf" with "MRS_cmass_leaf"
 names <- gsub("dave_", "", layers)
 # Rename exactly "MRS" to MRS_cmass_leaf
@@ -929,8 +1029,8 @@ pools <- c("leaf", "root", "sap", "storage")
 alpha_layers <- paste0("dave_alpha_", pools)
 cgrow_layers <- paste0("dave_cgrow_", pools)
 
-alpha_data <- read_data(src, alpha_layers, site)@data
-cgrow_data <- read_data(src, cgrow_layers, site)@data
+alpha_data <- read_data(alpha_layers)
+cgrow_data <- read_data(cgrow_layers)
 
 names(alpha_data) <- gsub(paste0(src@name, "_"), "", names(alpha_data))
 names(cgrow_data) <- gsub(paste0(src@name, "_"), "", names(cgrow_data))
@@ -1006,7 +1106,7 @@ ggplot(df_box, aes(x = pool, y = value, fill = pool)) +
 ```{r cpool_veg}
 layers <- c("leaf", "root", "sap", "storage", "repr")
 outputs <- paste0("dave_cmass_", layers)
-data <- read_data(src, outputs, site)@data
+data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
 
 # Rename e.g. MRS_cmass_leaf to leaf
@@ -1026,7 +1126,7 @@ ggplot(data_long) +
 
 ```{r npool_veg}
 outputs <- paste0("dave_nmass_", layers)
-data <- read_data(src, outputs, site)@data
+data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
 
 # Rename e.g. MRS_cmass_leaf to leaf
@@ -1046,7 +1146,7 @@ ggplot(data_long) +
 
 ```{r stoichiometry}
 read_cton <- function(pool) {
-    data <- read_cton_live(src, pool, site)
+    data <- read_cton_live(pool)
     data <- data[, c("Date", "cton_min", "cton", "cton_max")]
     names(data) <- c(
         "Date",
@@ -1080,7 +1180,6 @@ ggplot() +
               aes(x = Date, y = value), linetype = "dashed", color = "grey40") +
     facet_wrap(~ pool, scales = "free_y") +
     labs(title = paste(site, "Stoichiometry"), x = "Date", y = "C:N Ratio")
-
 ```
 
 ### Stoichiometry Normalised
@@ -1121,7 +1220,7 @@ ggplot(cton_norm_long) +
 ```{r allometry}
 # fixme: eliminate whitespace
 vars <- c("dave_height", "dave_diameter", "dave_basalarea", "dave_density")
-data <- read_data(src, vars, site, read_obs = FALSE)@data
+data <- read_data(vars, read_obs = FALSE)
 data$date <- calc_date(data$Year, data$Day)
 var_names <- gsub("dave_", "", vars)
 names(data) <- gsub(paste0(src@name, "_"), "", names(data))
@@ -1135,11 +1234,57 @@ ggplot(data_long) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 
+### Mortality Fractions
+
+```{r mortality_fractions}
+mort_age <- read_data("dave_amort_age")
+mort_greff <- read_data("dave_amort_greff")
+cmass_mort <- read_data("dave_acmass_mort", layers = pft)
+
+mort_age <- rename(mort_age, age = all_of(pft))
+mort_greff <- rename(mort_greff, greff = all_of(pft))
+cmass_mort <- rename(cmass_mort, cmass = all_of(pft))
+
+data <- merge(mort_age, mort_greff, by = "Year")
+data$mort_total <- data$age + data$greff
+data <- merge(data, cmass_mort, by = "Year")
+
+# Plot mortality fractions.
+data_long <- pivot_longer(data, cols = c("age", "greff"),
+                          names_to = "source", values_to = "value")
+ggplot(data_long) +
+    geom_line(aes(x = Year, y = value, color = source)) +
+    ylab("Mortality Fraction") +
+    labs(title = paste(site, "Mortality Fractions")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Mortality C Mass
+
+```{r mortality_cmass}
+data$age_frac <- data$age / data$mort_total
+data$greff_frac <- data$greff / data$mort_total
+
+data$age_cmass <- data$age_frac * data$cmass
+data$greff_cmass <- data$greff_frac * data$cmass
+
+# Pivot to long format and name age_cmass as "age" and greff_cmass as "greff".
+data_long <- pivot_longer(data, cols = c("age_cmass", "greff_cmass"),
+                          names_to = "source", values_to = "value") %>%
+    mutate(source = factor(source, levels = c("age_cmass", "greff_cmass"),
+                           labels = c("age", "greff")))
+ggplot(data_long) +
+    geom_line(aes(x = Year, y = value, color = source)) +
+    ylab("Carbon Mass Mortality (kgC/m2)") +
+    labs(title = paste(site, "Mortality C Mass")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
 ### Diagnostics
 
 ```{r diagnostics}
 vars <- c("dave_latosa", "dave_cue")
-data <- read_data(src, vars, site, read_obs = FALSE)@data
+data <- read_data(vars, read_obs = FALSE)
 names(data) <- gsub(paste0(src@name, "_"), "", names(data))
 data$date <- calc_date(data$Year, data$Day)
 newnames <- gsub("dave_", "", vars)
@@ -1149,5 +1294,58 @@ ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = variable)) +
     ylab(NULL) +
     labs(title = paste(site, "Diagnostics")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Nitrogen Stress
+
+```{r nitrogen_stress}
+vars <- c("dave_ndemand", "dave_nmass_storage", "dave_nmass_storage_max",
+          "dave_nretranslocated", "dave_fnuptake", "dave_nstorage_drawdown")
+data <- read_data(vars, layers = pft)
+names(data) <- gsub(paste0(src@name, "_"), "", names(data))
+data$date <- calc_date(data$Year, data$Day)
+data$nuptake <- data$fnuptake * data$ndemand
+
+cols <- gsub("dave_", "", vars)
+data_long <- pivot_longer(data, cols = cols, names_to = "variable",
+                          values_to = "value")
+# Convert kg -> g (except fnuptake)
+data_long$value[data_long$variable != "fnuptake"] <-
+    data_long$value[data_long$variable != "fnuptake"] * 1000
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = variable)) +
+    facet_wrap(~ variable, scales = "free_y") +
+    ylab("Nitrogen (gN/m2)") +
+    labs(title = paste(site, "Nitrogen Stress Factors")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+```{r annual_nitrogen_usage}
+anstorage_drawdown <- read_data("dave_anstorage_drawdown", layers = pft)
+anretranslocated <- read_data("dave_anretranslocated", layers = pft)
+anuptake <- read_data("dave_anuptake", layers = pft)
+nmass_storage <- read_data("dave_nmass_storage", layers = pft)
+nmass_storage <- nmass_storage[Day == 365, ]
+nmass_storage <- remove_cols(nmass_storage, "Day")
+
+vars <- c("anstorage_drawdown", "anretranslocated", "anuptake", "nmass_storage")
+outputs <- paste0("dave_", vars)
+data <- read_data(outputs, layers = pft, show_all_predictions = FALSE)
+names(data) <- gsub(paste0(src@name, "_"), "", names(data))
+data$delta_storage <- c(NA, diff(data$nmass_storage))
+
+vars <- c(vars, "delta_storage")
+data_long <- pivot_longer(data, cols = vars, names_to = "variable",
+                          values_to = "value") %>%
+    mutate(variable = factor(variable, levels = vars,
+                             labels = c("Storage Drawdown", "Retranslocation",
+                                        "Uptake", "Storage", "Delta Storage")))
+# Convert kg to g
+data_long$value <- data_long$value * 1e3
+ggplot(data_long) +
+    geom_line(aes(x = Year, y = value, color = variable)) +
+    ylab("Nitrogen (gN/m2)") +
+    labs(title = paste(site, "Annual Nitrogen Usage")) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
