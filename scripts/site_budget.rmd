@@ -210,41 +210,72 @@ ozflux_panel(src, "dave_swmm_100", site)
 ### Annual Carbon Fluxes
 
 ```{r carbon_fluxes_annual}
-# GPP, NPP, NEE, Respiration
-acflux_vars <- c("dave_anee", "dave_anpp", "dave_agpp", "dave_aresp")
-data <- read_data(acflux_vars)
-renamed <- c("NEE", "NPP", "GPP", "Resp")
-names(data) <- c("Year", renamed)
-data_long <- pivot_longer(data, cols = renamed, names_to = "layer",
-                          values_to = "value")
-ggplot(data_long) +
-    geom_line(aes(x = Year, y = value, color = layer)) +
-    facet_wrap(~ layer, scales = "free_y") +
-    ylab("Carbon Flux (kgC/m2/year)") +
-    labs(title = paste(site, "Carbon Fluxes")) +
-    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-```
+# Read daily fluxes. These are used later for the daily flux plots, and we sum
+# the observations so that we have some observations for the annual plots.
 
-### Daily Carbon Fluxes
-
-```{r carbon_fluxes_daily}
 # TODO: break down respiration into growth/maintenance/etc
 nee_data <- read_data("dave_nee")
 npp_data <- read_data("dave_npp")
 gpp_data <- read_data("dave_gpp")
 resp_data <- read_data("dave_resp")
 
-# Rename observed -> observed_flux and dave@name -> flux for all fluxes.
-fix_names <- function(names, flux) {
-    names <- gsub("observed", paste0("observed_", flux), names)
-    names <- gsub(src@name, flux, names)
-    return(names)
-}
-names(nee_data) <- fix_names(names(nee_data), "nee")
-names(npp_data) <- fix_names(names(npp_data), "npp")
-names(gpp_data) <- fix_names(names(gpp_data), "gpp")
-names(resp_data) <- fix_names(names(resp_data), "resp")
+nee_data <- rename(nee_data, nee = all_of(src@name), observed_nee = observed)
+# We don't have NPP observations, so npp_data comes out with the right colname.
+gpp_data <- rename(gpp_data, gpp = all_of(src@name), observed_gpp = observed)
+resp_data <- rename(resp_data, resp = all_of(src@name),
+                    observed_resp = observed)
 
+# For each year in data, compute total observed flux, for fluxes which have
+# daily observations (ie NEE, GPP, Resp).
+obs_nee <- nee_data %>%
+    dplyr::group_by(Year) %>%
+    dplyr::summarise(observed_nee = sum(observed_nee, na.rm = TRUE) / 1000)
+obs_gpp <- gpp_data %>%
+    dplyr::group_by(Year) %>%
+    dplyr::summarise(observed_gpp = sum(observed_gpp, na.rm = TRUE) / 1000)
+obs_resp <- resp_data %>%
+    dplyr::group_by(Year) %>%
+    dplyr::summarise(observed_resp = sum(observed_resp, na.rm = TRUE) / 1000)
+obs_data <- merge(obs_nee, obs_gpp, by = "Year")
+obs_data <- merge(obs_data, obs_resp, by = "Year")
+
+# GPP, NPP, NEE, Respiration
+acflux_vars <- c("dave_anee", "dave_anpp", "dave_agpp", "dave_aresp")
+data <- read_data(acflux_vars)
+acflux_data <- data
+names(data) <- gsub(paste0(src@name, "_a"), "", names(data))
+
+data <- merge(data, obs_data, by = "Year")
+
+# Plot annual fluxes.
+fluxes <- gsub("dave_a", "", acflux_vars)
+cols <- c(fluxes, paste0("observed_", fluxes))
+cols <- intersect(cols, names(data))
+data_long <- pivot_longer(data, cols = cols, names_to = "layer",
+                          values_to = "value") %>%
+    mutate(source = ifelse(grepl("observed", layer), "observed", "predicted"),
+           flux = gsub("observed_", "", layer)) %>%
+    mutate(flux = factor(flux, levels = c("gpp", "npp", "nee", "resp")))
+
+labeller <- c(nee = "NEE", npp = "NPP", gpp = "GPP", resp = "Resp")
+
+ggplot(data_long) +
+    geom_line(data = dplyr::filter(data_long),
+              aes(x = Year, y = value, color = source)) +
+    facet_wrap(~ flux, scales = "free_y", labeller = as_labeller(labeller)) +
+    ylab("Carbon Flux (kgC/m2/year)") +
+    labs(title = paste(site, "Carbon Fluxes"), color = "Type") +
+    scale_color_manual(
+        values = daveanalysis:::get_colour_palette(2),
+        breaks = c("observed", "predicted"),
+        labels = c("Observed", "Predicted")
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Daily Carbon Fluxes
+
+```{r carbon_fluxes_daily}
 data <- merge(nee_data, npp_data, by = c("Year", "Day"))
 data <- merge(data, gpp_data, by = c("Year", "Day"))
 data <- merge(data, resp_data, by = c("Year", "Day"))
@@ -304,9 +335,9 @@ ggplot(data_long) +
     ylab("Carbon Flux (gC/m2/day)") +
     labs(title = paste(site, "Daily Carbon Fluxes"), color = "Type") +
     scale_color_manual(
-        values = rev(daveanalysis:::get_colour_palette(2)),
-        breaks = c("predicted", "observed"),
-        labels = c("Predicted", "Observed")
+        values = daveanalysis:::get_colour_palette(2),
+        breaks = c("observed", "predicted"),
+        labels = c("Observed", "Predicted")
     ) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
