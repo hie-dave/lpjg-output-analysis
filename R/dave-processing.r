@@ -334,7 +334,7 @@ read_data <- function(sources
             }
 
             layer_names <- get_layer_names(var, nvar, layers, source@name)
-            if (is.null(data)) {
+            if (is.null(data) || nrow(data@data) == 0) {
                 # IE no observations
                 data <- predictions
                 if (length(sources) > 1 || length(vars) > 1) {

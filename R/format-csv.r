@@ -281,7 +281,7 @@ get_field_csv <- function(source,
 
         if (is_named_layers) {
             log_diag("[get_field_csv] Renaming layers.")
-            data.table::setnames(dt, old = unname(layers), new = names(layers))
+            data.table::setnames(dt, old = unlist(unname(layers)), new = names(layers))
             log_diag("[get_field_csv] Address after renaming layers: ", data.table::address(dt))
         }
     }
