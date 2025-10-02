@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+################################################################################
+# Helper functions
+################################################################################
+
+# Print the error message to stderr and exit with non-zero status.
+die() {
+    echo $* >&2
+    exit 1
+}
+
+# Detect GNU sed (supports --version and prints "GNU").
+is_gnu_sed() {
+    sed --version 2>/dev/null | grep -qi 'gnu'
+}
+
+# In-place sed wrapper that handles BSD vs GNU.
+sedi() {
+    if is_gnu_sed; then
+        # GNU sed: -i requires no extra empty argument.
+        sed -i "$@"
+    else
+        # BSD sed: -i requires an explicit (possibly empty) extension.
+        sed -i '' "$@"
+    fi
+}
+
+################################################################################
+# Input parsing.
+################################################################################
+
+REPO=
+USAGE="Usage: ${0} --repo </path/to/repository>"
+while getopts "hr:" opt; do
+    case $opt in
+        r)
+            REPO="${OPTARG}"
+            ;;
+        h)
+            echo "${USAGE}"
+            exit 0
+            ;;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z "${REPO}" ]; then
+    echo "${USAGE}" >&2
+    die "--repo is required."
+fi
+
+if [ ! -d "${REPO}" ]; then
+    die "Specified repo path does not exist or is not a directory: ${REPO}"
+fi
+
+################################################################################
+# Main Script.
+################################################################################
+
+# Get the path to the directory containing this script.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Site budget file is in the same directory as this script.
+SITE_BUDGET="${DIR}/site_budget.rmd"
+
+# Get the list of model outputs required by the site budget.
+OUTPUTS="$(pcregrep -o1 '"(dave_[A-Za-z_]+)"' "${SITE_BUDGET}" | sort | uniq)"
+
+# Assume the file name and repo structure. Maybe this could be a CLI argument,
+# but in practice it's not expected to change.
+INS="${REPO}/benchmarks/ozflux/outputs.ins"
+GREP="$(which grep)"
+
+for OUTPUT in ${OUTPUTS}
+do
+    FILE_PARAM="file_${OUTPUT}"
+    # Uncomment the line if it already exists. E.g.
+    # "     ! file_dave_asdf..." ->
+    # "      file_dave_asdf..."
+    sedi -i -E "s/^([[:blank:]]*)!([[:blank:]]*${FILE_PARAM})/\1\2/g" "${INS}"
+
+    if ! "${GREP}" -q "^[[:blank:]]*${FILE_PARAM}" "${INS}"; then
+        # If the ${OUTPUT} ends with an _, we will need to skip it and warn user.
+        if [[ "${OUTPUT}" == *"_" ]]; then
+            echo "Warning: RMD constructs output type from template: ${OUTPUT}, which does not exist in outputs.ins. You will need to enable this/these manually..." >&2
+            continue
+        fi
+
+        # Otherwise, it should be safe to just append this output to the end of
+        # the file.
+        echo "${FILE_PARAM} \"${OUTPUT}.out\"" >> "${INS}"
+    fi
+done

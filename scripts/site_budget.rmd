@@ -576,7 +576,7 @@ ggplot(df_long) +
 
 ### Daily Nitrogen in Litter
 
-```{r clitter}
+```{r nlitter}
 layers <- c("SURFMETA", "SURFSTRUCT", "SURFCWD", "SURFFWD")
 data <- read_data("dave_nlitter", layers = layers)
 data$date <- calc_date(data$Year, data$Day)
@@ -839,7 +839,7 @@ ggplot(data, aes(x = sw_mean, y = wscal)) +
 
 ### Water Stress vs. Weighted Soil Water Potential
 
-```{r water_stress_vs_soil_water_potential}
+```{r water_stress_vs_weighted_soil_water_potential}
 weighted_psi <- read_data("dave_weighted_psi", layers = pft)
 weighted_psi <- rename(weighted_psi, "weighted_psi" = pft)
 
@@ -1358,7 +1358,7 @@ anretranslocated <- read_data("dave_anretranslocated", layers = pft)
 anuptake <- read_data("dave_anuptake", layers = pft)
 nmass_storage <- read_data("dave_nmass_storage", layers = pft)
 nmass_storage <- nmass_storage[Day == 365, ]
-nmass_storage <- remove_cols(nmass_storage, "Day")
+nmass_storage <- select(nmass_storage, -"Day")
 
 vars <- c("anstorage_drawdown", "anretranslocated", "anuptake", "nmass_storage")
 outputs <- paste0("dave_", vars)
