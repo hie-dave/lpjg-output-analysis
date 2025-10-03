@@ -498,24 +498,37 @@ available N + this year's fluxes. If we have accounted for all of the fluxes
 correctly, this should be a 1:1 line.
 
 ```{r anflux_sanity_check}
-anflux_layers <- c("deposition", "fixation", "gross_mineralisation",
+anflux_layers <- c("deposition", "fixation", "uptake", "gross_mineralisation",
                    "immobilisation", "net_mineralisation", "min_leach",
                    "org_leach", "volatilisation", "gas_emissions", "flux",
-                   "nuptake", "avail")
+                   "flux_avail", "avail", "totaln")
 data <- read_data("dave_nitrogen_budget_annual", layers = anflux_layers)
 
-data[, nmass_prev := data.table::shift(avail, 1)]
-data[, nmass_expected := nmass_prev + flux]
+nflux_layers <- c("MANUREN", "NFERT", "ESTN", "HARVESTN", "SEEDN", "NH3_FIRE",
+                  "NOx_FIRE", "N2O_FIRE", "N2_FIRE", "NH3_SOIL", "NO_SOIL",
+                  "N2O_SOIL", "N2_SOIL", "NET_NITRIF", "NET_DENITRIF",
+                  "GROSS_NITRIF", "GROSS_DENITRIF")
+nflux <- read_data("dave_anflux", layers = nflux_layers)
 
-r2 <- with(data[-1, ], cor(avail, nmass_expected)^2)
+data[, navail_prev := data.table::shift(avail, 1)]
+data[, navail_expected := navail_prev + flux_avail]
 
-# Plot nmass and nmass_expected from row 2 to the end.
-ggplot(data[-1, ], aes(x = avail, y = nmass_expected)) +
-    geom_point() + labs(title = paste(site, "Expected vs Actual Available N")) +
+data[, ntot_prev := data.table::shift(totaln, 1)]
+data[, ntot_expected := ntot_prev + flux]
+
+r2_avail <- with(data[-1, ], cor(avail, navail_expected)^2)
+r2_total <- with(data[-1, ], cor(totaln, ntot_expected)^2)
+
+# Plot navail and navail_expected from row 2 to the end.
+ggplot(data[-1, ]) +
+    geom_point(aes(x = avail, y = navail_expected)) +
+    geom_point(aes(x = totaln, y = ntot_expected), color = "red") +
+    labs(title = paste(site, "Expected vs Actual Available N")) +
     xlab("Actual (kgN/m2)") + ylab("Expected (kgN/m2)") +
     geom_text(
         x = -Inf, y = Inf,
-        label = paste0("r2 = ", round(r2, 2)),
+        label = paste0("r2_avail = ", round(r2_avail, 2), "\nr2_total = ",
+                       round(r2_total, 2)),
         hjust = -0.1, vjust = 1.25, size = 5
     )
 anflux_data <- data
@@ -529,24 +542,30 @@ correctly, this should be a 1:1 line.
 
 ```{r dnflux_sanity_check}
 # Same order as anflux cols for comparison purposes
-nflux_cols <- c("dNO3dep", "dNH4dep", "dnfix", "nmin_gross", "nimmob",
-                "nmin_net", "norg_leach", "nmin_leach", "nvolatilisation",
-                "nloss_gas", "flux", "nuptake", "avail")
-data <- read_data("dave_soil_nflux", layers = nflux_cols)
+nbudget_cols <- c("deposition", "fixation", "uptake", "net_mineralisation",
+                  "gross_mineralisation", "immobilisation", "min_leach",
+                  "org_leach", "volatilisation", "gas_emissions", "flux_avail",
+                  "flux", "avail", "totaln")
+data <- read_data("dave_nitrogen_budget_daily", layers = nbudget_cols)
 data$date <- calc_date(data$Year, data$Day)
 
-data[, nmass_prev := data.table::shift(avail, 1)]
-data[, nmass_expected := nmass_prev + flux]
+data[, navail_prev := data.table::shift(avail, 1)]
+data[, navail_expected := navail_prev + flux_avail]
 
-r2 <- with(data[-1, ], cor(avail, nmass_expected)^2)
+data[, ntot_prev := data.table::shift(totaln, 1)]
+data[, ntot_expected := ntot_prev + flux]
 
-# Plot nmass and nmass_expected from row 2 to the end.
-ggplot(data[-1, ], aes(x = avail, y = nmass_expected)) +
+r2_avail <- with(data[-1, ], cor(avail, navail_expected)^2)
+r2_total <- with(data[-1, ], cor(totaln, ntot_expected)^2)
+
+# Plot navail and navail_expected from row 2 to the end.
+ggplot(data[-1, ], aes(x = avail, y = navail_expected)) +
     geom_point() + labs(title = paste(site, "Expected vs Actual Available N")) +
     xlab("Actual (kgN/m2)") + ylab("Expected (kgN/m2)") +
     geom_text(
         x = -Inf, y = Inf,
-        label = paste0("r2 = ", round(r2, 2)),
+        label = paste0("r2_avail = ", round(r2_avail, 2), "\nr2_total = ",
+                       round(r2_total, 2)),
         hjust = -0.1, vjust = 1.25, size = 5
     )
 dnflux_data <- data
