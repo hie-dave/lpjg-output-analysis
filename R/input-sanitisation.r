@@ -227,6 +227,8 @@ is_known_quantity <- function(name) {
 
 # Attempt to get units given a variable name by looking in the observed file.
 get_units <- function(var_name) {
+    # TODO: query observations registry
+    # TODO: implement a true lpj-guess quantity registry
     trimmed <- trim_dave(var_name)
     for (var in get_observed_vars()) {
         if (var@id == trimmed) {

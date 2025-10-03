@@ -13,6 +13,10 @@ ozflux_shiny <- function(sources) {
 
   gridcells <- read_ozflux_sites()
 
+  # Warning: this is no longer the complete list of observations.
+  # If we ever want to use this tool again, we'll need to rethink this. The good
+  # news is that we now have a proper registry which probably already has API to
+  # support this.
   vars <- get_observed_vars()
 
   var_names <- c()

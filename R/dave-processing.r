@@ -412,7 +412,6 @@ get_observed_vars <- function() {
     , DGVMTools::defineQuantity("resp", "Respiration", "gC m^-2 day^-1")
     , DGVMTools::defineQuantity("nee", "NEE", "gC m^-2 day^-1")
     , DGVMTools::defineQuantity("aet", "ET", "mm day^-1")
-    , DGVMTools::defineQuantity("lai", "LAI", "m^2 m^-2")
     , DGVMTools::defineQuantity("aboveground_tree_biomass", "Above-Ground Live Tree Biomass", "kg/m2")
     , DGVMTools::defineQuantity("dead_biomass", "??Above-Ground Dead Biomass??", "kg/m2")
     , DGVMTools::defineQuantity("height", "Height", "m")

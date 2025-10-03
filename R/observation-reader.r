@@ -340,11 +340,10 @@ create_modis_reader <- function() {
         "MODIS LAI",
         file_path,
         "lai",
-        layers = c("lai" = "MYD15A2H_006_Lai_500m"),
-        lat_col = "Latitude",
-        lon_col = "Longitude",
-        time_col = "Date",
+        layers = c("lai"),
+        time_col = "date",
         time_fmt = "%d/%m/%Y",
+        site_col = "site",
         infer_site = TRUE
     ))
 }
@@ -401,7 +400,7 @@ populate_registry <- function() {
     register_reader(create_flux_data_reader())
 
     # MODIS LAI.
-    # register_reader(create_modis_reader())
+    register_reader(create_modis_reader())
 
     # SMIPS swindex.
     register_reader(create_smips_reader("swindex", "SMindex", "wcont"))
