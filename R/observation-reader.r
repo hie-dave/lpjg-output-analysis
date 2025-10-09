@@ -307,6 +307,11 @@ create_csv_reader <- function(id,
         format = CSV
     )
 
+    # Force promise arguments to avoid late binding issues in closures.
+    force(quant)
+    force(layers)
+    force(file_path)
+
     return(new("ObservationReader",
         src = src,
         file_path = file_path,
