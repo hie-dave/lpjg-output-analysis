@@ -635,26 +635,6 @@ rm(anflux_data)
 ```{r nflux_daily}
 data <- dnflux_data
 
-# Calculate deposition from dNO3dep and dNH4dep, and update nflux_cols
-data[, deposition := dNO3dep + dNH4dep]
-data[, dNO3dep := NULL]
-data[, dNH4dep := NULL]
-
-# Remove dNO3dep and dNH4dep from nflux_cols
-nflux_cols <- setdiff(nflux_cols, c("dNO3dep", "dNH4dep"))
-nflux_cols <- c("deposition", nflux_cols)
-
-# Rename columns to be consistent with annual nitrogen outputs.
-data <- rename(data, fixation = "dnfix",
-               gross_mineralisation = "nmin_gross",
-               immobilisation = "nimmob",
-               net_mineralisation = "nmin_net",
-               org_leach = "norg_leach",
-               min_leach = "nmin_leach",
-               volatilisation = "nvolatilisation",
-               gas_emissions = "nloss_gas",
-               avail = "avail")
-
 # Plot fluxes
 df_long <- pivot_longer(data, cols = anflux_layers, names_to = "layer",
                         values_to = "value") %>%
