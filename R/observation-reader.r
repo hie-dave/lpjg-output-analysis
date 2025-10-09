@@ -394,6 +394,27 @@ create_awra_reader <- function(var, name, model_variable, obs_dir) {
     ))
 }
 
+create_gosif_reader <- function() {
+    obs_dir <- system.file("data", package = get_global("dave_pkgname"))
+    filename <- "gosif_gpp.csv.gz"
+    file_path <- file.path(obs_dir, "gosif", filename)
+    layers <- c("gpp")
+    names(layers) <- "gpp"
+    return(create_csv_reader(
+        "gosif-gpp",
+        "GOSIF GPP",
+        file_path,
+        "gpp",
+        layers = layers,
+        site_col = "site",
+        lat_col = NULL,
+        lon_col = NULL,
+        time_col = "date",
+        time_fmt = "%Y-%m-%d",
+        infer_site = TRUE
+    ))
+}
+
 #'
 #' Populate the observation reader registry with a default set of readers.
 #'
@@ -415,6 +436,9 @@ populate_registry <- function() {
 
     # SMIPS ET.
     register_reader(create_smips_reader("et", "ETa", "aet"))
+
+    # GOSIF GPP.
+    register_reader(create_gosif_reader())
 }
 
 #'
