@@ -158,20 +158,33 @@ convert_to_date <- function(date_strings, date_fmt) {
                                     "%Y-%m-%d %H:%M:%OS")
     have_fasttime <- requireNamespace("fasttime", quietly = TRUE)
     dates <- c()
-    if (!is.null(date_fmt) && date_fmt %in% fasttime_supported_formats && have_fasttime) {
+    # Special-case: year-only inputs. Using an explicit anchor avoids
+    # base R's behavior of filling missing components from the current date
+    # (when using strptime) or interpreting numerics as days since 1970.
+    if (!is.null(date_fmt) && identical(date_fmt, "%Y")) {
+        log_diag("Parsing year-only dates with anchor 12-31.")
+        years <- suppressWarnings(as.integer(as.character(date_strings)))
+        if (any(is.na(years))) {
+            log_error("Some year values are not parseable as integers: ",
+                      paste0(date_strings[is.na(years)], collapse = ", "))
+        }
+        dates <- as.Date(paste0(years, "-12-31"))
+    } else if (!is.null(date_fmt) && date_fmt %in% fasttime_supported_formats && have_fasttime) {
         log_diag("Using fasttime to convert dates")
         dates <- fasttime::fastDate(date_strings)
-        if (NA %in% dates) {
+        if (any(is.na(dates))) {
             log_warning("fasttime::fastDate failed, falling back to as.Date.")
-            dates <- as.Date(date_strings, format = date_fmt)
+            dates <- as.Date(as.character(date_strings), format = date_fmt)
         }
     } else {
         log_diag("Using base R to convert dates. If this is slow, consider installing the fasttime package and converting dates to yyyy-MM-dd.")
-        dates <- as.Date(date_strings, format = date_fmt)
+        # Coerce to character to ensure as.Date uses the provided format,
+        # rather than interpreting numerics as days since 1970.
+        dates <- as.Date(as.character(date_strings), format = date_fmt)
     }
-    if (NA %in% dates) {
+    if (any(is.na(dates))) {
         msg <- "Some dates could not be parsed: "
-        msg <- paste(msg, date_strings[which(NA %in% dates)], collapse = ", ")
+        msg <- paste(msg, date_strings[which(is.na(dates))], collapse = ", ")
         if (is.null(date_fmt)) {
             msg <- paste0(msg, "\nNo date format was specified")
         } else {
@@ -264,7 +277,7 @@ get_field_csv <- function(source,
         log_diag("[get_field_csv] Filtering by layers: ", paste0(input_col_names, collapse = ", "))
         if (any(!input_col_names %in% colnames(dt))) {
             missing_cols <- input_col_names[!input_col_names %in% colnames(dt)]
-            log_error("Some of the layers specified are not present in the file: ", paste0(missing_cols, collapse = ", "))
+            log_error("Some of the layers specified are not present in the file ", file_path, ": ", paste0(missing_cols, collapse = ", "))
         }
 
         cols_to_keep <- c(time_col, input_col_names)

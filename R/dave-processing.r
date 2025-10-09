@@ -258,6 +258,7 @@ read_data <- function(sources
 
                 # For now, use reader_id as the layer name. Should revisit this.
                 if (is.null(data)) {
+                    log_debug("This is the first reader for variable ", var_id)
                     data <- obs_field
                     if (layers %in% names(data)) {
                         DGVMTools::renameLayers(data, layers, reader_id)
@@ -273,10 +274,15 @@ read_data <- function(sources
                     if (!(layers_old %in% names(obs_field))) {
                         layers_old <- names(obs_field)[names(obs_field) != "Site"][1]
                     }
-                    data <- DGVMTools::copyLayers(obs_field, data, layers_old
-                        , new.layer.names = reader_id
-                        , tolerance = get_global("merge_tol"), keep.all.from = show_all_observations
-                        , keep.all.to = show_all_observations)#, allow.cartesian = TRUE
+                    log_debug("Merging data from reader ", reader_id,
+                              " with layers ", layers_old, "...")
+                    data <- DGVMTools::copyLayers(obs_field, data, layers_old,
+                                                  new.layer.names = reader_id,
+                                                  tolerance = get_global("merge_tol"),
+                                                  keep.all.from = show_all_observations,
+                                                  keep.all.to = show_all_observations)
+                    log_debug("After merging, data has ", nrow(data@data),
+                              " rows")
                 }
             }
         }
@@ -336,16 +342,29 @@ read_data <- function(sources
             layer_names <- get_layer_names(var, nvar, layers, source@name)
             if (is.null(data) || nrow(data@data) == 0) {
                 # IE no observations
+                log_debug("This is the first source for variable ", var@name)
                 data <- predictions
                 if (length(sources) > 1 || length(vars) > 1) {
                     DGVMTools::renameLayers(data, layers, layer_names)
                 }
             } else {
                 nr <- nrow(data@data)
+                log_debug("Merging data from source ", source@name,
+                          " for variable ", var@name)
+                # If data is annual (ie no Day column), and all predictions have
+                # the same Day, drop the Day column from predictions before
+                # merging.
+                if ("Day" %in% names(predictions@data) &&
+                    !("Day" %in% names(data@data)) &&
+                    all(predictions@data$Day == predictions@data$Day[1])) {
+                    log_diag("Dropping Day column from predictions")
+                    predictions@data$Day <- NULL
+                }
                 data <- DGVMTools::copyLayers(predictions, data, layers
                     , new.layer.names = layer_names
                     , tolerance = get_global("merge_tol"), keep.all.from = show_all_predictions
                     , keep.all.to = show_all_observations)#, allow.cartesian = TRUE
+                log_debug("After merging, data has ", nrow(data@data), " rows")
                 # Note: if using a "non-standard" ozflux site (such as Abisko),
                 # we will have observations for all standard sites but not this
                 # one. If show_all_observations is TRUE, copyLayers() will emit
