@@ -33,7 +33,7 @@ sedi() {
 ################################################################################
 
 REPO=
-USAGE="Usage: ${0} --repo </path/to/repository>"
+USAGE="Usage: ${0} -r </path/to/repository>"
 while getopts "hr:" opt; do
     case $opt in
         r)
@@ -52,7 +52,7 @@ done
 
 if [ -z "${REPO}" ]; then
     echo "${USAGE}" >&2
-    die "--repo is required."
+    die "Repository path is required."
 fi
 
 if [ ! -d "${REPO}" ]; then
@@ -69,13 +69,14 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Site budget file is in the same directory as this script.
 SITE_BUDGET="${DIR}/site_budget.rmd"
 
-# Get the list of model outputs required by the site budget.
-OUTPUTS="$(pcregrep -o1 '"(dave_[A-Za-z_]+)"' "${SITE_BUDGET}" | sort | uniq)"
-
 # Assume the file name and repo structure. Maybe this could be a CLI argument,
 # but in practice it's not expected to change.
 INS="${REPO}/benchmarks/ozflux/outputs.ins"
 GREP="$(which grep)"
+
+# Get the list of model outputs required by the site budget.
+# OUTPUTS="$(pcregrep -o1 '"(dave_[A-Za-z_]+)"' "${SITE_BUDGET}" | sort | uniq)"
+OUTPUTS="$("${GREP}" -E -o '"dave_[A-Za-z_]+' "${SITE_BUDGET}" | "${GREP}" -v -E _$ | sed -E 's/"//g')"
 
 for OUTPUT in ${OUTPUTS}
 do
