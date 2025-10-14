@@ -69,13 +69,14 @@ if [ ! -d "${REPO}" ]; then die "Repository directory not found: ${REPO}"; fi
 # Processing
 ################################################################################
 
-# Map PIDs to site and log for post-run reporting
-declare -A PID_TO_SITE
-declare -A PID_TO_LOG
+# Map PIDs to site and log using a POSIX-friendly temp file
+mkdir -p "${OUT_DIR}"
+MAP_FILE="${OUT_DIR}/.pid_map.$$"
+: > "${MAP_FILE}"
+trap 'rm -f "${MAP_FILE}"' EXIT
 
 for SITE in ${SITES}
 do
-    mkdir -p "${OUT_DIR}"
     OUT_FILE="${OUT_DIR}/${SITE}.html"
     LOG_FILE="${OUT_DIR}/${SITE}.log"
     wait_for_jobs
@@ -90,15 +91,16 @@ do
             description = '${DESCRIPTION}'),
         output_file = '${OUT_FILE}')" >"${LOG_FILE}" 2>&1 &
     PID=$!
-    PID_TO_SITE["${PID}"]="${SITE}"
-    PID_TO_LOG["${PID}"]="${LOG_FILE}"
+    # Append PID mapping: PID<TAB>SITE<TAB>LOG
+    printf '%s\t%s\t%s\n' "$PID" "$SITE" "$LOG_FILE" >> "${MAP_FILE}"
 done
 
 # Wait for all jobs and report failures with context
 FAIL=0
-for PID in "${!PID_TO_SITE[@]}"; do
-    SITE="${PID_TO_SITE[$PID]}"
-    LOG="${PID_TO_LOG[$PID]}"
+# Read mappings and wait for each PID
+# The IFS below contains a literal tab character
+IFS='	'
+while read -r PID SITE LOG; do
     if ! wait "$PID"; then
         echo "ERROR: Rendering failed for ${SITE} (PID ${PID}). See log: ${LOG}" >&2
         # Show the tail of the log for quick triage
@@ -109,8 +111,9 @@ for PID in "${!PID_TO_SITE[@]}"; do
         fi
         FAIL=1
     else
-        echo "OK: ${SITE} completed successfully." 
+        echo "OK: ${SITE} completed successfully."
     fi
-done
+done < "${MAP_FILE}"
+unset IFS
 
 exit $FAIL
