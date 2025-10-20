@@ -347,7 +347,7 @@ create_modis_reader <- function() {
         "lai",
         layers = c("lai"),
         time_col = "date",
-        time_fmt = "%d/%m/%Y",
+        time_fmt = "%Y-%m-%d",
         site_col = "site",
         infer_site = TRUE
     ))
@@ -415,6 +415,27 @@ create_gosif_reader <- function() {
     ))
 }
 
+create_tern_lai_reader <- function() {
+    # cols <- c("dhp", "dhp", "lai")
+    obs_dir <- system.file("data", package = get_global("dave_pkgname"))
+    filename <- "TERNlai_ozflux.csv.gz"
+    file_path <- file.path(obs_dir, filename)
+    layers <- c("PAI")
+    names(layers) <- "lai"
+    return(create_csv_reader(
+        "dhp",
+        "DHP",
+        file_path,
+        "lai",
+        layers = layers,
+        site_col = "site",
+        lat_col = NULL,
+        lon_col = NULL,
+        time_col = "Date",
+        time_fmt = "%Y-%m-%d"
+    ))
+}
+
 #'
 #' Populate the observation reader registry with a default set of readers.
 #'
@@ -436,6 +457,9 @@ populate_registry <- function() {
 
     # SMIPS ET.
     register_reader(create_smips_reader("et", "ETa", "aet"))
+
+    # DHP/DCP LAI data.
+    register_reader(create_tern_lai_reader())
 
     # GOSIF GPP.
     register_reader(create_gosif_reader())
