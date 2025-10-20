@@ -260,7 +260,7 @@ read_data <- function(sources
                 if (is.null(data)) {
                     log_debug("This is the first reader for variable ", var_id)
                     data <- obs_field
-                    if (layers %in% names(data)) {
+                    if (length(layers) == 1 && layers %in% names(data)) {
                         DGVMTools::renameLayers(data, layers, reader_id)
                     } else {
                         # Get first layer that's not "Site"
