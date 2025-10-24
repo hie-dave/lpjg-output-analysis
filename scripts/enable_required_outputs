@@ -84,7 +84,7 @@ do
     # Uncomment the line if it already exists. E.g.
     # "     ! file_dave_asdf..." ->
     # "      file_dave_asdf..."
-    sedi -i -E "s/^([[:blank:]]*)!([[:blank:]]*${FILE_PARAM})/\1\2/g" "${INS}"
+    sedi -E "s/^([[:blank:]]*)!([[:blank:]]*${FILE_PARAM})/\1\2/g" "${INS}"
 
     if ! "${GREP}" -q "^[[:blank:]]*${FILE_PARAM}" "${INS}"; then
         # If the ${OUTPUT} ends with an _, we will need to skip it and warn user.
