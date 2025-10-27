@@ -436,6 +436,27 @@ create_tern_lai_reader <- function() {
     ))
 }
 
+create_flux_csv_reader <- function(var, model_variable) {
+    obs_dir <- system.file("data", package = get_global("dave_pkgname"))
+    filename <- paste0(var, ".csv.gz")
+    file_path <- file.path(obs_dir, filename)
+    layers <- c(var)
+    names(layers) <- model_variable
+    return(create_csv_reader(
+        paste0("fluxtower_", var),
+        paste("Flux Tower", var),
+        file_path,
+        model_variable,
+        layers = layers,
+        site_col = "site",
+        lat_col = NULL,
+        lon_col = NULL,
+        time_col = "date",
+        time_fmt = "%Y-%m-%d",
+        infer_site = TRUE
+    ))
+}
+
 #'
 #' Populate the observation reader registry with a default set of readers.
 #'
@@ -463,6 +484,11 @@ populate_registry <- function() {
 
     # GOSIF GPP.
     register_reader(create_gosif_reader())
+
+    # Met data from flux towers.
+    register_reader(create_flux_csv_reader("pr", "dave_met_precip"))
+    register_reader(create_flux_csv_reader("temp", "dave_met_temp"))
+    register_reader(create_flux_csv_reader("rsds", "dave_met_insol"))
 }
 
 #'
