@@ -212,6 +212,16 @@ create_flux_data_reader <- function() {
     # Define the supported variables
     # TODO: should read this dynamically.
     obs_vars <- get_observed_vars()
+
+    ignored_obs_vars <- c("gpp", "aet")
+    # FIXME: temp hack while we convert variables one at a time to CSV.
+    # In the meantime, they will exist in both places, and should be ignored
+    # in the netcdf reader.
+    for (var_id in ignored_obs_vars) {
+        obs_vars <- obs_vars[which(sapply(obs_vars,
+                                          function(x) x@id) != var_id)]
+    }
+
     supported_vars <- sapply(obs_vars, function(x) x@id)
 
     # Create mapping from observation variables to model variables
@@ -436,14 +446,15 @@ create_tern_lai_reader <- function() {
     ))
 }
 
-create_flux_csv_reader <- function(var, model_variable) {
+create_flux_csv_reader <- function(var, model_variable,
+                                   id = paste0("flux_", var)) {
     obs_dir <- system.file("data", package = get_global("dave_pkgname"))
     filename <- paste0(var, ".csv.gz")
-    file_path <- file.path(obs_dir, filename)
+    file_path <- file.path(obs_dir, "flux", filename)
     layers <- c(var)
     names(layers) <- model_variable
     return(create_csv_reader(
-        paste0("fluxtower_", var),
+        id,
         paste("Flux Tower", var),
         file_path,
         model_variable,
@@ -474,7 +485,7 @@ populate_registry <- function() {
     register_reader(create_smips_reader("swindex", "SMindex", "wcont"))
 
     # SMIPS sw (aka totalbucket).
-    register_reader(create_smips_reader("sw", "totalbucket", "swmm_100"))
+    register_reader(create_smips_reader("sw", "totalbucket", "swavail_100"))
 
     # SMIPS ET.
     register_reader(create_smips_reader("et", "ETa", "aet"))
@@ -486,9 +497,14 @@ populate_registry <- function() {
     register_reader(create_gosif_reader())
 
     # Met data from flux towers.
-    register_reader(create_flux_csv_reader("pr", "dave_met_precip"))
-    register_reader(create_flux_csv_reader("temp", "dave_met_temp"))
-    register_reader(create_flux_csv_reader("rsds", "dave_met_insol"))
+    register_reader(create_flux_csv_reader("pr", "met_precip"))
+    register_reader(create_flux_csv_reader("temp", "met_temp"))
+    register_reader(create_flux_csv_reader("rsds", "met_insol"))
+    register_reader(create_flux_csv_reader("sws", "swvol"))
+    register_reader(create_flux_csv_reader("et", "aet"))
+    register_reader(create_flux_csv_reader("aet", "aaet"))
+    # TODO: could add LL and LT gpp?
+    register_reader(create_flux_csv_reader("gpp_solo", "gpp", id = "flux_gpp"))
 }
 
 #'
@@ -503,7 +519,7 @@ register_supplementary_observations <- function(obs_dir) {
     awra_dir <- file.path(obs_dir, "awra")
     if (dir.exists(awra_dir)) {
         register_reader(create_awra_reader("s0", "AWRA Upper Soil Moisture (0-0.1m)", "swmm_10", awra_dir))
-        register_reader(create_awra_reader("ss", "AWRA Lower Soil Moisture (0.1-1m)", "swmm_100", awra_dir))
+        register_reader(create_awra_reader("ss", "AWRA Lower Soil Moisture (0.1-1m)", "swavail_100", awra_dir))
         register_reader(create_awra_reader("sd", "AWRA Deep Soil Moisture (1-6m)", "swmm_600", awra_dir))
     } else {
         log_warning("AWRA directory not found: ", awra_dir, ". It's likely that you have not downloaded the full dataset, or you have used the wrong path when calling register_supplementary_observations().")
