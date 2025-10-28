@@ -257,8 +257,11 @@ read_data <- function(sources
                 obs_field <- reader@read_func(var_id, sites = sites$Name)
 
                 # For now, use reader_id as the layer name. Should revisit this.
-                if (is.null(data)) {
-                    log_debug("This is the first reader for variable ", var_id)
+                if (nrow(obs_field@data) == 0) {
+                    log_warning("No rows of data were returned from reader ",
+                                reader_id, " for variable ", var_id)
+                } else if (is.null(data)) {
+                    log_debug(reader_id, " is the first reader for variable ", var_id)
                     data <- obs_field
                     if (length(layers) == 1 && layers %in% names(data)) {
                         DGVMTools::renameLayers(data, layers, reader_id)
@@ -275,7 +278,8 @@ read_data <- function(sources
                         layers_old <- names(obs_field)[names(obs_field) != "Site"][1]
                     }
                     log_debug("Merging data from reader ", reader_id,
-                              " with layers ", layers_old, "...")
+                              " with ", nrow(data@data), " rows of layers ",
+                              layers_old, "...")
                     data <- DGVMTools::copyLayers(obs_field, data, layers_old,
                                                   new.layer.names = reader_id,
                                                   tolerance = get_global("merge_tol"),
@@ -342,7 +346,7 @@ read_data <- function(sources
             layer_names <- get_layer_names(var, nvar, layers, source@name)
             if (is.null(data) || nrow(data@data) == 0) {
                 # IE no observations
-                log_debug("This is the first source for variable ", var@name)
+                log_debug(source@name, " is the first source for variable ", var@name)
                 data <- predictions
                 if (length(sources) > 1 || length(vars) > 1) {
                     DGVMTools::renameLayers(data, layers, layer_names)
