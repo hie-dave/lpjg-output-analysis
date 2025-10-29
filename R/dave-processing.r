@@ -274,7 +274,7 @@ read_data <- function(sources
                     }
                 } else {
                     layers_old <- layers
-                    if (!(layers_old %in% names(obs_field))) {
+                    if (!all(layers_old %in% names(obs_field))) {
                         layers_old <- names(obs_field)[names(obs_field) != "Site"][1]
                     }
                     log_debug("Merging data from reader ", reader_id,
