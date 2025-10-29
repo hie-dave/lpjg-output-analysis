@@ -11,7 +11,8 @@ read_data(
   layers = NULL,
   correct_leaps = FALSE,
   show_all_observations = TRUE,
-  show_all_predictions = TRUE
+  show_all_predictions = TRUE,
+  read_obs = TRUE
 )
 }
 \arguments{

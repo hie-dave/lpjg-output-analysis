@@ -16,7 +16,8 @@ ozflux_plot_layerwise(
   common_yaxis = FALSE,
   show_all_observations = TRUE,
   show_all_predictions = TRUE,
-  allow_points = TRUE
+  allow_points = TRUE,
+  show_obs = TRUE
 )
 }
 \arguments{

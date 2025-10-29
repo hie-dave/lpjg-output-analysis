@@ -213,7 +213,7 @@ create_flux_data_reader <- function() {
     # TODO: should read this dynamically.
     obs_vars <- get_observed_vars()
 
-    ignored_obs_vars <- c("gpp", "aet")
+    ignored_obs_vars <- c("gpp", "aet", "nee", "resp")
     # FIXME: temp hack while we convert variables one at a time to CSV.
     # In the meantime, they will exist in both places, and should be ignored
     # in the netcdf reader.
@@ -496,15 +496,17 @@ populate_registry <- function() {
     # GOSIF GPP.
     register_reader(create_gosif_reader())
 
-    # Met data from flux towers.
+    # Data from flux towers.
+    # TODO: Lloyd-Taylor fluxes?
     register_reader(create_flux_csv_reader("pr", "met_precip"))
     register_reader(create_flux_csv_reader("temp", "met_temp"))
     register_reader(create_flux_csv_reader("rsds", "met_insol"))
     register_reader(create_flux_csv_reader("sws", "swvol"))
     register_reader(create_flux_csv_reader("et", "aet"))
     register_reader(create_flux_csv_reader("aet", "aaet"))
-    # TODO: could add LL and LT gpp?
     register_reader(create_flux_csv_reader("gpp_solo", "gpp", id = "flux_gpp"))
+    register_reader(create_flux_csv_reader("nee_solo", "nee", id = "flux_nee"))
+    register_reader(create_flux_csv_reader("er_solo", "resp", id = "flux_resp"))
 }
 
 #'

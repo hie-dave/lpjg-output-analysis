@@ -8,6 +8,7 @@ output:
         self_contained: true
 params:
   repo: "~/code/lpj-guess/dave"
+  data_dir: "~/code/lpj-guess/scripts/ozflux-lpjg/data"
   source_id: "new"
   source_label: "MRS-NewCode"
   site: "CumberlandPlain"
@@ -57,6 +58,8 @@ dave_config(log_level = 0)
 
 # Set ggplot theme.
 theme_set(theme_bw(base_size = 16))
+
+daveanalysis:::register_supplementary_observations(params$data_dir)
 ```
 
 ```{r helper_functions}
@@ -66,11 +69,6 @@ read_data <- function(vars, layers = NULL, ...) {
     # Remove Lon/Lat columns, which are redundant when dealing with one site.
     data <- select(data, -c("Lon", "Lat"))
     return(data)
-}
-
-use_colour <- function(plot, index, name) {
-    colour <- daveanalysis:::get_colour_palette(index)[index]
-    plot + scale_color_manual(values = colour, labels = c(name))
 }
 
 calc_date <- function(year, day) {
@@ -127,6 +125,201 @@ read_cton_live <- function(pool) {
     df$Date <- calc_date(df$Year, df$Day)
     return(df)
 }
+
+plot_against <- function(x, y, xname, yname, xunits, yunits,
+                         ignored_layers = NULL, log_x = FALSE,
+                         nrow = 2, scales = "free",
+                         xlim = NULL, ylim = NULL) {
+    xdata <- read_data(x)
+    ydata <- read_data(y)
+
+    # Get list of observed source names.
+    std_ignore <- c("Year", "Day", "Site")
+    std_x_ignore <- intersect(std_ignore, names(xdata))
+    pred_x_layers <- src@name
+    if (!(pred_x_layers) %in% names(xdata)) {
+        pred_x_layers <- setdiff(names(xdata), std_x_ignore)
+    }
+    obs_x_layers <- setdiff(names(xdata),
+                            intersect(names(xdata),
+                                      c(std_x_ignore, pred_x_layers)))
+    if (length(obs_x_layers) == 0 && length(pred_x_layers) == 1) {
+        # Only 1 x layer.
+        obs_x_layers <- pred_x_layers
+    }
+    std_y_ignore <- intersect(std_ignore, names(ydata))
+    pred_y_layers <- src@name
+    if (!(pred_y_layers) %in% names(ydata)) {
+        pred_y_layers <- setdiff(names(ydata), std_y_ignore)
+    }
+    obs_y_layers <- setdiff(names(ydata),
+                            intersect(names(ydata),
+                                      c(std_y_ignore, pred_y_layers)))
+
+    if (!is.null(ignored_layers)) {
+        ignored_x <- intersect(ignored_layers, obs_x_layers)
+        obs_x_layers <- setdiff(obs_x_layers, ignored_x)
+
+        ignored_y <- intersect(ignored_layers, obs_y_layers)
+        obs_y_layers <- setdiff(obs_y_layers, ignored_y)
+    }
+
+    # Convert x to long format and filter out NA values.
+    x_long <- pivot_longer(xdata, cols = c(obs_x_layers, pred_x_layers),
+                           names_to = "source", values_to = "x")
+    # x_long <- x_long[complete.cases(x_long), ]
+
+    # Convert y to long format and filter out NA values.
+    y_long <- pivot_longer(ydata, cols = c(obs_y_layers, pred_y_layers),
+                           names_to = "source", values_to = "y")
+    # y_long <- y_long[complete.cases(y_long), ]
+
+    by <- c("Year", "Day", "Site")
+    by <- intersect(by, names(x_long))
+    by <- intersect(by, names(y_long))
+    data <- merge(x_long, y_long, by = by,
+                  suffixes = c("_x", "_y"))
+    data$date <- calc_date(data$Year, data$Day)
+    data$month <- as.numeric(format(data$date, "%m"))
+    data$month <- factor(data$month, levels = 1:12, labels = month.abb)
+
+    # Predicted vs Predicted
+    # Note: pred_*_layers is scalar (length=1) for now, for single-simulation
+    # plots. This may change in the future, in which case we would need %in%.
+    pred_df <- dplyr::filter(
+        data,
+        source_x == pred_x_layers,
+        source_y == pred_y_layers
+    )
+
+    # Observed y vs Observed x (all combinations).
+    obs_df <- dplyr::filter(data,
+                            source_x %in% obs_x_layers,
+                            source_y %in% obs_y_layers)
+
+    # Build a single combined data frame that includes Predicted vs Predicted
+    # as just another "combo", so we can facet in one plot.
+    pred_df <- pred_df %>%
+        dplyr::mutate(combo = paste0("Predicted ", yname, " vs Predicted ",
+                                     xname))
+
+    all_df <- pred_df
+    if (nrow(obs_df) > 0) {
+        obs_df <- obs_df %>% dplyr::mutate(combo = paste0(source_y, " vs ",
+                                                          source_x))
+        all_df <- dplyr::bind_rows(pred_df, obs_df)
+    }
+
+    p_all <- ggplot(all_df, aes(x = x, y = y, color = month)) +
+        geom_point(alpha = 0.6, size = 0.9) +
+        facet_wrap(~ combo, scales = scales, nrow = nrow) +
+        labs(title = paste(site, paste0(yname, " vs ", xname)),
+             x = paste(xname, " (", xunits, ")"),
+             y = paste(yname, " (", yunits, ")"),
+             color = "Month") +
+        theme(plot.title = element_text(hjust = 0.5))
+
+    if (log_x) {
+        p_all <- p_all + scale_x_log10()
+    }
+
+    if (!is.null(xlim)) {
+        p_all <- p_all + xlim(xlim)
+    }
+
+    if (!is.null(ylim)) {
+        p_all <- p_all + ylim(ylim)
+    }
+
+    return(p_all)
+}
+
+plot_ratio <- function(x, y, xname, yname, xunits, yunits,
+                       ignored_layers = NULL, nrow = 2, scales = "fixed") {
+    # Read raw data
+    xdata <- read_data(x)
+    ydata <- read_data(y)
+
+    # Identify observed and predicted layer names for each variable
+    std_ignore <- c("Year", "Day", "Site")
+    pred_x_layers <- src@name
+    obs_x_layers <- setdiff(names(xdata),
+                            intersect(names(xdata), c(std_ignore, pred_x_layers)))
+
+    pred_y_layers <- src@name
+    obs_y_layers <- setdiff(names(ydata),
+                            intersect(names(ydata), c(std_ignore, pred_y_layers)))
+
+    # Optionally ignore specific observed layers
+    if (!is.null(ignored_layers)) {
+        obs_x_layers <- setdiff(obs_x_layers, intersect(ignored_layers, obs_x_layers))
+        obs_y_layers <- setdiff(obs_y_layers, intersect(ignored_layers, obs_y_layers))
+    }
+
+    # Long format for x and y
+    x_long <- tidyr::pivot_longer(xdata, cols = c(obs_x_layers, pred_x_layers),
+                                  names_to = "source_x", values_to = "x")
+    y_long <- tidyr::pivot_longer(ydata, cols = c(obs_y_layers, pred_y_layers),
+                                  names_to = "source_y", values_to = "y")
+
+    # Merge by common keys
+    by <- intersect(c("Year", "Day", "Site"), intersect(names(x_long), names(y_long)))
+    data <- merge(x_long, y_long, by = by)
+
+    # Enrich with date/month for coloring
+    data$date <- calc_date(data$Year, data$Day)
+    data$month <- factor(as.integer(format(data$date, "%m")), levels = 1:12, labels = month.abb)
+
+    # Predicted ratio (unique per date)
+    pred_df <- dplyr::filter(data, source_x == pred_x_layers, source_y == pred_y_layers)
+    pred_df <- dplyr::mutate(pred_df, predicted_ratio = y / x)
+    pred_df <- pred_df[is.finite(pred_df$predicted_ratio), c("Year", "Day", "predicted_ratio", "month")]
+    pred_df <- unique(pred_df)
+
+    # Observed ratio for all combinations of observed sources
+    obs_df <- dplyr::filter(data, source_x %in% obs_x_layers, source_y %in% obs_y_layers)
+    if (nrow(obs_df) == 0) {
+        # Fallback: return a simple time-series of predicted ratio if no observations exist
+        ts_df <- dplyr::mutate(pred_df, combo = paste0("Predicted ", yname, "/", xname))
+        p <- ggplot(ts_df, aes(x = Year + (Day - 1) / 365, y = predicted_ratio, color = month)) +
+            geom_point(alpha = 0.6, size = 0.9) +
+            labs(
+                title = paste(site, paste0(yname, " / ", xname, " Ratios (No observations)")),
+                x = "Year",
+                y = paste0("Predicted ", yname, "/", xname, " (", yunits, "/", xunits, ")"),
+                color = "Month"
+            ) +
+            theme(plot.title = element_text(hjust = 0.5))
+        return(p)
+    }
+
+    obs_df <- dplyr::mutate(obs_df, observed_ratio = y / x)
+    obs_df <- obs_df[is.finite(obs_df$observed_ratio), ]
+
+    # Join observed ratios with predicted ratios by date
+    plot_df <- dplyr::inner_join(obs_df, pred_df, by = c("Year", "Day", "month"))
+
+    # Facet label per observed combination
+    plot_df <- dplyr::mutate(
+        plot_df,
+        combo = paste0(source_y, " vs ", source_x)
+    )
+
+    # Scatter: observed ratio (x) vs predicted ratio (y)
+    p <- ggplot(plot_df, aes(x = observed_ratio, y = predicted_ratio, color = month)) +
+        geom_point(alpha = 0.6, size = 0.9) +
+        geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey40") +
+        facet_wrap(~ combo, scales = scales, nrow = nrow) +
+        labs(
+            title = paste(site, paste0(yname, "/", xname, ": Predicted vs Observed")),
+            x = paste0("Observed ", yname, "/", xname, " (", yunits, "/", xunits, ")"),
+            y = paste0("Predicted ", yname, "/", xname, " (", yunits, "/", xunits, ")"),
+            color = "Month"
+        ) +
+        theme(plot.title = element_text(hjust = 0.5))
+
+    return(p)
+}
 ```
 
 ## Overview {.tabset}
@@ -144,7 +337,7 @@ ozflux_panel(src, "dave_lai", site, show_all_observations = FALSE)
 ### GPP
 
 ```{r benchmark_gpp}
-ozflux_panel(src, "dave_gpp", site)
+ozflux_panel(src, "dave_gpp", site, show_all_observations = FALSE)
 ```
 
 ### NEE
@@ -187,22 +380,27 @@ ozflux_panel(src, "dave_diameter", site)
 
 ```{r benchmark_soil_moisture}
 # Register an observation reader for EucFACE soil moisture.
-eucface_path <- "~/code/lpj-guess/scripts/ozflux-lpjg/data/eucface"
-eucface_file <- file.path(eucface_path, "EucFACE_soil_moisture_1m_sitecol.csv")
-eucface_reader <- create_csv_reader("EucFACE_soil_moisture_1m",
-                                    "EucFACE_soil_moisture_1m",
-                                    eucface_file,
-                                    "swmm_100",
-                                    layers = list("swmm_100" = "swc.sum"),
-                                    site_col = "site",
-                                    lat_col = NULL,
-                                    lon_col = NULL,
-                                    time_col = "Date",
-                                    time_fmt = "%Y-%m-%d",
-                                    infer_site = TRUE)
-register_reader(eucface_reader)
-
-ozflux_panel(src, "dave_swmm_100", site)
+if (site == "CumberlandPlain") {
+    eucface_path <- "~/code/lpj-guess/scripts/ozflux-lpjg/data/eucface"
+    filename <- "EucFACE_soil_moisture_1m_sitecol.csv"
+    eucface_file <- file.path(eucface_path, filename)
+    eucface_reader <- create_csv_reader("EucFACE_soil_moisture_1m",
+                                        "EucFACE_soil_moisture_1m",
+                                        eucface_file,
+                                        "swmm_100",
+                                        layers = list("swmm_100" = "swc.sum"),
+                                        site_col = "site",
+                                        lat_col = NULL,
+                                        lon_col = NULL,
+                                        time_col = "Date",
+                                        time_fmt = "%Y-%m-%d",
+                                        infer_site = TRUE)
+    register_reader(eucface_reader)
+    var <- "dave_swmm_100"
+} else {
+    var <- "dave_swavail_100"
+}
+ozflux_panel(src, var, site, show_all_observations = FALSE)
 ```
 
 ## Carbon Budget {.tabset}
@@ -219,11 +417,11 @@ npp_data <- read_data("dave_npp")
 gpp_data <- read_data("dave_gpp")
 resp_data <- read_data("dave_resp")
 
-nee_data <- rename(nee_data, nee = all_of(src@name), observed_nee = observed)
+nee_data <- rename(nee_data, nee = all_of(src@name), observed_nee = flux_nee)
 # We don't have NPP observations, so npp_data comes out with the right colname.
-gpp_data <- rename(gpp_data, gpp = all_of(src@name), observed_gpp = observed)
+gpp_data <- rename(gpp_data, gpp = all_of(src@name), observed_gpp = flux_gpp)
 resp_data <- rename(resp_data, resp = all_of(src@name),
-                    observed_resp = observed)
+                    observed_resp = flux_resp)
 
 # For each year in data, compute total observed flux, for fluxes which have
 # daily observations (ie NEE, GPP, Resp).
@@ -676,19 +874,52 @@ ggplot(df_long) +
 sw_data <- data
 ```
 
+### Distribution of Soil Moisture
+
+```{r soil_moisture_dist}
+# Use sw_data from previous chunk to show per-layer distributions
+sw_layers <- paste0("sw_", 0:14)
+
+# Long format with numeric ordering for facets
+sw_long <- pivot_longer(
+    sw_data,
+    cols = all_of(sw_layers),
+    names_to = "layer",
+    values_to = "value"
+)
+sw_long$layer_num <- as.integer(sub("^sw_", "", sw_long$layer))
+sw_long$layer <- factor(
+    sw_long$layer,
+    levels = paste0("sw_", sort(unique(sw_long$layer_num)))
+)
+labeller <- function(s) paste("layer", as.integer(sub("^sw_", "", s)))
+
+# Faceted histograms per layer (values are already 0–1)
+ggplot(sw_long) +
+    geom_histogram(aes(x = value, fill = layer), bins = 30, color = "white") +
+    facet_wrap(~ layer, labeller = as_labeller(labeller), ncol = 5) +
+    xlab("Soil Moisture (0–1)") +
+    ylab("Count") +
+    xlim(0, 1) +
+    scale_x_continuous(
+        breaks = seq(0, 1, by = 0.5)
+    ) +
+    labs(title = paste(site, "Distribution of Soil Moisture by Layer")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
 ### Layerwise Soil Water Potential
 
 ```{r soil_water_potential}
-layers <- paste0("soil_psi", 0:14)
+layers <- paste0("psi_", 0:14)
 data <- read_data("dave_soil_psi_layer", layers = layers)
 data$date <- calc_date(data$Year, data$Day)
 df_long <- pivot_longer(data, cols = layers, names_to = "layer",
                         values_to = "value")
-df_long$layer_num <- as.integer(sub("^soil_psi", "", df_long$layer))
+df_long$layer_num <- as.integer(sub("^psi_", "", df_long$layer))
 df_long$layer <- factor(df_long$layer,
-                        levels = paste0("soil_psi",
-                                        sort(unique(df_long$layer_num))))
-labeller <- function(s) paste("layer", as.integer(sub("^soil_psi", "", s)))
+                        levels = paste0("psi_", sort(unique(df_long$layer_num))))
+labeller <- function(s) paste("layer", as.integer(sub("^psi_", "", s)))
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer,
@@ -699,15 +930,45 @@ ggplot(df_long) +
 psi_data <- data
 ```
 
+### Distribution of Soil Water Potential
+
+```{r soil_water_potential_dist}
+# Use psi_data from previous chunk to show per-layer distributions
+psi_layers <- paste0("psi_", 0:14)
+
+# Long format with numeric ordering for facets
+psi_long <- pivot_longer(
+    psi_data,
+    cols = all_of(psi_layers),
+    names_to = "layer",
+    values_to = "value"
+)
+psi_long$layer_num <- as.integer(sub("^psi_", "", psi_long$layer))
+psi_long$layer <- factor(
+    psi_long$layer,
+    levels = paste0("psi_", sort(unique(psi_long$layer_num)))
+)
+psi_labeller <- function(s) paste("layer", as.integer(sub("^psi_", "", s)))
+
+# Faceted histograms per layer
+ggplot(psi_long) +
+    geom_histogram(aes(x = value, fill = layer), bins = 30, color = "white") +
+    facet_wrap(~ layer, labeller = as_labeller(psi_labeller), ncol = 5) +
+    xlab("Soil Water Potential (MPa)") +
+    ylab("Count") +
+    labs(title = paste(site, "Distribution of Soil Water Potential by Layer")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
 ### Layerwise SWC vs SWP
 
 ```{r layerwise_swc_vs_swp}
 # sw_data and psi_data read in above chunks
 layers <- 0:14
 sw_layers <- paste0("sw_", layers)
-psi_layers <- paste0("soil_psi", layers)
+psi_layers <- paste0("psi_", layers)
 
-names(psi_data) <- gsub("soil_psi", "psi_", names(psi_data))
+names(psi_data) <- gsub("psi_", "psi_", names(psi_data))
 
 # Long form with a common integer 'layer' index
 sw_long <- pivot_longer(sw_data, cols = all_of(sw_layers), names_to = "layer",
@@ -857,12 +1118,14 @@ ggplot(data, aes(x = weighted_psi, y = wscal)) +
 psi_layers <- paste0("psi_", 0:14)
 psi_data$psi_mean <- rowMeans(psi_data[, ..psi_layers], na.rm = TRUE)
 
-data <- merge(data, psi_data[, c("Year", "Day", "psi_mean")], by = c("Year", "Day"))
+data <- merge(data, psi_data[, c("Year", "Day", "psi_mean")],
+              by = c("Year", "Day"))
+title <- paste(site, "Water stress vs unweighted mean soil water potential")
 ggplot(data, aes(x = psi_mean, y = wscal)) +
     geom_point(color = "#0072B2") +
     xlab("Weighted Soil Water Potential (MPa)") +
     ylab("Water Stress (0-1)") +
-    labs(title = paste(site, "Water stress vs unweighted mean soil water potential")) +
+    labs(title = title) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
 
@@ -1172,6 +1435,52 @@ ggplot(data_long) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 
+### Carbon Turnover
+
+```{r cturnover}
+# cturnover outputs are in kgC/m2
+pools <- c("leaf", "root", "sap")
+outputs <- paste0("dave_cturnover_", pools)
+data <- read_data(outputs)
+data$date <- calc_date(data$Year, data$Day)
+
+# Rename e.g. MRS_cturnover_leaf to leaf
+names(data) <- gsub(paste0(src@name, "_cturnover_"), "", names(data))
+
+data_long <- pivot_longer(data, cols = pools, names_to = "pool",
+                          values_to = "value")
+# Convert kg -> g
+data_long$value <- data_long$value * 1000
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = pool)) +
+    facet_wrap(~ pool, scales = "free_y") +
+    ylab("Carbon Turnover (gC/m2)") +
+    labs(title = paste(site, "Carbon Turnover")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+### Nitrogen Turnover
+
+```{r nturnover}
+# nturnover outputs are in gN/m2
+pools <- c("leaf", "root", "sap")
+outputs <- paste0("dave_nturnover_", pools)
+data <- read_data(outputs)
+data$date <- calc_date(data$Year, data$Day)
+
+# Rename e.g. MRS_nturnover_leaf to leaf
+names(data) <- gsub(paste0(src@name, "_nturnover_"), "", names(data))
+
+data_long <- pivot_longer(data, cols = pools, names_to = "pool",
+                          values_to = "value")
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = pool)) +
+    facet_wrap(~ pool, scales = "free_y") +
+    ylab("Nitrogen Turnover (gN/m2)") +
+    labs(title = paste(site, "Nitrogen Turnover")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
 ### Stoichiometry
 
 ```{r stoichiometry}
@@ -1251,10 +1560,10 @@ ggplot(cton_norm_long) +
 # fixme: eliminate whitespace
 vars <- c("dave_height", "dave_diameter", "dave_basalarea", "dave_density")
 data <- read_data(vars, read_obs = FALSE)
-data$date <- calc_date(data$Year, data$Day)
-var_names <- gsub("dave_", "", vars)
 names(data) <- gsub(paste0(src@name, "_"), "", names(data))
-data_long <- pivot_longer(data, cols = var_names, names_to = "variable",
+data$date <- calc_date(data$Year, data$Day)
+newnames <- gsub("dave_", "", vars)
+data_long <- pivot_longer(data, cols = newnames, names_to = "variable",
                           values_to = "value")
 ggplot(data_long) +
     geom_line(aes(x = date, y = value, color = variable)) +
@@ -1351,6 +1660,8 @@ ggplot(data_long) +
     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 
+### Nitrogen Usage
+
 ```{r annual_nitrogen_usage}
 anstorage_drawdown <- read_data("dave_anstorage_drawdown", layers = pft)
 anretranslocated <- read_data("dave_anretranslocated", layers = pft)
@@ -1379,3 +1690,147 @@ ggplot(data_long) +
     labs(title = paste(site, "Annual Nitrogen Usage")) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
+
+### Number of Cohorts
+
+```{r number_of_cohorts}
+ozflux_plot(src, "dave_ancohort", site)
+```
+
+## Climate {.tabset}
+
+### GPP vs Temperature
+
+```{r gpp_vs_temperature}
+plot_against("dave_met_temp", "dave_gpp",
+             "Temperature", "GPP",
+             "°C", "gC/m2/day", scales = "fixed")
+```
+
+### GPP vs PAR
+
+```{r gpp_vs_par}
+plot_against("dave_met_insol", "dave_gpp",
+             "PAR", "GPP",
+             "W/m2", "gC/m2/day", scales = "fixed")
+```
+
+### GPP vs ET
+
+```{r gpp_vs_et}
+plot_against("dave_aet", "dave_gpp",
+             "ET", "GPP",
+             "mm", "gC/m2/day", nrow = 3, xlim = c(0, 4), ylim = c(0, 10))
+```
+
+### GPP vs Soil Moisture
+
+```{r gpp_vs_soil_moisture}
+plot_against("dave_swvol", "dave_gpp",
+             "Volumetric Soil Moisture", "GPP",
+             "m3/m3", "gC/m2/day", ylim = c(0, 10))
+```
+
+### GPP vs VPD
+
+```{r gpp_vs_vpd}
+plot_against("dave_met_vpd", "dave_gpp",
+             "VPD", "GPP",
+             "kPa", "gC/m2/day", scales = "fixed")
+```
+
+### NEE vs PAR
+
+```{r nee_vs_par}
+plot_against("dave_met_insol", "dave_nee",
+             "PAR", "NEE",
+             "W/m2", "gC/m2/day", scales = "fixed")
+
+plot_ratio("dave_met_insol", "dave_nee", "PAR", "NEE", "W/m2", "gC/m2/day")
+plot_ratio("dave_met_insol", "dave_gpp", "PAR", "GPP", "W/m2", "gC/m2/day")
+```
+
+### GPP vs Linear Regression
+
+```{r gpp_vs_linear_regression}
+gpp <- read_data("dave_gpp")
+gpp <- rename(gpp, predicted_gpp = src@name, gosif_gpp = "gosif-gpp")
+par <- read_data("dave_met_insol")
+par <- rename(par, observed_par = flux_rsds)
+par <- par[, c("Year", "Day", "Site", "observed_par")]
+
+data <- merge(gpp, par, by = c("Year", "Day", "Site"))
+
+# Calculate a regression line from each *_gpp vs observed_par
+gpp_cols <- c("predicted_gpp", "gosif_gpp", "flux_gpp")
+
+# Build Date, guard against missing columns, and fit per-source regressions
+data$date <- calc_date(data$Year, data$Day)
+available_gpp <- intersect(gpp_cols, names(data))
+
+for (col in available_gpp) {
+    fit_col <- paste0(col, "_fit")
+    # Robust fit ignoring NA
+    df_fit <- data[, c(..col, "observed_par")]
+    names(df_fit) <- c("gpp", "observed_par")
+    model <- lm(gpp ~ observed_par, data = df_fit)
+    data[[fit_col]] <- predict(model, newdata = data.frame(observed_par = data$observed_par))
+}
+
+# Long format: one color per source, linetype distinguishes data vs regression
+plot_cols <- c(available_gpp, paste0(available_gpp, "_fit"))
+
+data_long <- tidyr::pivot_longer(
+    data,
+    cols = all_of(plot_cols),
+    names_to = "variable",
+    values_to = "value"
+) %>%
+    dplyr::mutate(
+        source = sub("_fit$", "", variable),
+        type = ifelse(grepl("_fit$", variable), "regression", "data")
+    )
+
+# Optional: nicer labels for legend
+label_map <- c(
+    predicted_gpp = "Predicted",
+    gosif_gpp = "GOSIF",
+    flux_gpp = "Flux"
+)
+
+data_long$source_label <- dplyr::recode(data_long$source, !!!label_map)
+
+ggplot(data_long, aes(x = date, y = value, color = type)) +
+    geom_line() +
+    facet_wrap(~ source_label, scales = "free_y") +
+    scale_linetype_manual(values = c(data = "solid", regression = "dotted"), guide = "none") +
+    labs(
+        title = paste(site, "GPP vs PAR: Data and Linear Fits"),
+        x = "Date",
+        y = "GPP (gC/m2/day)",
+        color = "GPP Source"
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Test
+
+```{r test}
+vars <- c("dave_gpp", "dave_met_vpd", "dave_met_precip", "dave_met_temp", "dave_swvol")
+ozflux_plot(src, vars, site, separate = TRUE)
+data <- read_data(vars)
+data$date <- calc_date(data$Year, data$Day)
+outputs <- gsub("dave_", "", vars)
+cols <- paste0(src@name, "_", outputs)
+
+cols[1] <- "flux_gpp"
+data_long <- pivot_longer(data, cols = cols, names_to = "variable", values_to = "value")
+data_long <- data_long[complete.cases(data_long), ]
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = variable)) +
+    facet_wrap(~ variable, scales = "free_y", ncol = 1) +
+    ylab(NULL) +
+    labs(title = paste(site, "Diagnostics")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
