@@ -388,9 +388,15 @@ get_field_csv <- function(source,
     data.table::setcolorder(dt, c(base_cols, extra_cols))
 
     if (is.null(target.STAInfo)) {
+        first_year <- -Inf
+        last_year <- Inf
+        if (nrow(dt) > 0) {
+            first_year <- min(dt$Year)
+            last_year <- max(dt$Year)
+        }
         target.STAInfo <- new("STAInfo",
-                              first.year = min(dt[["Year"]]),
-                              last.year = max(dt[["Year"]]),
+                              first.year = first_year,
+                              last.year = last_year,
                               year.aggregate.method = "none",
                               subannual.resolution = temporal_resolution,
                               subannual.original = temporal_resolution)

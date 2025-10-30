@@ -69,10 +69,6 @@ get_layer_names_for_sources <- function(
         layers,
         sources,
         nlayer = length(layers)) {
-    if (length(sources) == 1 && nvar == 1) {
-        return(layers)
-    }
-
     layer_names <- c()
     for (source in sources) {
         lyrs <- get_layer_names(var, nvar, layers, source@name, nlayer = nlayer)
@@ -275,7 +271,12 @@ read_data <- function(sources
                 } else {
                     layers_old <- layers
                     if (!all(layers_old %in% names(obs_field))) {
-                        layers_old <- names(obs_field)[names(obs_field) != "Site"][1]
+                        available_layers <- names(obs_field)[names(obs_field) != "Site"]
+                        if (length(available_layers) == 1) {
+                            layers_old <- available_layers[1]
+                        } else if (length(available_layers) == length(layers_old)) {
+                            layers_old <- available_layers
+                        }
                     }
                     log_debug("Merging data from reader ", reader_id,
                               " with ", nrow(data@data), " rows of layers ",
