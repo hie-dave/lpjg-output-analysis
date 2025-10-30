@@ -1823,4 +1823,3 @@ ggplot(data_long, aes(x = date, y = value, color = type)) +
 #     labs(title = paste(site, "Diagnostics")) +
 #     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
-
