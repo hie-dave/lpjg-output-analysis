@@ -9,10 +9,10 @@ output:
 params:
   repo: "~/code/lpj-guess/dave"
   data_dir: "~/code/lpj-guess/scripts/ozflux-lpjg/data"
-  source_id: "new"
-  source_label: "MRS-NewCode"
-  site: "CumberlandPlain"
-  pft: "MRS"
+  source_id: "dave"
+  source_label: "dave"
+  site: "SturtPlains"
+  pft: "C4G_perennial"
   description: "A description of the simulations. If you're seeing this in a rendered .html file, then someone forgot to set the description when rendering the document. This can be done with `rmarkdown::render(\"site_budget.rmd\", params = list(description = \"A description of the simulations\"))`"
   aspect_ratio: 0.6
   image_fmt: "svg"
@@ -104,11 +104,11 @@ plot_sompool <- function(file, ylab, title, xlab = "Date") {
 }
 
 read_cton_live <- function(pool) {
-    cmass <- read_data(paste0("dave_cmass_", pool))
-    nmass <- read_data(paste0("dave_nmass_", pool))
+    cmass <- read_data(paste0("dave_cmass_", pool), layers = pft)
+    nmass <- read_data(paste0("dave_nmass_", pool), layers = pft)
 
-    cton_min <- read_data(paste0("dave_cton_", pool, "_min"))
-    cton_max <- read_data(paste0("dave_cton_", pool, "_max"))
+    cton_min <- read_data(paste0("dave_cton_", pool, "_min"), layers = pft)
+    cton_max <- read_data(paste0("dave_cton_", pool, "_max"), layers = pft)
 
     cton_min <- min(cton_min[[pft]])
     cton_max <- max(cton_max[[pft]])
@@ -361,19 +361,19 @@ ozflux_panel(src, "dave_aet", site)
 ### Above-Ground Biomass
 
 ```{r benchmark_biomass}
-ozflux_panel(src, "dave_aboveground_tree_biomass", site)
+# ozflux_panel(src, "dave_aboveground_tree_biomass", site)
 ```
 
 ### Height
 
 ```{r benchmark_height}
-ozflux_panel(src, "dave_height", site)
+# ozflux_panel(src, "dave_height", site)
 ```
 
 ### Diameter
 
 ```{r benchmark_diameter}
-ozflux_panel(src, "dave_diameter", site)
+# ozflux_panel(src, "dave_diameter", site)
 ```
 
 ### Soil Moisture
@@ -441,7 +441,7 @@ obs_data <- merge(obs_data, obs_resp, by = "Year")
 acflux_vars <- c("dave_anee", "dave_anpp", "dave_agpp", "dave_aresp")
 data <- read_data(acflux_vars)
 acflux_data <- data
-names(data) <- gsub(paste0(src@name, "_a"), "", names(data))
+names(data) <- gsub("^a", "", names(data))
 
 data <- merge(data, obs_data, by = "Year")
 
@@ -599,7 +599,7 @@ ggplot(data_long) +
 pools <- c("leaf", "root", "sap", "heart", "repr")
 data <- NULL
 for (pool in pools) {
-    var <- paste0("dave_cmass_standing_dead_", pool)
+    var <- paste0("dave_cmass_standing_", pool)
     pool_data <- read_data(var, layers = pft)
     pool_data <- rename(pool_data, !!pool := all_of(pft))
     if (is.null(data)) {
@@ -626,7 +626,7 @@ ggplot(data_long) +
 vars <- c("maintenance", "growth")
 data <- read_data(paste0("dave_resp_", vars))
 data$date <- calc_date(data$Year, data$Day)
-names(data) <- gsub(paste0(src@name, "_resp_"), "", names(data))
+names(data) <- gsub("resp_", "", names(data))
 data_long <- pivot_longer(data, cols = vars, names_to = "respiration",
                           values_to = "value")
 ggplot(data_long) +
@@ -665,7 +665,7 @@ pools <- c("leaf", "root", "sap")
 outputs <- paste0("dave_resp_", pools)
 data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
-names(data) <- gsub(paste0(src@name, "_resp_"), "", names(data))
+names(data) <- gsub("resp_", "", names(data))
 data_long <- pivot_longer(data, cols = pools, names_to = "pool",
                           values_to = "value")
 ggplot(data_long) +
@@ -911,15 +911,15 @@ ggplot(sw_long) +
 ### Layerwise Soil Water Potential
 
 ```{r soil_water_potential}
-layers <- paste0("psi_", 0:14)
+layers <- paste0("soil_psi", 0:14)
 data <- read_data("dave_soil_psi_layer", layers = layers)
 data$date <- calc_date(data$Year, data$Day)
 df_long <- pivot_longer(data, cols = layers, names_to = "layer",
                         values_to = "value")
-df_long$layer_num <- as.integer(sub("^psi_", "", df_long$layer))
+df_long$layer_num <- as.integer(sub("^soil_psi", "", df_long$layer))
 df_long$layer <- factor(df_long$layer,
-                        levels = paste0("psi_", sort(unique(df_long$layer_num))))
-labeller <- function(s) paste("layer", as.integer(sub("^psi_", "", s)))
+                        levels = paste0("soil_psi", sort(unique(df_long$layer_num))))
+labeller <- function(s) paste("layer", as.integer(sub("^soil_psi", "", s)))
 ggplot(df_long) +
     geom_line(aes(x = date, y = value, color = layer)) +
     facet_wrap(~ layer,
@@ -934,7 +934,7 @@ psi_data <- data
 
 ```{r soil_water_potential_dist}
 # Use psi_data from previous chunk to show per-layer distributions
-psi_layers <- paste0("psi_", 0:14)
+psi_layers <- paste0("soil_psi", 0:14)
 
 # Long format with numeric ordering for facets
 psi_long <- pivot_longer(
@@ -943,12 +943,12 @@ psi_long <- pivot_longer(
     names_to = "layer",
     values_to = "value"
 )
-psi_long$layer_num <- as.integer(sub("^psi_", "", psi_long$layer))
+psi_long$layer_num <- as.integer(sub("^soil_psi", "", psi_long$layer))
 psi_long$layer <- factor(
     psi_long$layer,
-    levels = paste0("psi_", sort(unique(psi_long$layer_num)))
+    levels = paste0("soil_psi", sort(unique(psi_long$layer_num)))
 )
-psi_labeller <- function(s) paste("layer", as.integer(sub("^psi_", "", s)))
+psi_labeller <- function(s) paste("layer", as.integer(sub("^soil_psi", "", s)))
 
 # Faceted histograms per layer
 ggplot(psi_long) +
@@ -966,18 +966,18 @@ ggplot(psi_long) +
 # sw_data and psi_data read in above chunks
 layers <- 0:14
 sw_layers <- paste0("sw_", layers)
-psi_layers <- paste0("psi_", layers)
+psi_layers <- paste0("soil_psi", layers)
 
-names(psi_data) <- gsub("psi_", "psi_", names(psi_data))
+names(psi_data) <- gsub("soil_psi", "soil_psi", names(psi_data))
 
 # Long form with a common integer 'layer' index
 sw_long <- pivot_longer(sw_data, cols = all_of(sw_layers), names_to = "layer",
                         values_to = "swc") %>%
     mutate(layer = as.integer(sub("^sw_", "", layer)))
 
-psi_long <- pivot_longer(psi_data, cols = all_of(paste0("psi_", layers)),
+psi_long <- pivot_longer(psi_data, cols = all_of(paste0("soil_psi", layers)),
                          names_to = "layer", values_to = "psi") %>%
-    mutate(layer = as.integer(sub("^psi_", "", layer)))
+    mutate(layer = as.integer(sub("^soil_psi", "", layer)))
 
 # Join by Year/Day/layer
 plot_df <- dplyr::inner_join(sw_long, psi_long, by = c("Year", "Day", "layer"))
@@ -1115,7 +1115,7 @@ ggplot(data, aes(x = weighted_psi, y = wscal)) +
 ### Water Stress vs. Mean Soil Water Potential
 
 ```{r water_stress_vs_soil_water_potential}
-psi_layers <- paste0("psi_", 0:14)
+psi_layers <- paste0("soil_psi", 0:14)
 psi_data$psi_mean <- rowMeans(psi_data[, ..psi_layers], na.rm = TRUE)
 
 data <- merge(data, psi_data[, c("Year", "Day", "psi_mean")],
@@ -1299,9 +1299,6 @@ df <- read_data(layers, layers = pft)
 df$date <- calc_date(df$Year, df$Day)
 # Replace e.g. "dave_cmass_leaf" with "MRS_cmass_leaf"
 names <- gsub("dave_", "", layers)
-# Rename exactly "MRS" to MRS_cmass_leaf
-names(df) <- gsub(paste0(src@name, "_"), "", names(df))
-
 df_long <- pivot_longer(df, cols = names, names_to = "layer",
                         values_to = "value") %>%
     mutate(component = sub("_limit$", "", layer),
@@ -1324,9 +1321,6 @@ cgrow_layers <- paste0("dave_cgrow_", pools)
 
 alpha_data <- read_data(alpha_layers)
 cgrow_data <- read_data(cgrow_layers)
-
-names(alpha_data) <- gsub(paste0(src@name, "_"), "", names(alpha_data))
-names(cgrow_data) <- gsub(paste0(src@name, "_"), "", names(cgrow_data))
 
 # Aggregate to annual values. Alphas: mean, Cgrow: sum
 alpha_data <- aggregate(alpha_data, by = list(alpha_data$Year), mean)
@@ -1403,7 +1397,7 @@ data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
 
 # Rename e.g. MRS_cmass_leaf to leaf
-names(data) <- gsub(paste0(src@name, "_cmass_"), "", names(data))
+names(data) <- gsub("cmass_", "", names(data))
 
 data_long <- pivot_longer(data, cols = layers, names_to = "pool",
                           values_to = "value")
@@ -1423,7 +1417,7 @@ data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
 
 # Rename e.g. MRS_cmass_leaf to leaf
-names(data) <- gsub(paste0(src@name, "_nmass_"), "", names(data))
+names(data) <- gsub("nmass_", "", names(data))
 
 data_long <- pivot_longer(data, cols = layers, names_to = "pool",
                           values_to = "value")
@@ -1445,7 +1439,7 @@ data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
 
 # Rename e.g. MRS_cturnover_leaf to leaf
-names(data) <- gsub(paste0(src@name, "_cturnover_"), "", names(data))
+names(data) <- gsub("cturnover_", "", names(data))
 
 data_long <- pivot_longer(data, cols = pools, names_to = "pool",
                           values_to = "value")
@@ -1469,7 +1463,7 @@ data <- read_data(outputs)
 data$date <- calc_date(data$Year, data$Day)
 
 # Rename e.g. MRS_nturnover_leaf to leaf
-names(data) <- gsub(paste0(src@name, "_nturnover_"), "", names(data))
+names(data) <- gsub("nturnover_", "", names(data))
 
 data_long <- pivot_longer(data, cols = pools, names_to = "pool",
                           values_to = "value")
@@ -1560,7 +1554,6 @@ ggplot(cton_norm_long) +
 # fixme: eliminate whitespace
 vars <- c("dave_height", "dave_diameter", "dave_basalarea", "dave_density")
 data <- read_data(vars, read_obs = FALSE)
-names(data) <- gsub(paste0(src@name, "_"), "", names(data))
 data$date <- calc_date(data$Year, data$Day)
 newnames <- gsub("dave_", "", vars)
 data_long <- pivot_longer(data, cols = newnames, names_to = "variable",
@@ -1576,8 +1569,8 @@ ggplot(data_long) +
 ### Mortality Fractions
 
 ```{r mortality_fractions}
-mort_age <- read_data("dave_amort_age")
-mort_greff <- read_data("dave_amort_greff")
+mort_age <- read_data("dave_amort_age", layers = pft)
+mort_greff <- read_data("dave_amort_greff", layers = pft)
 cmass_mort <- read_data("dave_acmass_mort", layers = pft)
 
 mort_age <- rename(mort_age, age = all_of(pft))
@@ -1624,7 +1617,6 @@ ggplot(data_long) +
 ```{r diagnostics}
 vars <- c("dave_latosa", "dave_cue")
 data <- read_data(vars, read_obs = FALSE)
-names(data) <- gsub(paste0(src@name, "_"), "", names(data))
 data$date <- calc_date(data$Year, data$Day)
 newnames <- gsub("dave_", "", vars)
 data_long <- pivot_longer(data, cols = newnames, names_to = "variable",
@@ -1642,7 +1634,6 @@ ggplot(data_long) +
 vars <- c("dave_ndemand", "dave_nmass_storage", "dave_nmass_storage_max",
           "dave_nretranslocated", "dave_fnuptake", "dave_nstorage_drawdown")
 data <- read_data(vars, layers = pft)
-names(data) <- gsub(paste0(src@name, "_"), "", names(data))
 data$date <- calc_date(data$Year, data$Day)
 data$nuptake <- data$fnuptake * data$ndemand
 
@@ -1673,7 +1664,6 @@ nmass_storage <- select(nmass_storage, -"Day")
 vars <- c("anstorage_drawdown", "anretranslocated", "anuptake", "nmass_storage")
 outputs <- paste0("dave_", vars)
 data <- read_data(outputs, layers = pft, show_all_predictions = FALSE)
-names(data) <- gsub(paste0(src@name, "_"), "", names(data))
 data$delta_storage <- c(NA, diff(data$nmass_storage))
 
 vars <- c(vars, "delta_storage")
@@ -1694,7 +1684,7 @@ ggplot(data_long) +
 ### Number of Cohorts
 
 ```{r number_of_cohorts}
-ozflux_plot(src, "dave_ancohort", site)
+ozflux_plot_layerwise(src, "dave_ancohort", site, layers = pft)
 ```
 
 ## Climate {.tabset}
@@ -1816,21 +1806,21 @@ ggplot(data_long, aes(x = date, y = value, color = type)) +
 ### Test
 
 ```{r test}
-vars <- c("dave_gpp", "dave_met_vpd", "dave_met_precip", "dave_met_temp", "dave_swvol")
-ozflux_plot(src, vars, site, separate = TRUE)
-data <- read_data(vars)
-data$date <- calc_date(data$Year, data$Day)
-outputs <- gsub("dave_", "", vars)
-cols <- paste0(src@name, "_", outputs)
+# vars <- c("dave_gpp", "dave_met_vpd", "dave_met_precip", "dave_met_temp", "dave_swvol")
+# ozflux_plot(src, vars, site, separate = TRUE)
+# data <- read_data(vars)
+# data$date <- calc_date(data$Year, data$Day)
+# outputs <- gsub("dave_", "", vars)
+# cols <- outputs
 
-cols[1] <- "flux_gpp"
-data_long <- pivot_longer(data, cols = cols, names_to = "variable", values_to = "value")
-data_long <- data_long[complete.cases(data_long), ]
-ggplot(data_long) +
-    geom_line(aes(x = date, y = value, color = variable)) +
-    facet_wrap(~ variable, scales = "free_y", ncol = 1) +
-    ylab(NULL) +
-    labs(title = paste(site, "Diagnostics")) +
-    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+# cols[1] <- "flux_gpp"
+# data_long <- pivot_longer(data, cols = cols, names_to = "variable", values_to = "value")
+# data_long <- data_long[complete.cases(data_long), ]
+# ggplot(data_long) +
+#     geom_line(aes(x = date, y = value, color = variable)) +
+#     facet_wrap(~ variable, scales = "free_y", ncol = 1) +
+#     ylab(NULL) +
+#     labs(title = paste(site, "Diagnostics")) +
+#     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
 

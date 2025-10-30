@@ -77,7 +77,8 @@ GREP="$(which grep)"
 # Get the list of model outputs required by the site budget.
 # OUTPUTS="$(pcregrep -o1 '"(dave_[A-Za-z_]+)"' "${SITE_BUDGET}" | sort | uniq)"
 OUTPUTS="$("${GREP}" -E -o '"dave_[A-Za-z_]+' "${SITE_BUDGET}" | "${GREP}" -v -E _$ | sed -E 's/"//g')"
-
+ADDITIONAL="$(echo dave_{c,n}mass_standing_{repr,leaf,root,sap,heart})"
+OUTPUT="${OUTPUTS} ${ADDITIONAL}"
 for OUTPUT in ${OUTPUTS}
 do
     FILE_PARAM="file_${OUTPUT}"
@@ -98,3 +99,4 @@ do
         echo "${FILE_PARAM} \"${OUTPUT}.out\"" >> "${INS}"
     fi
 done
+

@@ -483,7 +483,7 @@ plot_pvo <- function(
         obs_name <- get_global("obs_lyr")
     }
 
-    readers <- find_readers_for_var(gc@quant@id)
+    readers <- find_readers_for_var(trim_dave(gc@quant@id))
     if (!obs_name %in% names(gc@data) && length(readers) > 0) {
         obs_name <- names(readers)[1]
         log_debug("Using reader ", obs_name, " as default for site ", row$Name)
@@ -617,7 +617,17 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
 
     # Compute (and store) statistics).
     if (is.null(obs_lyr)) {
-        obs_lyr <- get_global("obs_lyr")
+        readers <- find_readers_for_var(trim_dave(gc@quant@id))
+        if (length(readers) > 0) {
+            reader_names <- unlist(lapply(readers, function(r) r@src@id))
+            avail_readers <- reader_names[reader_names %in% names(gc)]
+            if (length(avail_readers) > 0) {
+                obs_lyr <- avail_readers[1]
+            }
+        }
+        if (is.null(obs_lyr)) {
+            obs_lyr <- get_global("obs_lyr")
+        }
     }
     ignored_names <- c("Site", obs_lyr)
     names <- setdiff(names(gc), ignored_names)

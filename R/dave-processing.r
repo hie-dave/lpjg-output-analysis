@@ -45,20 +45,55 @@ get_layer_names <- function(
         nvar,
         layers,
         source_name,
+        nsource = 1,
         nlayer = length(layers)) {
 
     if (nvar == 1) {
         if (nlayer == 1) {
-            return(source_name)
+            if (nsource == 1) {
+                # Single variable, single layer, single source.
+                # Just use original layer name.
+                return(layers)
+            } else {
+                # Single variable, single layer, multiple sources.
+                # Source name by itself is enough to disambiguate data.
+                return(source_name)
+            }
         } else {
-            return(paste0(source_name, "_", layers))
+            if (nsource == 1) {
+                # Single variable, single source, multiple layers.
+                # Use original layer names.
+                return(layers)
+            } else {
+                # Single variable, multiple layers, multiple sources.
+                # We need source name and layer names to disambiguate data.
+                return(paste0(source_name, "_", layers))
+            }
         }
     } else {
+        # Multiple variables.
         id <- trim_dave(var@id)
         if (nlayer == 1) {
-            return(paste0(source_name, "_", id))
+            if (nsource == 1) {
+                # Multiple variables, single layer, single source.
+                # Variable name is enough to disambiguate data.
+                return(id)
+            } else {
+                # Multiple variables, single layer, multiple sources.
+                # We need source name and variable name to disambiguate data.
+                return(paste0(source_name, "_", id))
+            }
         } else {
-            return(paste0(source_name, "_", id, "_", layers))
+            # Multiple variables, multiple layers.
+            if (nsource == 1) {
+                # Multiple variables, single source, multiple layers.
+                # We need variable name and layer names to disambiguate data.
+                return(paste0(id, "_", layers))
+            } else {
+                # Multiple variables, multiple sources, multiple layers.
+                # We need all three components in order to disambiguate data.
+                return(paste0(source_name, "_", id, "_", layers))
+            }
         }
     }
 }
@@ -71,7 +106,8 @@ get_layer_names_for_sources <- function(
         nlayer = length(layers)) {
     layer_names <- c()
     for (source in sources) {
-        lyrs <- get_layer_names(var, nvar, layers, source@name, nlayer = nlayer)
+        lyrs <- get_layer_names(var, nvar, layers, source@name,
+                                nsource = length(sources), nlayer = nlayer)
         layer_names <- c(layer_names, lyrs)
     }
     return(layer_names)
@@ -239,6 +275,9 @@ read_data <- function(sources
         log_diag("Searching for readers which contain variable ", var_id)
         readers <- find_readers_for_var(var_id)
 
+        # Number of readers with data for this variable.
+        ndataful_readers <- 0
+
         if (read_obs && length(readers) > 0) {
             log_debug("Found ", length(readers), " reader(s) for variable ", var_id)
 
@@ -251,6 +290,10 @@ read_data <- function(sources
                 # Read the observation data using the reader's read_func
                 # Use direct slot access to avoid S4 method dispatch issues
                 obs_field <- reader@read_func(var_id, sites = sites$Name)
+
+                if (nrow(obs_field@data) > 0) {
+                    ndataful_readers <- ndataful_readers + 1
+                }
 
                 # For now, use reader_id as the layer name. Should revisit this.
                 if (nrow(obs_field@data) == 0) {
@@ -344,12 +387,14 @@ read_data <- function(sources
                 log_debug("Successfully performed leap year conversion")
             }
 
-            layer_names <- get_layer_names(var, nvar, layers, source@name)
+            nsource <- length(sources) + ndataful_readers
+            layer_names <- get_layer_names(var, nvar, layers, source@name,
+                                           nsource = nsource)
             if (is.null(data) || nrow(data@data) == 0) {
                 # IE no observations
                 log_debug(source@name, " is the first source for variable ", var@name)
                 data <- predictions
-                if (length(sources) > 1 || length(vars) > 1) {
+                if (any(layers != layer_names)) {
                     DGVMTools::renameLayers(data, layers, layer_names)
                 }
             } else {
