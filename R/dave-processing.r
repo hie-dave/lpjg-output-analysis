@@ -103,11 +103,13 @@ get_layer_names_for_sources <- function(
         nvar,
         layers,
         sources,
-        nlayer = length(layers)) {
+        nlayer = length(layers),
+        nsource_additional = 0) {
     layer_names <- c()
     for (source in sources) {
         lyrs <- get_layer_names(var, nvar, layers, source@name,
-                                nsource = length(sources), nlayer = nlayer)
+                                nsource = length(sources) + nsource_additional,
+                                nlayer = nlayer)
         layer_names <- c(layer_names, lyrs)
     }
     return(layer_names)

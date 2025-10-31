@@ -246,10 +246,11 @@ ozflux_plot_layerwise <- function(
         ylim <- get_ylim(gridcell, common_yaxis)
 
         plots <- list()
+        nobs <- ifelse(any(!(layers %in% names(gridcell))), 1, 0)
         if (separate_plots) {
             for (layer in layers) {
-                layers_to_plot <- get_layer_names_for_sources(var, 1, layer
-                    , sources, nlayer = length(layers))
+                layers_to_plot <- get_layer_names_for_sources(var, 1, layer,
+                    sources, nlayer = length(layers), nsource_additional = nobs)
                 multiplot <- length(layers) > 1 || nrow(sites) > 1
                 xlab <- if (multiplot) "" else NULL
                 ylab <- if (multiplot) "" else NULL
