@@ -1875,3 +1875,28 @@ ggplot(data_long, aes(x = date, y = value, color = type)) +
 #     labs(title = paste(site, "Diagnostics")) +
 #     theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
 ```
+
+## Fire {.tabset}
+
+### Litter Carbon
+
+```{r litter_carbon}
+litter_som_pools <- c("SURFSTRUCT", "SURFMETA")
+som <- read_data("dave_sompool_cmass", layers = litter_som_pools)
+
+standing <- read_data("dave_cmass_standing_leaf")
+standing <- rename(standing, standing_leaf = "total")
+
+data <- merge(som, standing, by = c("Year", "Day"))
+data$leaf_litter <- rowSums(data[, ..litter_som_pools])
+cols <- c("standing_leaf", "leaf_litter")
+data$date <- calc_date(data$Year, data$Day)
+data_long <- pivot_longer(data, cols = cols, names_to = "variable",
+                          values_to = "value")
+labeller <- function(v) gsub("_", " ", v)
+ggplot(data_long) +
+    geom_line(aes(x = date, y = value, color = variable)) +
+    ylab("Carbon (kgC/m2)") +
+    labs(title = paste(site, "Litter Carbon")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
