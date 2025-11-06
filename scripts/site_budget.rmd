@@ -1129,6 +1129,58 @@ ggplot(data, aes(x = psi_mean, y = wscal)) +
     theme(plot.title = element_text(hjust = 0.5))
 ```
 
+### g1 vs. SWC
+
+```{r g1_vs_swc}
+g1 <- read_data("dave_g1", layers = pft)
+g1 <- rename(g1, "g1" = pft)
+
+data <- merge(g1, sw_data, by = c("Year", "Day"))
+data$date <- calc_date(data$Year, data$Day)
+data_long <- pivot_longer(data, cols = sw_layers, names_to = "layer",
+                          values_to = "swc")
+data_long$layer_num <- as.integer(sub("^sw_", "", data_long$layer))
+data_long$layer <- factor(data_long$layer,
+                          levels = paste0("sw_",
+                                          sort(unique(data_long$layer_num))))
+
+ggplot(data_long, aes(x = swc, y = g1, color = layer)) +
+    geom_point(alpha = 0.4, size = 0.8) +
+    xlab("Soil Moisture (0–1)") +
+    ylab("g1 (kPa^0.5)") +
+    labs(title = paste(site, "g1 vs Soil Moisture")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+### g1 vs. swc (faceted)
+
+```{r g1_vs_swc_faceted}
+labeller <- function(s) paste("layer", as.integer(sub("^sw_", "", s)))
+
+ggplot(data_long, aes(x = swc, y = g1)) +
+    geom_point(alpha = 0.4, size = 0.8, aes(color = layer)) +
+    facet_wrap(~ layer, labeller = as_labeller(labeller)) +
+    xlab("Soil Moisture (0–1)") +
+    ylab("g1 (kPa^0.5)") +
+    labs(title = paste(site, "g1 vs Soil Moisture")) +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+### g1 vs. Weighted Soil Water Potential
+
+```{r g1_vs_weighted_psi}
+weighted_psi <- read_data("dave_weighted_psi", layers = pft)
+weighted_psi <- rename(weighted_psi, "weighted_psi" = pft)
+data <- merge(g1, weighted_psi, by = c("Year", "Day"))
+data$date <- calc_date(data$Year, data$Day)
+ggplot(data, aes(x = weighted_psi, y = g1)) +
+    geom_point(alpha = 0.4, size = 0.8) +
+    xlab("Weighted Soil Water Potential (MPa)") +
+    ylab("g1 (kPa^0.5)") +
+    labs(title = paste(site, "g1 vs Weighted Soil Water Potential")) +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
 ## SOM Pools {.tabset}
 
 ### Daily SOM Carbon
