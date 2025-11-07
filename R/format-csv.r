@@ -203,6 +203,17 @@ get_lon <- function(site_name, all_sites) {
     return(all_sites$Lon[all_sites$Name == site_name])
 }
 
+generate_layer_col_name <- function(base, col_names) {
+    base <- paste0(base, "_layer")
+    i <- 0
+    result <- base
+    while (result %in% col_names) {
+        result <- paste0(base, i)
+        i <- i + 1
+    }
+    return(result)
+}
+
 #'
 #' Get a Field for CSV
 #'
@@ -290,12 +301,35 @@ get_field_csv <- function(source,
         if (length(cols_to_remove) > 0) {
             dt[, (cols_to_remove) := NULL]
         }
-        log_diag("[get_field_csv] Address after column removal: ", data.table::address(dt))
+        log_diag("[get_field_csv] Address after column removal: ",
+                 data.table::address(dt))
 
         if (is_named_layers) {
             log_diag("[get_field_csv] Renaming layers.")
-            data.table::setnames(dt, old = unlist(unname(layers)), new = names(layers))
-            log_diag("[get_field_csv] Address after renaming layers: ", data.table::address(dt))
+            old_names <- unlist(unname(layers))
+            new_names <- names(layers)
+            if (length(unique(old_names)) == length(unique(new_names))) {
+                data.table::setnames(dt, old = old_names, new = new_names)
+                log_diag("[get_field_csv] Address after renaming layers: ",
+                         data.table::address(dt))
+            } else {
+                # Get all old names which have non-distinct new names.
+                for (new_name in unique(new_names)) {
+                    # Collapse layer names using pivot_longer.
+                    layer_col <- generate_layer_col_name(new_name, names(dt))
+                    indices <- which(new_names == new_name)
+                    if (length(indices) > 1) {
+                        to_collapse <- old_names[indices]
+                        log_diag("[get_field_csv] Collapsing layers ",
+                                 paste0(to_collapse, collapse = ", "), " into ",
+                                 new_name, " with layer column ", layer_col)
+                        dt <- tidyr::pivot_longer(dt, cols = to_collapse,
+                                                  names_to = layer_col,
+                                                  values_to = new_name)
+                        dt <- data.table::as.data.table(dt)
+                    }
+                }
+            }
         }
     }
 
@@ -390,7 +424,7 @@ get_field_csv <- function(source,
     if (is.null(target.STAInfo)) {
         first_year <- -Inf
         last_year <- Inf
-        if (nrow(dt) > 0) {
+        if (nrow(dt) > 0 && "Year" %in% names(dt)) {
             first_year <- min(dt$Year)
             last_year <- max(dt$Year)
         }

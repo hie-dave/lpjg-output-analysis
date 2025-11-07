@@ -447,6 +447,15 @@ plot_timeseries <- function(
     } else {
         lyrs <- layers
     }
+
+    chr_layers <- c()
+    for (lyr in lyrs) {
+        if (class(gc@data[[lyr]]) == "character") {
+            chr_layers <- c(chr_layers, lyr)
+        }
+    }
+    lyrs <- setdiff(lyrs, chr_layers)
+
     if (allow_points) {
         POINTS_THRESHOLD <- 30
         for (lyr in lyrs) {

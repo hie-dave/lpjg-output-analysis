@@ -213,7 +213,7 @@ create_flux_data_reader <- function() {
     # TODO: should read this dynamically.
     obs_vars <- get_observed_vars()
 
-    ignored_obs_vars <- c("gpp", "aet", "nee", "resp")
+    ignored_obs_vars <- c("gpp", "aet", "nee", "resp", "height", "diameter")
     # FIXME: temp hack while we convert variables one at a time to CSV.
     # In the meantime, they will exist in both places, and should be ignored
     # in the netcdf reader.
@@ -485,6 +485,33 @@ create_eucface_reader <- function() {
                              infer_site = TRUE))
 }
 
+create_inv_reader <- function(var,
+                              model_variable,
+                              filename = paste0(var, ".csv.gz")) {
+    obs_dir <- system.file("data", package = get_global("dave_pkgname"))
+    inv_file <- file.path(obs_dir, "inventory", filename)
+
+    layers <- var
+    # Height, diameter and basal area all have 90th-percentile values in a
+    # separate layer.
+    if (var %in% c("height", "ba", "diameter")) {
+        layers <- c(var, paste0(var, "_90p"))
+    }
+    names(layers) <- rep(model_variable, length(layers))
+
+    return(create_csv_reader("inventory",
+                             "Inventory",
+                             inv_file,
+                             model_variable,
+                             layers = layers,
+                             site_col = "site",
+                             lat_col = NULL,
+                             lon_col = NULL,
+                             time_col = "date",
+                             time_fmt = "%Y-%m-%d",
+                             infer_site = TRUE))
+}
+
 #'
 #' Populate the observation reader registry with a default set of readers.
 #'
@@ -493,7 +520,7 @@ create_eucface_reader <- function() {
 populate_registry <- function() {
 
     # Register the default NetCDF reader for the flux data.
-    register_reader(create_flux_data_reader())
+    # register_reader(create_flux_data_reader())
 
     # MODIS LAI.
     register_reader(create_modis_reader())
@@ -527,6 +554,11 @@ populate_registry <- function() {
 
     # Eucface soil moisture.
     register_reader(create_eucface_reader())
+
+    # Forest inventory data.
+
+    # Tree Height.
+    register_reader(create_inv_reader("height", "height"))
 }
 
 #'

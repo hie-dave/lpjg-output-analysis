@@ -162,6 +162,45 @@ test_that("get_field_csv reads and filters data correctly", {
     expect_equal(colnames(field_renamed@data), c("Lon", "Lat", "Year", "Day", "GrossPrimaryProductivity"))
 })
 
+test_that("get_field_csv_pivots_on_duplicate_named_layers", {
+    # Create a data table.
+    dummy_data <- data.table::data.table(
+        date = as.Date(c("2000-01-01", "2000-01-02", "2000-01-03")),
+        Lat = c(-35.0, -35.0, -36.0),
+        Lon = c(148.0, 148.0, 149.0),
+        GPP = c(1.1, 1.2, 2.1),
+        NPP = c(0.5, 0.6, 1.0)
+    )
+    temp_dir <- withr::local_tempdir()
+    data.table::fwrite(dummy_data, file.path(temp_dir, "test_quant.csv"))
+
+    # Create a mock source object pointing to our temp directory
+    mock_source <- new("Source", dir = temp_dir)
+    mock_quant <- new("Quantity", id = "test_quant")
+    mock_stainfo <- new("STAInfo", spatial.extent.id = "test_extent")
+
+    # Read 2 layers, but give them the same name.
+    layers <- c("GPP", "NPP")
+    names(layers) <- rep("x", length(layers))
+
+    # Run the function.
+    field <- get_field_csv(
+        source = mock_source,
+        quant = mock_quant,
+        layers = layers,
+        date_fmt = "%Y-%m-%d"
+    )
+
+    # Assert that the returned field has the correct data.
+    dt <- field@data
+
+    # Should have pivoted on layer name to long format.
+    expect_equal(nrow(dt), 6)
+    expect_equal(ncol(dt), 6) # Lon, Lat, Year, Day, x_layer, x
+    expect_equal(colnames(dt), c("Lon", "Lat", "Year", "Day", "x_layer", "x"))
+    expect_equal(unique(dt$x_layer), c("GPP", "NPP"))
+})
+
 test_that("get_file_path constructs correct path", {
     mock_source <- new("Source", dir = "/my/data")
     mock_quant <- new("Quantity", id = "gpp")
