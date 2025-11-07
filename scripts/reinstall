@@ -1,0 +1,2 @@
+#!/usr/bin/env Rscript
+remotes::install_local(".", force = TRUE, upgrade = "never")
