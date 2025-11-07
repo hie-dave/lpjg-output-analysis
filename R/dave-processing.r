@@ -326,11 +326,14 @@ read_data <- function(sources
                     log_debug("Merging data from reader ", reader_id,
                               " with ", nrow(data@data), " rows of layers ",
                               layers_old, "...")
+                    # Always keep all observations...for now. We can filter out
+                    # non-comparable data points later when we merge in
+                    # predictions.
                     data <- DGVMTools::copyLayers(obs_field, data, layers_old,
                                                   new.layer.names = reader_id,
                                                   tolerance = get_global("merge_tol"),
-                                                  keep.all.from = show_all_observations,
-                                                  keep.all.to = show_all_observations)
+                                                  keep.all.from = TRUE,
+                                                  keep.all.to = TRUE)
                     log_debug("After merging, data has ", nrow(data@data),
                               " rows")
                 }
