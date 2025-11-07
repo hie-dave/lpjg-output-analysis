@@ -389,7 +389,8 @@ get_field_csv <- function(source,
 
     temporal_resolution <- "Year"
     is_subannual <- any(per_site_year$N > 1, na.rm = TRUE)
-    if (is_subannual) {
+    nunique_day <- length(unique(as.integer(format(dt[[time_col]], "%j"))))
+    if (is_subannual || nunique_day > 1) {
         log_diag("Data is not annual. Assuming subannual resolution.")
 
         # Create Day (of year) column. Note: %j is 1-366.
