@@ -468,6 +468,23 @@ create_flux_csv_reader <- function(var, model_variable,
     ))
 }
 
+create_eucface_reader <- function() {
+    eucface_path <- system.file("data", package = get_global("dave_pkgname"))
+    filename <- "EucFACE_soil_moisture_1m_sitecol.csv.gz"
+    eucface_file <- file.path(eucface_path, filename)
+    return(create_csv_reader("EucFACE_soil_moisture_1m",
+                             "EucFACE_soil_moisture_1m",
+                             eucface_file,
+                             "swmm_100",
+                             layers = list("swmm_100" = "swc.sum"),
+                             site_col = "site",
+                             lat_col = NULL,
+                             lon_col = NULL,
+                             time_col = "Date",
+                             time_fmt = "%Y-%m-%d",
+                             infer_site = TRUE))
+}
+
 #'
 #' Populate the observation reader registry with a default set of readers.
 #'
@@ -507,6 +524,9 @@ populate_registry <- function() {
     register_reader(create_flux_csv_reader("gpp_solo", "gpp", id = "flux_gpp"))
     register_reader(create_flux_csv_reader("nee_solo", "nee", id = "flux_nee"))
     register_reader(create_flux_csv_reader("er_solo", "resp", id = "flux_resp"))
+
+    # Eucface soil moisture.
+    register_reader(create_eucface_reader())
 }
 
 #'
