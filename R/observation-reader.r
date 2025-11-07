@@ -499,10 +499,10 @@ create_inv_reader <- function(var,
     }
     names(layers) <- rep(model_variable, length(layers))
 
-    return(create_csv_reader("inventory",
-                             "Inventory",
-                             inv_file,
-                             model_variable,
+    return(create_csv_reader(id = paste0("inventory_", var),
+                             name = paste("Inventory", var),
+                             file_path = inv_file,
+                             quant = model_variable,
                              layers = layers,
                              site_col = "site",
                              lat_col = NULL,
@@ -559,6 +559,10 @@ populate_registry <- function() {
 
     # Tree Height.
     register_reader(create_inv_reader("height", "height"))
+    register_reader(create_inv_reader("diameter", "diameter"))
+    register_reader(create_inv_reader("ba", "basalarea"))
+    register_reader(create_inv_reader("live_biomass", "aboveground_tree_biomass"))
+    register_reader(create_inv_reader("dead_biomass", "standing_dead"))
 }
 
 #'
