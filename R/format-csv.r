@@ -337,6 +337,33 @@ get_field_csv <- function(source,
     dt[, (time_col) := convert_to_date(get(time_col), date_fmt)]
     log_diag("[get_field_csv] Address after date conversion: ", data.table::address(dt))
 
+    # Create Year column.
+    dt[, Year := as.integer(format(get(time_col), "%Y"))]
+
+    # Detect temporal resolution.
+    site_col_effective <- if (!is.null(site_col) && site_col %in% names(dt)) site_col else NULL
+
+    # Count records per site-year
+    if (is.null(site_col_effective)) {
+        per_site_year <- dt[, .N, by = .(Year)]
+    } else {
+        per_site_year <- dt[, .N, by = .(Year, site = get(site_col_effective))]
+    }
+
+    temporal_resolution <- "Year"
+    is_subannual <- any(per_site_year$N > 1, na.rm = TRUE)
+    nunique_day <- length(unique(as.integer(format(dt[[time_col]], "%j"))))
+    if (is_subannual || nunique_day > 1) {
+        log_diag("Data is not annual. Assuming subannual resolution.")
+
+        # Create Day (of year) column. Note: %j is 1-366.
+        dt[, Day := as.integer(format(get(time_col), "%j"))]
+        temporal_resolution <- "Day"
+    }
+
+    # Remove date column.
+    dt[, (time_col) := NULL]
+
     if (is.null(sites) && !is.null(target.STAInfo)) {
         log_diag("[get_field_csv] No sites specified. Therefore, all sites will be read.")
         sites <- filter_stainfo(target.STAInfo)
@@ -373,33 +400,6 @@ get_field_csv <- function(source,
             log_diag("[get_field_csv] Address after filter_sites: ", data.table::address(dt))
         }
     }
-
-    # Create Year column.
-    dt[, Year := as.integer(format(get(time_col), "%Y"))]
-
-    # Detect temporal resolution.
-    site_col_effective <- if (!is.null(site_col) && site_col %in% names(dt)) site_col else NULL
-
-    # Count records per site-year
-    if (is.null(site_col_effective)) {
-        per_site_year <- dt[, .N, by = .(Year)]
-    } else {
-        per_site_year <- dt[, .N, by = .(Year, site = get(site_col_effective))]
-    }
-
-    temporal_resolution <- "Year"
-    is_subannual <- any(per_site_year$N > 1, na.rm = TRUE)
-    nunique_day <- length(unique(as.integer(format(dt[[time_col]], "%j"))))
-    if (is_subannual || nunique_day > 1) {
-        log_diag("Data is not annual. Assuming subannual resolution.")
-
-        # Create Day (of year) column. Note: %j is 1-366.
-        dt[, Day := as.integer(format(get(time_col), "%j"))]
-        temporal_resolution <- "Day"
-    }
-
-    # Remove date column.
-    dt[, (time_col) := NULL]
 
     # Rename Lat/Lon columns to their expected names.
     base_cols <- c()
