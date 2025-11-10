@@ -530,7 +530,7 @@ plot_pvo <- function(
     plt <- set_text_multiplier(plt, text_multiplier)
 
     units <- DGVMTools:::standardiseUnitString(gc@quant@units)
-    x_label <- "Observed"
+    x_label <- obs_name
     y_label <- "Predicted"
     if (units != "1" && units != "") {
         x_label <- paste0(x_label, " (", units, ")")
@@ -665,8 +665,12 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
             avail_readers <- reader_names[reader_names %in% names(gc)]
             log_debug("Available readers: ", paste(avail_readers, collapse = ", "))
             if (length(avail_readers) > 0) {
-                log_debug("Using reader ", avail_readers[1], " as default")
-                obs_lyr <- avail_readers[1]
+                # Choose the reader with the most data points.
+                nvalues <- sapply(avail_readers, function(r)
+                    length(which(!is.na(gc@data[[r]]))))
+                obs_lyr <- avail_readers[which.max(nvalues)]
+                log_debug("Using reader ", obs_lyr,
+                          " as default, as it has the most data points")
             }
         }
         if (is.null(obs_lyr)) {
