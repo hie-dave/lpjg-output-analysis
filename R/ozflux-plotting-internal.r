@@ -193,7 +193,7 @@ set_text_multiplier <- function(plt, text_multiplier = NULL) {
 #' @keywords internal
 #' @return A ggplot
 #'
-plot_temporal <- function(fields,
+plot_temporal <- function(gc,
                          layers = NULL,
                          gridcells = NULL,
                          title = character(0),
@@ -226,7 +226,7 @@ plot_temporal <- function(fields,
                          plotTrend = FALSE,
                          ...
 ) {
-    data.toplot <- DGVMTools::plotTemporal(fields,
+    data.toplot <- DGVMTools::plotTemporal(gc,
         layers = layers,
         gridcells = gridcells,
         title = title,
@@ -260,34 +260,50 @@ plot_temporal <- function(fields,
         plot = FALSE # Force plotTemporal to return a dataframe
     )
 
-    fields <- DGVMTools:::santiseFieldsForPlotting(fields)
+    fields <- DGVMTools:::santiseFieldsForPlotting(gc)
     layers <- DGVMTools:::santiseLayersForPlotting(fields, layers)
 
-    # Threshold of NA fraction below which we use points instead of lines.
+    # Threshold of NA values as a fraction of the "number of values" below which
+    # we use points instead of lines. "Number of values" of a particular layer
+    # here means the total number of rows (ie timesteps) between the first and
+    # last non-NA value in that layer.
     POINTS_THRESHOLD <- 0.1
+
+    # Threshold of number of data points below which we use points instead of
+    # lines.
+    NVALUE_THRESHOLD <- 30
 
     # Track which layers should use points vs lines
     sparse_layers <- c()
     for (lyr in layers) {
-        # Filter data for this layer
-        layer_data <- data.toplot[data.toplot$Layer == lyr, ]
-
-        # Find the time range where we have any data
-        valid_data <- layer_data[!is.na(layer_data$Value), ]
-        if (nrow(valid_data) < 2) {
-            # No valid data at all - consider it sparse
+        # Get the index of the first and last rows with non-NA values in this
+        # layer.
+        lyr_rows <- which(!is.na(gc@data[[lyr]]))
+        if (length(lyr_rows) < 2) {
+            # No valid data - consider it sparse.
             sparse_layers <- c(sparse_layers, lyr)
             next
         }
+        first <- lyr_rows[1]
+        last <- lyr_rows[length(lyr_rows)]
 
-        # Get the time range where we have data
-        time_range <- range(valid_data$Time)
-        # Filter to just this time range
-        active_period <- layer_data[layer_data$Time >= time_range[1] & layer_data$Time <= time_range[2], ]
+        # Get all rows between the first and last non-NA rows.
+        layer_data <- gc@data[first:last, ]
 
         # Calculate fraction of non-NA data points within this period
-        data_frac <- sum(!is.na(active_period$Value)) / nrow(active_period)
+        nvalue <- length(which(!is.na(layer_data[[lyr]])))
+        data_frac <- nvalue / nrow(layer_data)
+        log_debug("Layer ", lyr, " has ", data_frac,
+                 " fraction of non-NA data points (",
+                 nvalue, "/", nrow(layer_data), ") (rows ", first, ":", last,
+                 ")")
         if (data_frac < POINTS_THRESHOLD) {
+            log_debug("Layer ", lyr, " is sparse (data fraction ", data_frac,
+                     " < ", POINTS_THRESHOLD, "). Ergo, we use points.")
+            sparse_layers <- c(sparse_layers, lyr)
+        } else if (nvalue < NVALUE_THRESHOLD) {
+            log_debug("Layer ", lyr, " has too few data points (", nvalue,
+                     " < ", NVALUE_THRESHOLD, "). Ergo, we use points.")
             sparse_layers <- c(sparse_layers, lyr)
         }
     }
@@ -440,7 +456,6 @@ plot_timeseries <- function(
         colours <- get_colour_palette(ncolour)
     }
 
-    points <- FALSE
     non_data_layers <- c("Site")
     if (is.null(layers)) {
         lyrs <- setdiff(names(gc), non_data_layers)
@@ -456,16 +471,6 @@ plot_timeseries <- function(
     }
     lyrs <- setdiff(lyrs, chr_layers)
 
-    if (allow_points) {
-        POINTS_THRESHOLD <- 30
-        for (lyr in lyrs) {
-            data <- gc@data[[lyr]]
-            data <- data[which(!is.na(data))]
-            if (length(data) < POINTS_THRESHOLD) {
-                points <- TRUE
-            }
-        }
-    }
     return(plot_temporal(gc, layers = lyrs, cols = colours
         , text.multiplier = text_multiplier, text.expression = FALSE
         , y.lim = ylim, x.label = xlab, y.label = ylab, subtitle = NULL
@@ -500,6 +505,13 @@ plot_pvo <- function(
 
     ignored_names <- c("Site", obs_name)
     ynames <- setdiff(names(gc), ignored_names)
+    log_debug("[plot_pvo] ynames = ", paste(ynames, collapse = ", "))
+    # Filter out non-numeric layers.
+    ynames <- ynames[unlist(lapply(ynames, function(n) is.numeric(gc@data[[n]])))]
+    log_debug("[plot_pvo] ynames (numeric) = ", paste(ynames, collapse = ", "))
+    if (length(ynames) == 0) {
+        log_error("Unable to plot: data contains no numeric non-observed layers")
+    }
 
     # alpha <- 1
     data <- gc@data
@@ -563,20 +575,36 @@ plot_subannual <- function(
 
     # Filter data down to only those dates for which all layers are available.
     # Otherwise, we will be plotting over different time periods for each layer.
-    filtered <- gc@data[complete.cases(gc@data), ]
-    if (nrow(filtered) == 0) {
-        log_warning("[plot_subannual] When plotting ", gc@quant@name, ", the available layers (", paste(names(gc), collapse = ", "), ") do not cover the same time period. In other words, there is no date on which all layers have a value. The resultant subannual plot will therefore not be filtered by date, so you must be careful when interpreting it, because the subannual pattern that is rendered will have a different 'meaning' for each layer, because the timeseries cover different time periods.")
-    } else {
-        gc@data <- filtered
+    # filtered <- gc@data[complete.cases(gc@data), ]
+    # if (nrow(filtered) == 0) {
+    #     log_warning("[plot_subannual] When plotting ", gc@quant@name, ", the available layers (", paste(names(gc), collapse = ", "), ") do not cover the same time period. In other words, there is no date on which all layers have a value. The resultant subannual plot will therefore not be filtered by date, so you must be careful when interpreting it, because the subannual pattern that is rendered will have a different 'meaning' for each layer, because the timeseries cover different time periods.")
+    # } else {
+    #     gc@data <- filtered
+    # }
+
+    ignored_names <- c("Site")
+    ynames <- setdiff(names(gc), ignored_names)
+    log_debug("[plot_subannual] ynames = ", paste(ynames, collapse = ", "))
+
+    # Filter out non-numeric layers.
+    ynames <- ynames[unlist(lapply(ynames,
+                                   function(n) is.numeric(gc@data[[n]])))]
+    log_debug("[plot_subannual] ynames (numeric) = ",
+              paste(ynames, collapse = ", "))
+    if (length(ynames) == 0) {
+        log_error("Unable to plot: data contains no numeric layers")
     }
 
     # Process and plot each layer separately
-    for (layer_name in names(gc)) {
+    for (layer_name in ynames) {
+        log_diag("Plotting layer ", layer_name)
         # Create a temporary gc with just this layer
         temp_gc <- DGVMTools::selectLayers(gc, layer_name)
+        log_diag("Found ", nrow(temp_gc@data), " rows")
 
         # Remove rows with NA values for this layer
         temp_gc@data <- temp_gc@data[!is.na(temp_gc@data[[layer_name]]), ]
+        log_diag("After removing NAs, ", nrow(temp_gc@data), " rows remain")
 
         # Only proceed if we have data
         if (nrow(temp_gc@data) > 0) {
@@ -596,6 +624,8 @@ plot_subannual <- function(
                 data = df_layer,
                 ggplot2::aes(x = Day, y = value, color = variable)
             )
+        } else {
+            log_warning("[plot_subannual] No data found for layer ", layer_name)
         }
     }
 
