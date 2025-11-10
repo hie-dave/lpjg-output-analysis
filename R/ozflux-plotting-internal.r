@@ -656,22 +656,34 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
 
     # Compute (and store) statistics).
     if (is.null(obs_lyr)) {
+        log_debug("No observed layer was specified, so will attempt to find one")
         readers <- find_readers_for_var(trim_dave(gc@quant@id))
+        log_debug("Found ", length(readers), " readers")
         if (length(readers) > 0) {
             reader_names <- unlist(lapply(readers, function(r) r@src@id))
+            log_debug("Reader names: ", paste(reader_names, collapse = ", "))
             avail_readers <- reader_names[reader_names %in% names(gc)]
+            log_debug("Available readers: ", paste(avail_readers, collapse = ", "))
             if (length(avail_readers) > 0) {
+                log_debug("Using reader ", avail_readers[1], " as default")
                 obs_lyr <- avail_readers[1]
             }
         }
         if (is.null(obs_lyr)) {
+            log_debug("No available readers found, so will use global default")
             obs_lyr <- get_global("obs_lyr")
         }
     }
+    log_debug("obs_lyr=", obs_lyr)
+
     ignored_names <- c("Site", obs_lyr)
     names <- setdiff(names(gc), ignored_names)
+    # Ignore any non-numeric layers that may be present.
+    log_debug("All names: ", paste(names, collapse = ", "))
+    names <- names[unlist(lapply(names, function(n) is.numeric(gc@data[[n]])))]
+    log_debug("Numeric names: ", paste(names, collapse = ", "))
     if (length(names) == 0) {
-        log_error("Unable to plot: data contains no layers")
+        log_error("Unable to plot: data contains no numeric layers")
     }
 
     r2 <- list()
@@ -681,6 +693,8 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     bias <- list()
     # Compute stats for each source.
     for (name in names) {
+        log_debug("Computing stats with xlayer='", obs_lyr, "', ylayer='", name,
+                  "'")
         df <- gc@data
         df <- df[!is.na(df[[obs_lyr]]) & !is.na(df[[name]]), ]
         obs <- df[[obs_lyr]]
