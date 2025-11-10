@@ -494,7 +494,7 @@ create_inv_reader <- function(var,
     layers <- var
     # Height, diameter and basal area all have 90th-percentile values in a
     # separate layer.
-    if (var %in% c("height", "ba", "diameter")) {
+    if (var %in% c("height", "diameter")) {
         layers <- c(var, paste0(var, "_90p"))
     }
     names(layers) <- rep(model_variable, length(layers))
@@ -560,7 +560,7 @@ populate_registry <- function() {
     # Tree Height.
     register_reader(create_inv_reader("height", "height"))
     register_reader(create_inv_reader("diameter", "diameter"))
-    register_reader(create_inv_reader("ba", "basalarea"))
+    register_reader(create_inv_reader("ba", "patch_ba"))
     register_reader(create_inv_reader("live_biomass", "aboveground_tree_biomass"))
     register_reader(create_inv_reader("dead_biomass", "standing_dead"))
 }
