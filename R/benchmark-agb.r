@@ -160,7 +160,7 @@ get_fullcam_filepath <- function(data_directory, highres = FALSE) {
 #'                read the low-resolution (1°) dataset.
 #' @name validate_agb
 #' @rdname validate_agb
-#' @keywords internal
+#' @export
 #'
 validate_agb <- function(data_directory, highres = FALSE) {
     fullcam_path <- get_fullcam_filepath(data_directory, highres)

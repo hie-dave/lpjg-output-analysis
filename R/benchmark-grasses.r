@@ -71,6 +71,7 @@ benchmark_grasses <- function(settings, params, tables) {
             log_warning("No daily LAI (", var, ") data found for simulation '", simulation@name, "'. Falling back to annual LAI (not ideal!)")
             var <- "lai"
         }
+        var <- "lai"
         if (!has_output(simulation, var)) {
             log_warning("No annual LAI (", var, ") data found for simulation '", simulation@name, "'. This simulation will not be included in the C3/C4 grass distribution benchmark.")
             next
@@ -149,7 +150,7 @@ benchmark_grasses <- function(settings, params, tables) {
     comparisons <- NULL
     if (length(trends) > 0) {
         name0 <- names(means)[[1]]
-        name1 <- names(means)[[2]]
+        # name1 <- names(means)[[2]]
         comparisons <- DGVMBenchmarks::fullSpatialComparison(benchmark, means
                                                             , trends, seasonals
                                                             , name0)#, name1)

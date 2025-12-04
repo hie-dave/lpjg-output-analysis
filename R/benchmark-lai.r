@@ -71,11 +71,11 @@ benchmark_lai <- function(settings, params, tables, lai_type = "tot") {
     datasets <- c(bom_data)
     do_aggregation(bom_data)
 
-    if (lai_type == "tot") {
-        modis_lai_data <- read_modis_lai(settings$data_path)
-        datasets <- c(datasets, modis_lai_data)
-        do_aggregation(modis_lai_data)
-    }
+    # if (lai_type == "tot") {
+    #     modis_lai_data <- read_modis_lai(settings$data_path)
+    #     datasets <- c(datasets, modis_lai_data)
+    #     do_aggregation(modis_lai_data)
+    # }
 
     # Create benchmark object.
     # The ID of this benchmark object is used as the quantity column in the

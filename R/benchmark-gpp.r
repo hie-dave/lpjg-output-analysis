@@ -144,7 +144,7 @@ benchmark_gpp <- function(params, settings, tables) {
     if (!is.null(new_name) && !(new_name %in% names(maps))) {
         new_name <- NULL
     }
-    if (!is.null(new_name) && !(old_name %in% names(maps))) {
+    if (!is.null(old_name) && !(old_name %in% names(maps))) {
         old_name <- NULL
     }
 
