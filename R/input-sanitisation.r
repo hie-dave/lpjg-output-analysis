@@ -293,7 +293,7 @@ sanitise_variable <- function(var) {
         var <- readable_name(var)
         log_debug("Creating quantity from input string '", var, "'; id = '"
             , id, "', name = '", var, "', units = '", units, "'")
-        return(DGVMTools::defineQuantity(id, var, units))
+        return(DGVMTools::defineQuantity(id, var, units, format = "GUESS"))
     }
 
     log_error("Unable to parse object as source: ", var)

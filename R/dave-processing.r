@@ -131,6 +131,9 @@ get_ignored_layers <- function() {
 }
 
 get_default_layers <- function(source, var, sites = NULL) {
+    if (source@format@id != "OZFLUX") {
+        return(NULL)
+    }
     available <- available_layers_ozflux(source, var, sites)
     if (length(available) < 1) {
         log_error("Unknown layers available for quantity ", var@id)
@@ -368,9 +371,6 @@ read_data <- function(sources
             if (!is.null(sites)) {
                 if (is.data.frame(sites) && source@format@id == "OZFLUX") {
                     args$sites <- sites
-                } else {
-                    args$spatial.extent.id <- sites$Name
-                    args$spatial.extent <- c(sites$Lon, sites$Lat)
                 }
             }
             predictions <- do.call(DGVMTools::getField, args)
@@ -390,6 +390,12 @@ read_data <- function(sources
                 # Use with= to avoid 'no visible binding' lint warnings
                 predictions@data[is_leap(predictions@data$Year) & predictions@data$Day > 59, Day := predictions@data$Day + 1]
                 log_debug("Successfully performed leap year conversion")
+            }
+
+            if (is.null(layers)) {
+                # set layers to the actual layers which were read.
+                layers_read <- names(predictions)
+                layers <- setdiff(layers_read, get_ignored_layers())
             }
 
             nsource <- length(sources) + ndataful_readers
