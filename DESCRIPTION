@@ -48,7 +48,9 @@ Suggests:
 	ggpubr,
 	knitrProgressBar,
 	DGVMBenchmarks,
-	fasttime
+	fasttime,
+	gganimate,
+	gifski
 License: GPL | file LICENSE
 URL: https://github.com/hie-dave
 BugReports: https://github.com/hie-dave/output-analysis/issues
@@ -69,6 +71,7 @@ Collate:
 	'dave-processing.r'
 	'ozflux-plotting-internal.r'
 	'ozflux-plotting.r'
+	'dave-plotting.r'
 	'ozflux-shiny.r'
 	'definitions.r'
 	'ozflux.r'

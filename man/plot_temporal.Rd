@@ -5,7 +5,7 @@
 \title{Plot temporal data}
 \usage{
 plot_temporal(
-  fields,
+  gc,
   layers = NULL,
   gridcells = NULL,
   title = character(0),

@@ -1006,3 +1006,20 @@ get_panel_title <- function(vars) {
     }
     return(NULL)
 }
+
+#'
+#' Calculate a date from a year and day.
+#' @param data A data frame containing a 'Year' and/or 'Day' column.
+#' @return A Date vector.
+#'
+#' @keywords internal
+#'
+calc_date <- function(data) {
+    if ("Year" %in% names(data) && "Day" %in% names(data)) {
+        return(as.Date(paste0(data$Year, "-", data$Day), format = "%Y-%j"))
+    } else if ("Year" %in% names(data)) {
+        return(as.Date(paste0(data$Year, "-12-31"), format = "%Y-%m-%d"))
+    } else {
+        stop("Data must contain 'Year' and 'Day' columns, or 'Year' column.")
+    }
+}

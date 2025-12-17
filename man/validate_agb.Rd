@@ -17,4 +17,3 @@ read the low-resolution (1°) dataset.}
 Ensure that the required files for the Above-Ground Biomass benchmark exist
 in the given data directory.
 }
-\keyword{internal}
