@@ -71,6 +71,18 @@ ozflux_benchmarks <- function(
     show_all_observations = TRUE,
     show_all_predictions = TRUE
 ) {
+
+    #' Check if a plot is valid (i.e. not NULL or NA, and of the correct type).
+    valid_plot <- function(x) {
+        if (is.null(x) || identical(x, NA)) {
+            return(FALSE)
+        }
+        if (use_plotly) {
+            return(htmlwidgets::is.htmlwidget(x))
+        }
+        return(ggplot2::is.ggplot(x) || inherits(x, "ggarrange"))
+    }
+
     # Sanitise input sources.
     log_debug("Sanitising input sources...")
     sources <- sanitise_sources(sources)
@@ -387,14 +399,18 @@ ozflux_benchmarks <- function(
 
             index <- (j - 1) * nrow(sites) + i
 
-            if (combined_graph && !is.list(combined_plots[[index]])) {
+            if (combined_graph && !valid_plot(combined_plots[[index]])) {
+                log_warning("Combined plot for site ", site, " and variable ",
+                            var@name, " is not valid; skipping...")
                 next
             }
 
-            if (!combined_graph &&
-                (!is.list(timeseries_plots[[index]])
-                || !is.list(pvo_plots[[index]])
-                || !is.list(subannual_plots[[index]]))) {
+            if (!combined_graph && (!valid_plot(timeseries_plots[[index]]) ||
+                                    !valid_plot(pvo_plots[[index]]) ||
+                                    !valid_plot(subannual_plots[[index]]))) {
+                log_warning("One or more plots for site ", site,
+                            " and variable ", var@name,
+                            " are not valid; skipping...")
                 next
             }
 
