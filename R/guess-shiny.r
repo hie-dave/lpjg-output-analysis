@@ -53,27 +53,77 @@ guess_shiny <- function(
             src = NULL,
             src_dir = NULL,
             quantities = character(0),
+            quantity_files = character(0),
             years = integer(0),
             animating = FALSE,
-            field_cache = list(),
+            data_cache = list(),
             selected_cell = NULL
         )
 
         ignored_cols <- c("Lon", "Lat", "Year", "Day", "patch", "stand")
+        ignore_quants <- c("*", "guess_out", "guess_err")
 
-        get_field_cached <- function(quant) {
-            if (!quant %in% names(rv$field_cache)) {
-                rv$field_cache[[quant]] <- DGVMTools::getField(
-                    source = rv$src,
-                    quant = quant,
-                    verbose = FALSE
-                )
+        to_title_case_name <- function(dt, canonical) {
+            idx <- which(tolower(names(dt)) == tolower(canonical))
+            if (length(idx) > 0) {
+                names(dt)[idx[1]] <- canonical
             }
-            rv$field_cache[[quant]]
+            dt
+        }
+
+        list_guess_outputs <- function(dir) {
+            files <- list.files(dir, pattern = "\\.out(\\.gz)?$", full.names = TRUE)
+            if (length(files) < 1) {
+                return(character(0))
+            }
+            quants <- sub("\\.out(\\.gz)?$", "", basename(files))
+            keep <- !(quants %in% ignore_quants)
+            files <- files[keep]
+            quants <- quants[keep]
+            # Prefer .out over .out.gz when both exist for same quantity.
+            is_gz <- grepl("\\.out\\.gz$", files)
+            order_idx <- order(quants, is_gz)
+            files <- files[order_idx]
+            quants <- quants[order_idx]
+            dedup <- !duplicated(quants)
+            out <- files[dedup]
+            names(out) <- quants[dedup]
+            out
+        }
+
+        get_quantity_data <- function(quant) {
+            if (!quant %in% names(rv$data_cache)) {
+                file_path <- rv$quantity_files[[quant]]
+                dt <- utils::read.table(file_path, header = TRUE, check.names = FALSE)
+                dt <- as.data.frame(dt)
+                dt <- to_title_case_name(dt, "Lon")
+                dt <- to_title_case_name(dt, "Lat")
+                dt <- to_title_case_name(dt, "Year")
+                dt <- to_title_case_name(dt, "Day")
+                required <- c("Lon", "Lat", "Year")
+                if (!all(required %in% names(dt))) {
+                    stop(
+                        "Output file '", basename(file_path),
+                        "' is missing one or more required columns: ",
+                        paste(required, collapse = ", ")
+                    )
+                }
+                rv$data_cache[[quant]] <- dt
+            }
+            rv$data_cache[[quant]]
         }
 
         get_layers <- function(dt) {
             setdiff(colnames(dt), ignored_cols)
+        }
+
+        has_variable_day <- function(dt) {
+            if (!"Day" %in% names(dt)) {
+                return(FALSE)
+            }
+            days <- unique(dt$Day)
+            days <- days[!is.na(days)]
+            length(days) > 1
         }
 
         load_source <- function(dir) {
@@ -85,9 +135,16 @@ guess_shiny <- function(
                 format = DGVMTools::GUESS
             )
             rv$src_dir <- dir
-            rv$quantities <- DGVMTools::availableQuantities(rv$src, names = TRUE)
-            rv$field_cache <- list()
+            rv$quantity_files <- list_guess_outputs(dir)
+            rv$quantities <- names(rv$quantity_files)
+            rv$data_cache <- list()
+            rv$years <- integer(0)
             rv$selected_cell <- NULL
+            rv$animating <- FALSE
+            shiny::updateActionButton(session, "toggle_anim", label = "Play")
+            if (length(rv$quantities) < 1) {
+                stop("No .out or .out.gz files found in directory: ", dir)
+            }
             shiny::updateSelectInput(
                 session,
                 "quantity",
@@ -134,7 +191,7 @@ guess_shiny <- function(
 
         quantity_data <- shiny::reactive({
             req(rv$src, input$quantity, input$quantity %in% rv$quantities)
-            as.data.frame(get_field_cached(input$quantity)@data)
+            get_quantity_data(input$quantity)
         })
 
         selected_year <- shiny::reactive({
@@ -202,7 +259,7 @@ guess_shiny <- function(
         shiny::observeEvent(c(input$quantity, input$year_anim), {
             req(rv$src, input$quantity, input$quantity %in% rv$quantities)
             dt <- quantity_data()
-            if (!"Day" %in% names(dt)) {
+            if (!has_variable_day(dt)) {
                 shinyjs::hide("day_container")
                 shiny::updateSelectInput(session, "day", choices = character(0), selected = character(0))
                 return()
@@ -227,7 +284,7 @@ guess_shiny <- function(
             req(input$layer)
             year <- selected_year()
             filtered <- dt[dt$Year == year, c("Lon", "Lat", "Year", input$layer), drop = FALSE]
-            if ("Day" %in% names(dt)) {
+            if (has_variable_day(dt)) {
                 req(input$day)
                 filtered <- dt[dt$Year == year & dt$Day == input$day,
                     c("Lon", "Lat", "Year", "Day", input$layer), drop = FALSE]
@@ -236,10 +293,22 @@ guess_shiny <- function(
             filtered
         })
 
+        layer_limits <- shiny::reactive({
+            dt <- quantity_data()
+            req(input$layer, input$layer %in% names(dt))
+            vals <- suppressWarnings(as.numeric(dt[[input$layer]]))
+            vals <- vals[is.finite(vals)]
+            if (length(vals) < 1) {
+                return(NULL)
+            }
+            c(min(vals), max(vals))
+        })
+
         output$spatial_plot <- shiny::renderPlot({
             dt <- timestep_data()
             req(nrow(dt) > 0)
             year <- selected_year()
+            lims <- layer_limits()
 
             title <- paste(input$quantity, "-", input$layer, "| Year:", year)
             if ("Day" %in% names(dt)) {
@@ -249,7 +318,6 @@ guess_shiny <- function(
             p <- ggplot2::ggplot(dt, ggplot2::aes(x = Lon, y = Lat, fill = value)) +
                 ggplot2::geom_tile() +
                 ggplot2::coord_equal() +
-                ggplot2::scale_fill_viridis_c(option = "C", na.value = "grey90") +
                 ggplot2::labs(
                     title = title,
                     x = "Longitude",
@@ -257,6 +325,15 @@ guess_shiny <- function(
                     fill = input$layer
                 ) +
                 ggplot2::theme_minimal()
+            if (is.null(lims)) {
+                p <- p + ggplot2::scale_fill_viridis_c(option = "C", na.value = "grey90")
+            } else {
+                p <- p + ggplot2::scale_fill_viridis_c(
+                    option = "C",
+                    limits = lims,
+                    na.value = "grey90"
+                )
+            }
             p
         })
 
