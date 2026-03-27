@@ -348,15 +348,19 @@ read_data <- function(sources
             log_warning("No observation readers found for variable '", var_id, "'")
         }
 
-        layers <- original_layer
-        if (is.null(layers)) {
-            layers <- get_default_layers(sources[[1]], var, sites$Name)
-        }
-        log_diag("Reading data for layers: ", layers)
-
         # Read outputs of this variable from each configured source.
         num_decimal_places <- get_global("merge_ndp")
         for (source in sources) {
+
+            layers <- original_layer
+            if (is.null(layers)) {
+                layers <- get_default_layers(source, var, sites$Name)
+            } else if (length(layers) == 0 && source@format@id == "OZFLUX") {
+                layers <- available_layers_ozflux(source, var, sites$Name)
+            }
+            lyr_disp <- paste(layers, collapse = ", ")
+            log_diag("Reading layers: ", lyr_disp, " from source ", source@name)
+
             # fixme: not all of the dave output files have a total column, and even
             # if they do this is a rather ugly workaround for the fact that some
             # are individual-level outputs while some are patch-level outputs.
