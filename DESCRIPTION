@@ -73,6 +73,7 @@ Collate:
 	'ozflux-plotting.r'
 	'dave-plotting.r'
 	'ozflux-shiny.r'
+	'guess-shiny.r'
 	'definitions.r'
 	'ozflux.r'
 	'format-csv.r'
