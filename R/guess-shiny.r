@@ -20,6 +20,29 @@ guess_shiny <- function(
     ui <- shiny::fluidPage(
         shiny::titlePanel("LPJ-GUESS Spatial Explorer"),
         shinyjs::useShinyjs(),
+        shiny::tags$script(shiny::HTML("
+            (function() {
+              function reportDarkMode() {
+                var dark = false;
+                if (window.matchMedia) {
+                  dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+                if (window.Shiny && Shiny.setInputValue) {
+                  Shiny.setInputValue('is_dark_mode', dark ? 'dark' : 'light', {priority: 'event'});
+                }
+              }
+              document.addEventListener('shiny:connected', reportDarkMode);
+              window.addEventListener('load', reportDarkMode);
+              if (window.matchMedia) {
+                var mq = window.matchMedia('(prefers-color-scheme: dark)');
+                if (mq.addEventListener) {
+                  mq.addEventListener('change', reportDarkMode);
+                } else if (mq.addListener) {
+                  mq.addListener(reportDarkMode);
+                }
+              }
+            })();
+        ")),
         shiny::sidebarLayout(
             shiny::sidebarPanel(
                 shiny::textInput(
@@ -116,6 +139,46 @@ guess_shiny <- function(
         get_layers <- function(dt) {
             setdiff(colnames(dt), ignored_cols)
         }
+
+        get_text_color <- function() {
+            dark_raw <- input$is_dark_mode
+            dark <- FALSE
+            if (is.logical(dark_raw)) {
+                dark <- isTRUE(dark_raw)
+            } else if (is.numeric(dark_raw)) {
+                dark <- !is.na(dark_raw) && dark_raw != 0
+            } else if (is.character(dark_raw)) {
+                dark <- tolower(trimws(dark_raw)) %in% c("true", "1", "dark")
+            }
+            if (dark) "white" else "black"
+        }
+
+        session$onFlushed(function() {
+            shinyjs::runjs("
+                (function() {
+                  function sendDarkMode() {
+                    var dark = false;
+                    if (window.matchMedia) {
+                      dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    }
+                    if (window.Shiny && Shiny.setInputValue) {
+                      Shiny.setInputValue('is_dark_mode', dark ? 'dark' : 'light', {priority: 'event'});
+                    }
+                  }
+                  sendDarkMode();
+                  if (!window.__guessDarkModeListenerInstalled && window.matchMedia) {
+                    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+                    var onChange = function() { sendDarkMode(); };
+                    if (mq.addEventListener) {
+                      mq.addEventListener('change', onChange);
+                    } else if (mq.addListener) {
+                      mq.addListener(onChange);
+                    }
+                    window.__guessDarkModeListenerInstalled = true;
+                  }
+                })();
+            ")
+        }, once = TRUE)
 
         has_variable_day <- function(dt) {
             if (!"Day" %in% names(dt)) {
@@ -310,6 +373,7 @@ guess_shiny <- function(
             req(nrow(dt) > 0)
             year <- selected_year()
             lims <- layer_limits()
+            txt_col <- get_text_color()
 
             title <- paste(input$quantity, "-", input$layer, "| Year:", year)
             if ("Day" %in% names(dt)) {
@@ -325,7 +389,19 @@ guess_shiny <- function(
                     y = "Latitude",
                     fill = input$layer
                 ) +
-                ggplot2::theme_minimal()
+                ggplot2::theme_minimal() +
+                ggplot2::theme(
+                    text = ggplot2::element_text(colour = txt_col),
+                    axis.text = ggplot2::element_text(colour = txt_col),
+                    axis.title = ggplot2::element_text(colour = txt_col),
+                    plot.title = ggplot2::element_text(colour = txt_col),
+                    legend.text = ggplot2::element_text(colour = txt_col),
+                    legend.title = ggplot2::element_text(colour = txt_col),
+                    panel.background = ggplot2::element_rect(fill = "transparent", colour = NA),
+                    plot.background = ggplot2::element_rect(fill = "transparent", colour = NA),
+                    legend.background = ggplot2::element_rect(fill = "transparent", colour = NA),
+                    legend.box.background = ggplot2::element_rect(fill = "transparent", colour = NA)
+                )
             if (is.null(lims)) {
                 p <- p + ggplot2::scale_fill_viridis_c(option = "C", na.value = "grey90")
             } else {
@@ -336,7 +412,7 @@ guess_shiny <- function(
                 )
             }
             p
-        })
+        }, bg = "transparent")
 
         shiny::observeEvent(input$spatial_click, {
             click <- input$spatial_click
@@ -379,6 +455,7 @@ guess_shiny <- function(
         output$timeseries_plot <- plotly::renderPlotly({
             ts <- pixel_timeseries()
             req(nrow(ts) > 0)
+            txt_col <- get_text_color()
 
             title <- sprintf(
                 "%s - %s | Lon=%.4f Lat=%.4f",
@@ -422,7 +499,32 @@ guess_shiny <- function(
                     ) +
                     ggplot2::theme_minimal()
             }
-            plotly::ggplotly(p)
+            p <- p + ggplot2::theme(
+                text = ggplot2::element_text(colour = txt_col),
+                axis.text = ggplot2::element_text(colour = txt_col),
+                axis.title = ggplot2::element_text(colour = txt_col),
+                plot.title = ggplot2::element_text(colour = txt_col),
+                panel.background = ggplot2::element_rect(fill = "transparent", colour = NA),
+                plot.background = ggplot2::element_rect(fill = "transparent", colour = NA)
+            )
+
+            plotly::ggplotly(p) %>%
+                plotly::layout(
+                    paper_bgcolor = "rgba(0,0,0,0)",
+                    plot_bgcolor = "rgba(0,0,0,0)",
+                    font = list(color = txt_col),
+                    title = list(font = list(color = txt_col)),
+                    xaxis = list(
+                        color = txt_col,
+                        title = list(font = list(color = txt_col)),
+                        tickfont = list(color = txt_col)
+                    ),
+                    yaxis = list(
+                        color = txt_col,
+                        title = list(font = list(color = txt_col)),
+                        tickfont = list(color = txt_col)
+                    )
+                )
         })
 
         shiny::observeEvent(TRUE, {
