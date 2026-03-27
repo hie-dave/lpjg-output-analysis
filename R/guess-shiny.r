@@ -281,12 +281,13 @@ guess_shiny <- function(
 
         timestep_data <- shiny::reactive({
             dt <- quantity_data()
-            req(input$layer)
+            req(input$layer, input$layer %in% names(dt))
             year <- selected_year()
             filtered <- dt[dt$Year == year, c("Lon", "Lat", "Year", input$layer), drop = FALSE]
             if (has_variable_day(dt)) {
-                req(input$day)
-                filtered <- dt[dt$Year == year & dt$Day == input$day,
+                valid_days <- as.character(dt[dt$Year == year, "Day"])
+                req(input$day, as.character(input$day) %in% valid_days)
+                filtered <- dt[dt$Year == year & as.character(dt$Day) == as.character(input$day),
                     c("Lon", "Lat", "Year", "Day", input$layer), drop = FALSE]
             }
             names(filtered)[names(filtered) == input$layer] <- "value"
@@ -365,7 +366,7 @@ guess_shiny <- function(
         pixel_timeseries <- shiny::reactive({
             req(rv$selected_cell)
             dt <- quantity_data()
-            req(input$layer)
+            req(input$layer, input$layer %in% names(dt))
 
             ts <- dt[dt$Lon == rv$selected_cell$Lon & dt$Lat == rv$selected_cell$Lat,
                 c("Lon", "Lat", "Year", intersect("Day", names(dt)), input$layer),
