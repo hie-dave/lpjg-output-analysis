@@ -69,6 +69,8 @@ Collate:
 	'dave-config.r'
 	'dave-stats.r'
 	'dave-processing.r'
+	'output-registry.r'
+	'dave-quantities.r'
 	'ozflux-plotting-internal.r'
 	'ozflux-plotting.r'
 	'dave-plotting.r'
