@@ -13,12 +13,15 @@ set_global("cb_colours", c(
 ))
 
 get_colour_palette <- function(n, alpha = 1, begin = 0) {
-    if (n > length(get_global("cb_colours"))) {
-        log_warning("Unable to get Wong et al colour palette with ", n
-            , " colours. Default colours will be used instead.")
-        return(NULL)
+    base_cols <- get_global("cb_colours")
+    if (n <= length(base_cols)) {
+        colours <- base_cols[1:n]
+    } else {
+        # Fall back to an HCL palette when more colours are needed.
+        log_warning("Requested ", n, " colours; extending beyond the ",
+                    length(base_cols), "-colour Wong palette")
+        colours <- grDevices::hcl.colors(n, palette = "Dark 3")
     }
-    colours <- get_global("cb_colours")[1:n]
     log_debug("Successfully generated colour palette with ", n, " colours")
     return(colours)
 }
@@ -487,6 +490,7 @@ plot_pvo <- function(
 
     if (is.null(colours)) {
         colours <- get_colour_palette(length(names(gc)))
+        colours <- setNames(colours, names(gc))
     }
 
     # predicted_name <- names(gc)[[length(names(gc))]]
@@ -500,7 +504,7 @@ plot_pvo <- function(
     readers <- find_readers_for_var(trim_dave(gc@quant@id))
     if (!obs_name %in% names(gc@data) && length(readers) > 0) {
         obs_name <- names(readers)[1]
-        log_debug("Using reader ", obs_name, " as default for site ", row$Name)
+        log_debug("Using reader ", obs_name, " as default observed layer")
     }
 
     ignored_names <- c("Site", obs_name)
@@ -521,9 +525,14 @@ plot_pvo <- function(
     plt <- ggplot2::ggplot(data, aes(x = .data[[obs_name]], y = value, color = layer))
     plt <- plt + ggplot2::geom_point(size = marker_size) + ggplot2::theme_bw()
 
-    # Set correct colours.
-    scale <- ggplot2::scale_color_manual(values = colours[2:length(colours)]
-                                         , labels = ynames)
+    # Set correct colours (use named mapping when available).
+    pred_cols <- colours
+    if (!is.null(names(pred_cols))) {
+        pred_cols <- pred_cols[ynames]
+    } else {
+        pred_cols <- pred_cols[seq_along(ynames)]
+    }
+    scale <- ggplot2::scale_color_manual(values = pred_cols, labels = ynames)
     plt <- plt + scale
 
     # Set text size.
@@ -660,7 +669,9 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         readers <- find_readers_for_var(trim_dave(gc@quant@id))
         log_debug("Found ", length(readers), " readers")
         if (length(readers) > 0) {
-            reader_names <- unlist(lapply(readers, function(r) r@src@id))
+            reader_names <- names(readers)
+            src_ids <- unlist(lapply(readers, function(r) r@src@id))
+            reader_names <- unique(c(reader_names, src_ids))
             log_debug("Reader names: ", paste(reader_names, collapse = ", "))
             avail_readers <- reader_names[reader_names %in% names(gc)]
             log_debug("Available readers: ", paste(avail_readers, collapse = ", "))
@@ -678,9 +689,17 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
             obs_lyr <- get_global("obs_lyr")
         }
     }
+    if (!(obs_lyr %in% names(gc@data))) {
+        log_warning("Observed layer '", obs_lyr,
+                    "' is not present in data; disabling observed-dependent plots")
+        obs_lyr <- NULL
+    }
     log_debug("obs_lyr=", obs_lyr)
 
-    ignored_names <- c("Site", obs_lyr)
+    ignored_names <- c("Site")
+    if (!is.null(obs_lyr)) {
+        ignored_names <- c(ignored_names, obs_lyr)
+    }
     names <- setdiff(names(gc), ignored_names)
     # Ignore any non-numeric layers that may be present.
     log_debug("All names: ", paste(names, collapse = ", "))
@@ -696,38 +715,66 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     rsr <- list()
     bias <- list()
     # Compute stats for each source.
-    for (name in names) {
-        log_debug("Computing stats with xlayer='", obs_lyr, "', ylayer='", name,
-                  "'")
-        df <- gc@data
-        df <- df[!is.na(df[[obs_lyr]]) & !is.na(df[[name]]), ]
-        obs <- df[[obs_lyr]]
-        pred <- df[[name]]
-        lyr_name <- get_stats_lyr_name(gc@quant@id, name)
+    if (!is.null(obs_lyr)) {
+        for (name in names) {
+            log_debug("Computing stats with xlayer='", obs_lyr, "', ylayer='", name,
+                      "'")
+            df <- gc@data
+            df <- df[!is.na(df[[obs_lyr]]) & !is.na(df[[name]]), ]
+            obs <- df[[obs_lyr]]
+            pred <- df[[name]]
+            lyr_name <- get_stats_lyr_name(gc@quant@id, name)
 
-        r2[[lyr_name]] <- if (length(obs) > 0) compute_r2(obs, pred) else NA
-        rmse[[lyr_name]] <- if (length(obs) > 0) compute_rmse(obs, pred) else NA
-        nse[[lyr_name]] <- if (length(obs) > 0) compute_nse(obs, pred) else NA
-        rsr[[lyr_name]] <- if (length(obs) > 0) compute_rsr(obs, pred) else NA
-        bias[[lyr_name]] <- if (length(obs) > 0) compute_bias(obs, pred) else NA
+            r2[[lyr_name]] <- if (length(obs) > 0) compute_r2(obs, pred) else NA
+            rmse[[lyr_name]] <- if (length(obs) > 0) compute_rmse(obs, pred) else NA
+            nse[[lyr_name]] <- if (length(obs) > 0) compute_nse(obs, pred) else NA
+            rsr[[lyr_name]] <- if (length(obs) > 0) compute_rsr(obs, pred) else NA
+            bias[[lyr_name]] <- if (length(obs) > 0) compute_bias(obs, pred) else NA
+        }
+    } else {
+        log_debug("Skipping stats: no observed layer available")
     }
 
     # Apparently a variable name in the j value will be interpreted literally
     # rather than dereferencing the value stored in the variable. What an
     # amazing language this is.
     if (is.null(ylim)) {
-        ymin <- min(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
-        ymax <- max(gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]])
+        ymin <- Inf
+        ymax <- -Inf
+        if (!is.null(obs_lyr)) {
+            v <- gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]]
+            if (length(v) > 0) {
+                ymin <- min(ymin, min(v))
+                ymax <- max(ymax, max(v))
+            }
+        }
         for (lyr_name in names) {
             v <- gc@data[which(!is.na(gc@data[[lyr_name]])), ][[lyr_name]]
-            ymin <- min(ymin, min(v))
-            ymax <- max(ymax, max(v))
+            if (length(v) > 0) {
+                ymin <- min(ymin, min(v))
+                ymax <- max(ymax, max(v))
+            }
+        }
+        if (!is.finite(ymin) || !is.finite(ymax)) {
+            ymin <- 0
+            ymax <- 1
         }
         ylim <- c(ymin, ymax)
     }
 
-    colours <- get_colour_palette(length(names(gc)))
-    colours <- setNames(colours, names(gc))
+    numeric_layers <- names[unlist(lapply(names, function(n)
+        is.numeric(gc@data[[n]])))]
+    colours <- c()
+    if (!is.null(obs_lyr) && obs_lyr %in% names(gc@data) &&
+        is.numeric(gc@data[[obs_lyr]])) {
+        colours[obs_lyr] <- "#000000"
+    }
+    pred_layers <- setdiff(numeric_layers, obs_lyr)
+    if (length(pred_layers) > 0) {
+        pred_cols <- get_colour_palette(length(pred_layers))
+        pred_cols <- setNames(pred_cols, pred_layers)
+        colours <- c(colours, pred_cols)
+    }
 
     # Create plots.
     result <- list()
@@ -742,7 +789,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         }
         result$timeseries <- timeseries
     }
-    if (do_pvo) {
+    if (do_pvo && !is.null(obs_lyr)) {
         log_diag("Creating predicted vs. observed scatter plot...")
         pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size,
                         colours = colours, obs_name = obs_lyr)
@@ -754,6 +801,8 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
             pvo <- to_plotly(pvo, ylab)
         }
         result$pvo <- pvo
+    } else if (do_pvo) {
+        log_warning("Skipping predicted-vs-observed plot: no observed layer was found")
     }
     if (do_subannual) {
         log_diag("Creating subannual plot...")
