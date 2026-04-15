@@ -10,8 +10,33 @@
 #'
 ozflux_shiny <- function(sources) {
   sources <- sanitise_sources(sources)
+  stale_threshold_secs <- 10
 
   gridcells <- read_ozflux_sites()
+
+  get_fresh_output_files <- function(site_out_dir) {
+    files <- c(
+      list.files(site_out_dir, pattern = "\\.out$", full.names = TRUE),
+      list.files(site_out_dir, pattern = "\\.out\\.gz$", full.names = TRUE)
+    )
+    if (length(files) < 1) {
+      return(character(0))
+    }
+
+    info <- file.info(files)
+    valid <- !is.na(info$mtime)
+    if (!any(valid)) {
+      return(character(0))
+    }
+
+    files <- files[valid]
+    info <- info[valid, , drop = FALSE]
+    newest <- max(info$mtime)
+    age_secs <- as.numeric(difftime(newest, info$mtime, units = "secs"))
+    fresh <- age_secs <= stale_threshold_secs
+
+    files[fresh]
+  }
 
   get_site_vars <- function(site_name) {
     out_vars <- c()
@@ -29,11 +54,8 @@ ozflux_shiny <- function(sources) {
         next
       }
 
-      files <- c(
-        list.files(site_out_dir, pattern = "\\.out$", full.names = FALSE),
-        list.files(site_out_dir, pattern = "\\.out\\.gz$", full.names = FALSE)
-      )
-      vars <- unlist(lapply(files, quant_from_file_name))
+      files <- get_fresh_output_files(site_out_dir)
+      vars <- unlist(lapply(basename(files), quant_from_file_name))
       vars <- vars[!is.na(vars) & vars != "" & !(vars %in% ignored)]
       out_vars <- c(out_vars, vars)
     }
