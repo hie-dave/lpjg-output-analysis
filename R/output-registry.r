@@ -577,6 +577,21 @@ get_output_metadata_ids <- function() {
 }
 
 #'
+#' Get a human-readable description for an output, suitable for display in a UI.
+#'
+#' @export
+#'
+get_display_name <- function(filename) {
+    metadata <- guess_metadata_from_filename(filename)
+    if (is.null(metadata)) {
+        return(NULL)
+    }
+    agg <- get_aggregation_label(metadata@aggregation_level)
+    temp <- get_temporal_resolution_label(metadata@temporal_resolution)
+    return(paste0(temp, " ", agg, "-level ", metadata@description))
+}
+
+#'
 #' Clear the output metadata registry.
 #'
 #' Primarily intended for tests.

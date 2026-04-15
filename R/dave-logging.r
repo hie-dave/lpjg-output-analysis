@@ -7,6 +7,7 @@ set_global("LOG_LEVEL_DEBUG", 4)
 set_global("log_level", get_global("LOG_LEVEL_INFORMATION"))
 set_global("log_file", "")
 set_global("warning_as_error", FALSE)
+set_global("log_writers", new.env(parent = emptyenv()))
 
 #'
 #' Set the log level used by dave_analysis logging functions.
@@ -82,6 +83,61 @@ level_to_string <- function(level) {
     return("MSG")
 }
 
+#'
+#' Register a custom log writer.
+#'
+#' Custom writers are called for each log line that passes the current log
+#' level filter.
+#'
+#' @param name Unique name for this writer.
+#' @param writer Function accepting `(line, level)`.
+#'
+#' @return Writer name, invisibly.
+#' @keywords internal
+#'
+register_log_writer <- function(name, writer) {
+    if (!is.character(name) || length(name) != 1 || name == "") {
+        log_error("log writer name must be a non-empty string")
+    }
+    if (!is.function(writer)) {
+        log_error("log writer must be a function")
+    }
+    writers <- get_global("log_writers")
+    writers[[name]] <- writer
+    invisible(name)
+}
+
+#'
+#' Unregister a custom log writer.
+#'
+#' @param name Writer name to remove.
+#'
+#' @return `TRUE` if a writer was removed, otherwise `FALSE`.
+#' @keywords internal
+#'
+unregister_log_writer <- function(name) {
+    if (!is.character(name) || length(name) != 1 || name == "") {
+        return(FALSE)
+    }
+    writers <- get_global("log_writers")
+    if (!exists(name, envir = writers, inherits = FALSE)) {
+        return(FALSE)
+    }
+    rm(list = name, envir = writers)
+    TRUE
+}
+
+#'
+#' Remove all custom log writers.
+#'
+#' @return `NULL`, invisibly.
+#' @keywords internal
+#'
+clear_log_writers <- function() {
+    set_global("log_writers", new.env(parent = emptyenv()))
+    invisible(NULL)
+}
+
 write_log_message <- function(..., level) {
     if (level <= get_global("log_level")) {
         l <- level_to_string(level)
@@ -89,8 +145,23 @@ write_log_message <- function(..., level) {
         pfx <- paste0("[", timestr, " ", l, "] ")
         msg <- paste0(...)
         msg <- gsub("\n", paste0("\n", pfx), msg)
-        file = get_global("log_file")
-        cat(paste0(pfx, msg, "\n"), file = file, append = TRUE)
+        line <- paste0(pfx, msg, "\n")
+
+        file <- get_global("log_file")
+        cat(line, file = file, append = TRUE)
+
+        writers <- get_global("log_writers")
+        writer_names <- ls(envir = writers, all.names = TRUE)
+        for (name in writer_names) {
+            writer <- writers[[name]]
+            tryCatch(
+                writer(line, level),
+                error = function(e) {
+                    warning("Log writer '", name, "' failed: ", e$message,
+                        call. = FALSE)
+                }
+            )
+        }
     }
 }
 
