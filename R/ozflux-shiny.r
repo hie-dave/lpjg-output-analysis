@@ -223,6 +223,16 @@ ozflux_shiny <- function(sources) {
           tags$style(HTML(".multicol {-webkit-column-count: 3; /* Chrome, Safari, Opera */-moz-column-count: 3; /* Firefox */column-count: 3;}")),
           tags$style(type="text/css", "#loadmessage {position: fixed;top: 0px;left: 0px;width: 100%;padding: 5px 0px 5px 0px;text-align: center;font-weight: bold;font-size: 100%;color: #000000;background-color: #CCFF66;z-index: 105;}"),
           tags$style(type = "text/css", "
+            :root {
+              --plot-height: 70vh;
+            }
+
+            #timeseries,
+            #pvo,
+            #subannual {
+              height: var(--plot-height) !important;
+            }
+
             #site ~ .selectize-control .selectize-dropdown-content,
             #var ~ .selectize-control .selectize-dropdown-content {
               max-height: 420px;
@@ -257,7 +267,13 @@ ozflux_shiny <- function(sources) {
                       value = FALSE),
         checkboxInput(inputId = "do_subannual",
                       label = "Create Subannual Plot",
-                      value = FALSE)
+                      value = FALSE),
+        sliderInput(inputId = "plot_height",
+                    label = "Plot Height",
+                    min = 40,
+                    max = 100,
+                    value = 70,
+                    step = 1)
       ),
 
       # Main panel for displaying outputs.
@@ -364,6 +380,22 @@ ozflux_shiny <- function(sources) {
                " (", level, ")")
     }, ignoreInit = TRUE)
 
+    observeEvent(input$plot_height, {
+      req(input$plot_height)
+      height_vh <- suppressWarnings(as.integer(input$plot_height))
+      if (is.na(height_vh)) {
+        log_warning("Invalid plot height selected in UI: '", input$plot_height,
+                    "'")
+        return()
+      }
+      height_vh <- max(40L, min(100L, height_vh))
+      shinyjs::runjs(
+        paste0("document.documentElement.style.setProperty('--plot-height', '",
+               height_vh, "vh');")
+      )
+      log_debug("Set plot height to ", height_vh, "vh")
+    }, ignoreInit = FALSE)
+
     observeEvent(input$site, {
       log_debug("Site changed to '", input$site, "'")
       vars <- get_site_vars(input$site)
@@ -466,11 +498,17 @@ ozflux_shiny <- function(sources) {
                 ", pvo=", isTRUE(input$do_pvo), " (effective=", do_pvo,
                 "), subannual=", isTRUE(input$do_subannual))
 
-      graphs <- create_plots(gridcell, var_name, ncol = ncol,
+      y_label <- get_y_label(var_name)
+      var_display <- get_display_name(paste0(var_name, ".out"))
+      if (is.null(var_display) || !nzchar(var_display)) {
+        var_display <- readable_name(var_name)
+      }
+
+      graphs <- create_plots(gridcell, y_label, ncol = ncol,
         do_timeseries = input$do_timeseries, do_pvo = do_pvo,
         do_subannual = input$do_subannual, obs_lyr = obs_layer)
 
-      title <- paste(site, var_name)
+      title <- paste(site, var_display)
       if (input$do_timeseries) {
         graphs$timeseries <- plotly::layout(graphs$timeseries, title = title)
       }

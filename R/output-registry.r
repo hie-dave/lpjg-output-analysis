@@ -592,6 +592,65 @@ get_display_name <- function(filename) {
 }
 
 #'
+#' Resolve output units from registry metadata.
+#'
+#' @param filename Character scalar output filename or path.
+#' @param layer Optional character scalar layer name.
+#'
+#' @return Character scalar units string, or `NULL` if metadata is not found.
+#'
+#' @keywords internal
+#'
+get_display_units <- function(filename, layer = NULL) {
+    metadata <- guess_metadata_from_filename(filename)
+    if (is.null(metadata)) {
+        return(NULL)
+    }
+
+    units <- metadata@units
+    if (!is.null(layer) && is.character(layer) && length(layer) == 1 &&
+        nzchar(layer)) {
+        units <- tryCatch(
+            get_units(metadata@layers, layer),
+            error = function(e) units
+        )
+    }
+
+    units
+}
+
+#'
+#' Resolve registry-backed quantity metadata for plotting and labelling.
+#'
+#' @param var_id Character scalar quantity ID (eg `lai`, `dave_lai`).
+#' @param layer Optional character scalar layer name.
+#'
+#' @return Named list with `id`, `name`, `units`, `display_name`, and
+#'   `metadata`, or `NULL` if not found.
+#'
+#' @keywords internal
+#'
+resolve_quantity_metadata <- function(var_id, layer = NULL) {
+    if (!is.character(var_id) || length(var_id) != 1 || !nzchar(var_id)) {
+        return(NULL)
+    }
+
+    filename <- paste0(var_id, ".out")
+    metadata <- guess_metadata_from_filename(filename)
+    if (is.null(metadata)) {
+        return(NULL)
+    }
+
+    list(
+        id = var_id,
+        name = if (nzchar(metadata@name)) metadata@name else NULL,
+        units = get_display_units(filename, layer = layer),
+        display_name = get_display_name(filename),
+        metadata = metadata
+    )
+}
+
+#'
 #' Clear the output metadata registry.
 #'
 #' Primarily intended for tests.

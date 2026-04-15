@@ -26,12 +26,16 @@ get_colour_palette <- function(n, alpha = 1, begin = 0) {
     return(colours)
 }
 
-to_plotly <- function(chart, lyr_name) {
+to_plotly <- function(chart, x_title = NULL, y_title = NULL) {
     res <- plotly::ggplotly(chart)
-    res <- plotly::layout(res,
-        xaxis = list(title = list(text = "Date")),
-        yaxis = list(title = list(text = lyr_name)),
-        legend = list(bgcolor = "rgba(0,0,0,0)"))
+    layout_args <- list(legend = list(bgcolor = "rgba(0,0,0,0)"))
+    if (!is.null(x_title)) {
+        layout_args$xaxis <- list(title = list(text = x_title))
+    }
+    if (!is.null(y_title)) {
+        layout_args$yaxis <- list(title = list(text = y_title))
+    }
+    res <- do.call(plotly::layout, c(list(res), layout_args))
     res <- plotly::config(res, scrollZoom = TRUE)
     return(res)
 }
@@ -486,7 +490,8 @@ plot_pvo <- function(
     text_multiplier = NULL,
     marker_size = 3,
     colours = NULL,
-    obs_name = NULL) {
+    obs_name = NULL,
+    units = NULL) {
 
     if (is.null(colours)) {
         colours <- get_colour_palette(length(names(gc)))
@@ -538,7 +543,16 @@ plot_pvo <- function(
     # Set text size.
     plt <- set_text_multiplier(plt, text_multiplier)
 
-    units <- DGVMTools:::standardiseUnitString(gc@quant@units)
+    if (is.null(units) || !nzchar(units)) {
+        metadata <- resolve_quantity_metadata(gc@quant@id)
+        if (!is.null(metadata) && !is.null(metadata$units) &&
+            nzchar(metadata$units)) {
+            units <- metadata$units
+        } else {
+            units <- gc@quant@units
+        }
+    }
+    units <- DGVMTools:::standardiseUnitString(units)
     x_label <- obs_name
     y_label <- "Predicted"
     if (units != "1" && units != "") {
@@ -663,6 +677,20 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         , do_subannual = TRUE, marker_size = 3, ylim = NULL
         , obs_lyr = NULL) {
 
+    ylab_default <- get_y_label(gc@quant)
+    ylab_has_units <- !is.null(ylab) && is.character(ylab) && length(ylab) == 1 &&
+        grepl("\\([^\\)]*\\)", ylab)
+    if (is.null(ylab) || !ylab_has_units) {
+        ylab <- ylab_default
+    }
+
+    quantity_units <- gc@quant@units
+    metadata <- resolve_quantity_metadata(gc@quant@id)
+    if (!is.null(metadata) && !is.null(metadata$units) &&
+        nzchar(metadata$units)) {
+        quantity_units <- metadata$units
+    }
+
     # Compute (and store) statistics).
     if (is.null(obs_lyr)) {
         log_debug("No observed layer was specified, so will attempt to find one")
@@ -785,20 +813,22 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
                                       colours = colours)
         timeseries <- trim_ggplot(timeseries, xlab = TRUE)
         if (use_plotly) {
-            timeseries <- to_plotly(timeseries, ylab)
+            timeseries <- to_plotly(timeseries, x_title = "Date",
+                                    y_title = ylab)
         }
         result$timeseries <- timeseries
     }
     if (do_pvo && !is.null(obs_lyr)) {
         log_diag("Creating predicted vs. observed scatter plot...")
         pvo <- plot_pvo(gc, ylim, text_multiplier, marker_size = marker_size,
-                        colours = colours, obs_name = obs_lyr)
+                        colours = colours, obs_name = obs_lyr,
+                        units = quantity_units)
         # On the subannual plots, we want the x-axis label (observed) as well
         # as the y-axis label (predicted), because these are not shared with any
         # other plots in the panel.
         pvo <- trim_ggplot(pvo, xlab = TRUE, ylab = TRUE)
         if (use_plotly) {
-            pvo <- to_plotly(pvo, ylab)
+            pvo <- to_plotly(pvo)
         }
         result$pvo <- pvo
     } else if (do_pvo) {
@@ -810,7 +840,7 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
                                     colours = colours)
         subannual <- trim_ggplot(subannual, xlab = TRUE)
         if (use_plotly) {
-            subannual <- to_plotly(subannual, ylab)
+            subannual <- to_plotly(subannual)
         }
         result$subannual <- subannual
     }
@@ -916,12 +946,25 @@ format_plot <- function(
 
 get_y_label <- function(var, site = NULL) {
     var <- sanitise_variable(var)
-    ylab <- trim_dave(var@name)
+    metadata <- resolve_quantity_metadata(var@id)
+
+    name <- var@name
+    units <- var@units
+    if (!is.null(metadata)) {
+        if (!is.null(metadata$name) && nzchar(metadata$name)) {
+            name <- metadata$name
+        }
+        if (!is.null(metadata$units) && nzchar(metadata$units)) {
+            units <- metadata$units
+        }
+    }
+
+    ylab <- trim_dave(name)
     if (!is.null(site)) {
       ylab <- paste(site, ylab)
     }
-    if (!is.null(var@units) && var@units != "") {
-        ylab <- paste0(ylab, " (", var@units, ")")
+    if (!is.null(units) && units != "") {
+        ylab <- paste0(ylab, " (", units, ")")
     }
     return(ylab)
 }

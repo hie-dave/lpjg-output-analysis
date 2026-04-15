@@ -225,8 +225,31 @@ is_known_quantity <- function(name) {
     return(!is.null(get_known_quantity(name)))
 }
 
+.resolve_registry_metadata <- function(name, layer = NULL) {
+    candidates <- unique(c(
+        as.character(name),
+        tolower(as.character(name)),
+        trim_dave(as.character(name)),
+        tolower(trim_dave(as.character(name)))
+    ))
+
+    for (candidate in candidates) {
+        metadata <- resolve_quantity_metadata(candidate, layer = layer)
+        if (!is.null(metadata)) {
+            return(metadata)
+        }
+    }
+
+    NULL
+}
+
 # Attempt to get units given a variable name by looking in the observed file.
 .get_units <- function(var_name) {
+    metadata <- .resolve_registry_metadata(var_name)
+    if (!is.null(metadata) && !is.null(metadata$units) && nzchar(metadata$units)) {
+        return(metadata$units)
+    }
+
     # TODO: query observations registry
     # TODO: implement a true lpj-guess quantity registry
     trimmed <- trim_dave(var_name)
@@ -244,6 +267,11 @@ is_known_quantity <- function(name) {
 
 # FIXME: this is really bad
 readable_name <- function(name) {
+    metadata <- .resolve_registry_metadata(name)
+    if (!is.null(metadata) && !is.null(metadata$name) && nzchar(metadata$name)) {
+        return(metadata$name)
+    }
+
     trimmed <- trim_dave(name)
     lower <- tolower(trimmed)
     acronyms <- c("lai", "gpp", "nee", "nep", "et", "er")
