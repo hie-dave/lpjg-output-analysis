@@ -226,7 +226,7 @@ is_known_quantity <- function(name) {
 }
 
 # Attempt to get units given a variable name by looking in the observed file.
-get_units <- function(var_name) {
+.get_units <- function(var_name) {
     # TODO: query observations registry
     # TODO: implement a true lpj-guess quantity registry
     trimmed <- trim_dave(var_name)
@@ -288,7 +288,7 @@ sanitise_variable <- function(var) {
         # Input is a string.
 
         # Case insensitivity...ew! (but it allows people to pass in "LAI")
-        units <- get_units(var)
+        units <- .get_units(var)
         id <- tolower(var)
         var <- readable_name(var)
         log_debug("Creating quantity from input string '", var, "'; id = '"
