@@ -8,7 +8,7 @@
 #' @import shiny
 #' @export
 #'
-ozflux_shiny <- function(sources) {
+ozflux_shiny <- function(sources, launch.browser = FALSE) {
   sources <- sanitise_sources(sources)
   stale_threshold_secs <- 10
   log_info("Starting ozflux_shiny with ", length(sources), " source(s)")
@@ -578,5 +578,5 @@ ozflux_shiny <- function(sources) {
   }
 
   app <- shinyApp(ui = ui, server = server)
-  runApp(app, launch.browser = FALSE)
+  runApp(app, launch.browser = launch.browser)
 }
