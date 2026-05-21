@@ -54,6 +54,11 @@ guess_shiny <- function(
                 shiny::hr(),
                 shiny::selectInput("quantity", "Quantity", choices = character(0)),
                 shiny::selectInput("layer", "Layer", choices = character(0)),
+                shiny::numericInput(
+                    "fill_cap_max",
+                    "Colour Saturation Max (optional)",
+                    value = NA_real_
+                ),
                 shiny::actionButton("toggle_anim", "Play"),
                 shiny::numericInput("anim_interval", "Animation Speed (ms/frame)", value = 300, min = 50, max = 5000, step = 50),
                 shiny::sliderInput("year_anim", "Year", min = 0, max = 1, value = 0, step = 1),
@@ -151,6 +156,45 @@ guess_shiny <- function(
                 dark <- tolower(trimws(dark_raw)) %in% c("true", "1", "dark")
             }
             if (dark) "white" else "black"
+        }
+
+        get_plot_labels <- function(quantity_id, layer = NULL) {
+            quantity_name <- quantity_id
+            units <- ""
+
+            metadata <- tryCatch(
+                .resolve_registry_metadata(quantity_id, layer = layer),
+                error = function(e) NULL
+            )
+            if (!is.null(metadata)) {
+                if (!is.null(metadata$name) && nzchar(metadata$name)) {
+                    quantity_name <- metadata$name
+                }
+                if (!is.null(metadata$units) && nzchar(metadata$units)) {
+                    units <- metadata$units
+                }
+            }
+
+            if (!nzchar(quantity_name)) {
+                quantity_name <- readable_name(quantity_id)
+            }
+            if (!nzchar(units)) {
+                units <- .get_units(quantity_id)
+            }
+            if (is.null(units) || is.na(units)) {
+                units <- ""
+            }
+
+            y_axis <- if (!is.null(layer) && nzchar(layer)) layer else quantity_name
+            if (nzchar(units)) {
+                y_axis <- paste0(y_axis, " [", units, "]")
+            }
+
+            list(
+                quantity_name = quantity_name,
+                units = units,
+                y_axis = y_axis
+            )
         }
 
         session$onFlushed(function() {
@@ -374,8 +418,9 @@ guess_shiny <- function(
             year <- selected_year()
             lims <- layer_limits()
             txt_col <- get_text_color()
+            labels <- get_plot_labels(input$quantity, input$layer)
 
-            title <- paste(input$quantity, "-", input$layer, "| Year:", year)
+            title <- paste(labels$quantity_name, "-", input$layer, "| Year:", year)
             if ("Day" %in% names(dt)) {
                 title <- paste(title, "Day:", input$day)
             }
@@ -387,7 +432,7 @@ guess_shiny <- function(
                     title = title,
                     x = "Longitude",
                     y = "Latitude",
-                    fill = input$layer
+                    fill = labels$y_axis
                 ) +
                 ggplot2::theme_minimal() +
                 ggplot2::theme(
@@ -405,11 +450,25 @@ guess_shiny <- function(
             if (is.null(lims)) {
                 p <- p + ggplot2::scale_fill_viridis_c(option = "C", na.value = "grey90")
             } else {
-                p <- p + ggplot2::scale_fill_viridis_c(
-                    option = "C",
-                    limits = lims,
-                    na.value = "grey90"
-                )
+                cap_max <- input$fill_cap_max
+                has_cap <- !is.null(cap_max) && is.finite(cap_max)
+                if (has_cap) {
+                    lower <- lims[1]
+                    upper <- as.numeric(cap_max)
+                    upper <- max(upper, lower + .Machine$double.eps)
+                    p <- p + ggplot2::scale_fill_viridis_c(
+                        option = "C",
+                        limits = c(lower, upper),
+                        oob = scales::squish,
+                        na.value = "grey90"
+                    )
+                } else {
+                    p <- p + ggplot2::scale_fill_viridis_c(
+                        option = "C",
+                        limits = lims,
+                        na.value = "grey90"
+                    )
+                }
             }
             p
         }, bg = "transparent")
@@ -456,10 +515,11 @@ guess_shiny <- function(
             ts <- pixel_timeseries()
             req(nrow(ts) > 0)
             txt_col <- get_text_color()
+            labels <- get_plot_labels(input$quantity, input$layer)
 
             title <- sprintf(
                 "%s - %s | Lon=%.4f Lat=%.4f",
-                input$quantity,
+                labels$quantity_name,
                 input$layer,
                 rv$selected_cell$Lon,
                 rv$selected_cell$Lat
@@ -474,7 +534,7 @@ guess_shiny <- function(
                         ggplot2::labs(
                             title = title,
                             x = "Timestep",
-                            y = input$layer
+                            y = labels$y_axis
                         ) +
                         ggplot2::theme_minimal()
                 } else {
@@ -484,7 +544,7 @@ guess_shiny <- function(
                         ggplot2::labs(
                             title = title,
                             x = "Date",
-                            y = input$layer
+                            y = labels$y_axis
                         ) +
                         ggplot2::theme_minimal()
                 }
@@ -495,7 +555,7 @@ guess_shiny <- function(
                     ggplot2::labs(
                         title = title,
                         x = "Year",
-                        y = input$layer
+                        y = labels$y_axis
                     ) +
                     ggplot2::theme_minimal()
             }

@@ -38,6 +38,61 @@ quant_from_file_name <- function(file_name) {
     return(NULL)
 }
 
+get_output_columns <- function(path) {
+    if (!file.exists(path)) {
+        gz_path <- paste0(path, ".gz")
+        if (file.exists(gz_path)) {
+            path <- gz_path
+        } else {
+            return(character(0))
+        }
+    }
+
+    header <- readLines(path, n = 1)
+    if (length(header) == 0) {
+        return(character(0))
+    }
+    cols <- unlist(strsplit(header[[1]], " "))
+    cols[cols != ""]
+}
+
+append_required_metadata_layers <- function(quant_id, layers, available_cols) {
+    # Preserve legacy behavior when no specific layers were requested.
+    if (is.null(layers)) {
+        return(NULL)
+    }
+
+    metadata <- resolve_quantity_metadata(quant_id)
+    if (is.null(metadata) || is.null(metadata$metadata)) {
+        return(layers)
+    }
+
+    metadata_layers <- get_metadata_layers(
+        metadata$metadata@aggregation_level,
+        metadata$metadata@temporal_resolution
+    )
+
+    # Lon/Lat/Year/Day are generally handled by DGVMTools internals.
+    base_metadata <- c("Lon", "Lat", "Year", "Day")
+    needed <- setdiff(metadata_layers, base_metadata)
+    if (length(needed) < 1) {
+        return(layers)
+    }
+
+    present <- intersect(needed, available_cols)
+    if (length(present) < 1) {
+        return(layers)
+    }
+
+    existing <- unname(layers)
+    missing <- setdiff(present, existing)
+    if (length(missing) < 1) {
+        return(layers)
+    }
+
+    c(layers, missing)
+}
+
 available_quantities <- function(source, directory, names = TRUE) {
     # First get the list of *.out files present
     files <- list.files(directory, ".out$")
@@ -258,9 +313,15 @@ get_field_ozflux <- function(
             , source@name, "', format=GUESS")
         site_source <- DGVMTools::defineSource(source@id, source@name, site_path
             , DGVMTools::GUESS)
+        available_cols <- get_output_columns(file.path(site_path, file_name))
+        layers_to_read <- append_required_metadata_layers(
+            quant_id,
+            layers,
+            available_cols
+        )
         log_debug("file.name = ", file_name)
         log_debug("Reading ", site, " ", quant_id, " data...")
-        field <- DGVMTools::getField(site_source, quant_id, layers
+        field <- DGVMTools::getField(site_source, quant_id, layers_to_read
             , file.name = file_name, verbose = verbose)
         log_debug("Successfully read ", nrow(field@data), " rows of ", site, " "
             , quant_id, " data!")
@@ -325,9 +386,14 @@ get_field_ozflux <- function(
     log_debug("Constructing a temporary source object with ID '", site, "', name '", site, "'...")
     src <- DGVMTools::defineSource(site, site, working_directory
         , DGVMTools::GUESS)
+    layers_to_read <- append_required_metadata_layers(
+        quant_id,
+        layers,
+        expected_cols
+    )
     log_debug("Calling getField() on temporary source object with quant='"
-        , quant_id, "', layers = ", layers, ", file.name = '", file_name, "'")
-    result <- DGVMTools::getField(src, quant_id, layers = layers
+        , quant_id, "', layers = ", layers_to_read, ", file.name = '", file_name, "'")
+    result <- DGVMTools::getField(src, quant_id, layers = layers_to_read
         , file.name = file_name, sta.info = target_stainfo
         , verbose = verbose)
     result@id <- paste(source@id, quant@id, sep = ".")
