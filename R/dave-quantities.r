@@ -166,6 +166,9 @@ add_pft_output("file_dave_cmass_storage_dynam", "Cmass Storage Dynam", "Cmass St
 add_pft_output("file_dave_cpool", "Cpool", "Cpool", "", "patch", "daily")
 add_pft_output("file_dave_creturn", "Creturn", "Creturn", "", "patch", "daily")
 add_pft_output("file_dave_csenesc", "Csenesc", "Csenesc", "", "patch", "daily")
+add_pft_output("file_dave_closs_temp", "Leaf Damage", "Leaf Carbon Loss Due to Temperature", "kgC/m2/day", "patch", "daily")
+add_pft_output("file_dave_nloss_temp", "Leaf Damage", "Leaf Nitrogen Loss Due to Temperature", "kgN/m2/day", "patch", "daily")
+add_pft_output("file_dave_loss_temp", "Leaf Damage", "Fractional Leaf Area Loss Due to Temperature", "fraction/day", "patch", "daily")
 add_pft_output("file_dave_cton_crown", "Cton Crown", "Cton Crown", "", "patch", "daily")
 add_pft_output("file_dave_cton_heart", "Cton Heart", "Cton Heart", "", "patch", "daily")
 add_pft_output("file_dave_cton_leaf", "Cton Leaf", "Cton Leaf", "", "patch", "daily")
@@ -520,7 +523,9 @@ add_pft_output("file_dave_cton_root_max", "Cton Root Max", "Cton Root Max", "", 
 add_pft_output("file_dave_cton_root_min", "Cton Root Min", "Cton Root Min", "", "patch", "annual")
 add_pft_output("file_dave_cton_sap_max", "Cton Sap Max", "Cton Sap Max", "", "patch", "annual")
 add_pft_output("file_dave_cton_sap_min", "Cton Sap Min", "Cton Sap Min", "", "patch", "annual")
-
+add_pft_output("file_dave_acloss_temp", "Leaf Damage", "Leaf Carbon Loss Due to Temperature", "kgC/m2", "patch", "annual")
+add_pft_output("file_dave_anloss_temp", "Leaf Damage", "Leaf Nitrogen Loss Due to Temperature", "kgN/m2", "patch", "annual")
+add_pft_output("file_dave_aloss_temp", "Leaf Damage", "Fractional Leaf Area Loss Due to Temperature", "fraction/year", "patch", "annual")
 
 # Annual stand-level outputs
 add_output_static("file_dave_stand_frac", "Stand Fraction", "Fraction of the gridcell occupied by each stand", "", c("fraction"), "stand", "annual")
