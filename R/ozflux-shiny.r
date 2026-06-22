@@ -3,6 +3,8 @@
 #' simulations against predictions.
 #'
 #' @param sources List of [DGVMTools::Source] objects to plot
+#' @param launch.browser If `TRUE`, the app will be launched in the system's default web browser. Otherwise, it will run in the R session's built-in viewer (if available) or the console.
+#' @param allow_unrecognised If `TRUE`, sources with unrecognised formats will be ignored with a warning. If `FALSE`, the presence of any unrecognised source formats will cause an error. This is useful to avoid silent misconfiguration where a user accidentally provides sources that don't actually contain any OZFLUX data.
 #'
 #' @return Returns a [shiny::shinyApp] object
 #' @import shiny
