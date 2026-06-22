@@ -2,7 +2,7 @@ get_ozflux_path <- function(source) {
     return(file.path(source@dir, "benchmarks", "ozflux"))
 }
 
-get_sites_ozflux <- function(source) {
+get_sites_ozflux <- function(source, allow_unrecognised = FALSE) {
     ozflux <- get_ozflux_path(source)
     standard_sites <- read_ozflux_sites()$Name
 
@@ -10,7 +10,7 @@ get_sites_ozflux <- function(source) {
     for (dir in list.dirs(ozflux, full.names = FALSE, recursive = FALSE)) {
         ins <- file.path(ozflux, dir, paste0(dir, ".ins"))
         if (file.exists(ins)) {
-            if (dir %in% standard_sites) {
+            if (allow_unrecognised || dir %in% standard_sites) {
                 sites <- c(sites, dir)
             } else {
                 log_info("Ignoring site ", dir
@@ -18,6 +18,35 @@ get_sites_ozflux <- function(source) {
             }
         }
     }
+    return(sites)
+}
+
+get_coords <- function(source, site) {
+    site_path <- file.path(get_ozflux_path(source), site)
+    gridlist <- file.path(site_path, "gridlist.txt")
+    if (!file.exists(gridlist)) {
+        log_error("gridlist.txt file does not exist for site '", site, "' at path '", gridlist, "'.")
+    }
+    coords <- read.table(gridlist)
+    lon <- coords$V1
+    lat <- coords$V2
+    return(list(lon = lon, lat = lat))
+}
+
+get_available_sites_ozflux <- function(sources, allow_unrecognised) {
+    sites <- c()
+    for (source in sources) {
+        if (source@format@id == "OZFLUX") {
+            for (site in get_sites_ozflux(source, allow_unrecognised)) {
+                coords <- get_coords(source, site)
+                sites <- rbind(sites, data.frame(Name = site, Lon = coords$lon,
+                                                 Lat = coords$lat))
+            }
+        }
+    }
+
+    # Unique sites by name.
+    sites <- sites[!duplicated(sites$Name), ]
     return(sites)
 }
 

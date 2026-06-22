@@ -8,12 +8,16 @@
 #' @import shiny
 #' @export
 #'
-ozflux_shiny <- function(sources, launch.browser = FALSE) {
+ozflux_shiny <- function(sources,
+                         launch.browser = FALSE,
+                         allow_unrecognised = FALSE) {
   sources <- sanitise_sources(sources)
   stale_threshold_secs <- 10
   log_info("Starting ozflux_shiny with ", length(sources), " source(s)")
 
   gridcells <- read_ozflux_sites()
+  gridcells <- get_available_sites_ozflux(sources,
+                                          allow_unrecognised = allow_unrecognised)
 
   get_fresh_output_files <- function(site_out_dir) {
     log_debug("Looking for output files in ", site_out_dir)
