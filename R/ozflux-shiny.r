@@ -6,6 +6,13 @@
 #' @param launch.browser If `TRUE`, the app will be launched in the system's default web browser. Otherwise, it will run in the R session's built-in viewer (if available) or the console.
 #' @param allow_unrecognised If `TRUE`, sources with unrecognised formats will be ignored with a warning. If `FALSE`, the presence of any unrecognised source formats will cause an error. This is useful to avoid silent misconfiguration where a user accidentally provides sources that don't actually contain any OZFLUX data.
 #'
+#' @details Select multiple outputs and choose columns separately for each output.
+#' Timeseries are aligned by date and, where present, stand, patch, and indiv.
+#' Different aggregation levels remain separate series. Annual values are dated
+#' December 31. Colour, line type, and point type can vary by column, quantity,
+#' source, stand, patch, or cohort (when present). The combined plot uses a shared value axis. Observed
+#' comparisons and subannual plots use the first selected output.
+#'
 #' @return Returns a [shiny::shinyApp] object
 #' @import shiny
 #' @export
@@ -14,72 +21,26 @@ ozflux_shiny <- function(sources,
                          launch.browser = FALSE,
                          allow_unrecognised = FALSE) {
   sources <- sanitise_sources(sources)
-  stale_threshold_secs <- 10
   log_info("Starting ozflux_shiny with ", length(sources), " source(s)")
 
   gridcells <- read_ozflux_sites()
   gridcells <- get_available_sites_ozflux(sources,
                                           allow_unrecognised = allow_unrecognised)
 
-  get_fresh_output_files <- function(site_out_dir) {
-    log_debug("Looking for output files in ", site_out_dir)
-    files <- c(
-      list.files(site_out_dir, pattern = "\\.out$", full.names = TRUE),
-      list.files(site_out_dir, pattern = "\\.out\\.gz$", full.names = TRUE)
-    )
-    log_debug("Found ", length(files), " output files in ", site_out_dir)
-    if (length(files) < 1) {
-      log_debug("No output files found in ", site_out_dir)
-      return(character(0))
-    }
-
-    info <- file.info(files)
-    valid <- !is.na(info$mtime)
-    if (!any(valid)) {
-      log_debug("No valid output files found in ", site_out_dir, " (no mtime)")
-      return(character(0))
-    }
-
-    files <- files[valid]
-    info <- info[valid, , drop = FALSE]
-    newest <- max(info$mtime)
-    age_secs <- as.numeric(difftime(newest, info$mtime, units = "secs"))
-    fresh <- age_secs <= stale_threshold_secs
-
-    log_debug("Oldest fresh output file in ", site_out_dir, " is ", round(max(age_secs[fresh]), 1), " seconds old")
-    log_debug("Found ", sum(fresh), " fresh output files in ", site_out_dir, " (", sum(!fresh), " stale)")
-
-    files[fresh]
+  get_site_output_files <- function(site_name) {
+    lapply(sources, function(source) {
+      if (source@format@id != "OZFLUX") return(character(0))
+      root <- get_ozflux_path(source)
+      directory <- file.path(root, site_name,
+        get_output_dir(file.path(root, "outputs.ins")))
+      ozflux_fresh_output_files(directory)
+    })
   }
 
-  get_site_vars <- function(site_name) {
-    log_debug("Getting variables for site ", site_name)
-    out_vars <- c()
-    ignored <- c("*", "guess_out", "guess_err")
-
-    for (source in sources) {
-      if (source@format@id != "OZFLUX") {
-        log_debug("Skipping source ", source@name, " with format ", source@format@id)
-        next
-      }
-
-      ozflux_dir <- get_ozflux_path(source)
-      out_dir_name <- get_output_dir(file.path(ozflux_dir, "outputs.ins"))
-      site_out_dir <- file.path(ozflux_dir, site_name, out_dir_name)
-      log_debug("Looking for output files in ", site_out_dir)
-      if (!dir.exists(site_out_dir)) {
-        log_debug("Output directory does not exist: ", site_out_dir)
-        next
-      }
-
-      files <- get_fresh_output_files(site_out_dir)
-      log_debug("Found ", length(files), " fresh output files for site ", site_name, " in source ", source@name)
-      vars <- unlist(lapply(basename(files), quant_from_file_name))
-      vars <- vars[!is.na(vars) & vars != "" & !(vars %in% ignored)]
-      out_vars <- c(out_vars, vars)
-    }
-
-    unique(sort(out_vars))
+  get_site_vars <- function(site_name, files = get_site_output_files(site_name)) {
+    vars <- unlist(lapply(basename(unlist(files)), quant_from_file_name))
+    vars <- vars[!is.na(vars) & vars != "" & !(vars %in% c("*", "guess_out", "guess_err"))]
+    unique(sort(vars))
   }
 
   get_var_group_name <- function(var_id) {
@@ -253,14 +214,20 @@ ozflux_shiny <- function(sources,
                     gridcells$Name,
                     selected = gridcells$Name[1]),
         selectInput(inputId = "var",
-                    label = "Variable",
+                    label = "Outputs",
                     choices = initial_choices,
-                    selected = initial_var),
-        selectizeInput(inputId = "layers",
-                 label = "Layers",
-                 choices = initial_layers,
-                 selected = initial_layers,
-                 multiple = TRUE),
+                    selected = initial_var, multiple = TRUE),
+        uiOutput("quantity_layers"),
+        selectInput("colour_by", "Colour", c("Vary by layer" = "Layer",
+          "Vary by quantity" = "Quantity", "Vary by source" = "Source",
+          "Constant" = "constant")),
+        selectInput("line_by", "Line type", c("Constant" = "constant",
+          "None" = "none", "Vary by layer" = "Layer",
+          "Vary by quantity" = "Quantity", "Vary by source" = "Source")),
+        selectInput("point_by", "Point type", c("None" = "none",
+          "Constant" = "constant", "Vary by layer" = "Layer",
+          "Vary by quantity" = "Quantity", "Vary by source" = "Source")),
+        helpText("Observed comparisons and subannual plots use the first selected output. Combined timeseries use a shared value axis; units are shown in tooltips."),
         selectInput(inputId = "obs_layer",
               label = "Observed Layer",
               choices = c("Auto-detect" = "", initial_obs_layers),
@@ -402,71 +369,96 @@ ozflux_shiny <- function(sources,
       log_debug("Set plot height to ", height_vh, "vh")
     }, ignoreInit = FALSE)
 
-    observeEvent(input$site, {
-      log_debug("Site changed to '", input$site, "'")
-      vars <- get_site_vars(input$site)
-      choices <- make_var_choices(vars)
-      selected <- if (input$var %in% vars) input$var else if (length(vars) > 0) vars[1] else NULL
-      log_debug("Updating variable dropdown with ", length(vars),
-                " variable(s); selected = '", selected, "'")
-      updateSelectInput(session, "var", choices = choices, selected = selected)
-    }, ignoreInit = TRUE)
+    # Poll once for a shared snapshot: choices and plotted files must agree.
+    fresh_files <- reactivePoll(2000, session,
+      checkFunc = function() {
+        req(input$site)
+        list(site = input$site, files = get_site_output_files(input$site))
+      },
+      valueFunc = function() get_site_output_files(input$site))
 
-    observeEvent(c(input$site, input$var), {
+    available_vars <- reactive(get_site_vars(input$site, fresh_files()))
+
+    observeEvent(available_vars(), {
+      vars <- available_vars()
+      selected <- intersect(input$var, vars)
+      if (!length(selected)) selected <- head(vars, 1)
+      updateSelectInput(session, "var", choices = make_var_choices(vars),
+                        selected = selected)
+    }, ignoreNULL = FALSE)
+
+    layer_id <- function(quantity) paste0("layers_", paste(as.integer(charToRaw(quantity)), collapse = "_"))
+
+    output$quantity_layers <- renderUI({
       req(input$site)
+      tagList(lapply(intersect(input$var, available_vars()), function(quantity) {
+        layers <- setdiff(get_site_layers(input$site, quantity),
+                          c("Lon", "Lat", "Year", "Day", "stand", "patch", "indiv"))
+        previous <- isolate(input[[layer_id(quantity)]])
+        selectizeInput(layer_id(quantity), paste(quantity, "columns"),
+          choices = layers,
+          selected = if (is.null(previous)) layers else intersect(previous, layers),
+          multiple = TRUE)
+      }))
+    })
+
+    observeEvent(input$var, {
       req(input$var)
-      log_debug("Refreshing layers/observation choices for site '", input$site,
-                "', variable '", input$var, "'")
+      updateSelectInput(session, "obs_layer",
+        choices = c("Auto-detect" = "", get_observation_layer_choices(input$var[1])),
+        selected = "")
+    })
 
-      available_vars <- get_site_vars(input$site)
-      if (!(input$var %in% available_vars)) {
-        log_debug("Variable '", input$var, "' is not currently available for site '", input$site, "'; skipping refresh")
-        return()
+    timeseries_data <- reactive({
+      req(input$site, input$var)
+      records <- list()
+      files_by_source <- fresh_files()
+      for (quantity in intersect(input$var, available_vars())) {
+        layers <- input[[layer_id(quantity)]]
+        if (!length(layers)) next
+        for (source_index in seq_along(sources)) {
+          source <- sources[[source_index]]
+          files <- files_by_source[[source_index]]
+          files <- files[basename(files) %in% paste0(quantity, c(".out", ".out.gz"))]
+          if (!length(files)) next
+          # Read each output independently: entity columns must never become
+          # prediction layers or be discarded by a Field merge.
+          frame <- read.table(files[1], header = TRUE, check.names = FALSE)
+          records[[length(records) + 1L]] <- list(data = frame,
+            quantity = quantity, source = source@id, layers = layers)
+        }
       }
+      validate(need(length(records) > 0, "Select at least one output column."))
+      ozflux_timeseries_data(records)
+    })
 
-      layers <- get_site_layers(input$site, input$var)
-      selected_layers <- if (length(input$layers) > 0) {
-        intersect(input$layers, layers)
-      } else {
-        c()
+    observeEvent(timeseries_data(), {
+      choices <- c("Constant" = "constant", "Vary by layer" = "Layer",
+        "Vary by quantity" = "Quantity", "Vary by source" = "Source")
+      choices <- c(choices, ozflux_entity_choices(timeseries_data()))
+      for (id in c("colour_by", "line_by", "point_by")) {
+        available <- if (id == "colour_by") choices else c("None" = "none", choices)
+        selected <- isolate(input[[id]])
+        if (!(selected %in% available)) selected <- "constant"
+        updateSelectInput(session, id, choices = available, selected = selected)
       }
-      if (length(selected_layers) < 1) {
-        selected_layers <- layers
-      }
-      log_debug("Updating layers dropdown with ", length(layers),
-                " layer(s); selected count = ", length(selected_layers))
-      updateSelectizeInput(session, "layers", choices = layers,
-                           selected = selected_layers, server = TRUE)
-
-      obs_layers <- get_observation_layer_choices(input$var)
-      obs_choices <- c("Auto-detect" = "", obs_layers)
-      selected_obs <- if (!is.null(input$obs_layer) && input$obs_layer %in% obs_layers) {
-        input$obs_layer
-      } else {
-        ""
-      }
-      log_debug("Updating observed layer dropdown with ", length(obs_layers),
-                " option(s); selected = '", selected_obs, "'")
-      updateSelectInput(session, "obs_layer", choices = obs_choices,
-                        selected = selected_obs)
-    }, ignoreInit = FALSE)
+    })
 
     plots <- reactive({
       req(input$site)
       req(input$var)
-      req(input$layers)
-      validate(need(length(input$layers) > 0,
+      req(input[[layer_id(input$var[1])]])
+      validate(need(length(input[[layer_id(input$var[1])]]) > 0,
                     "Please select at least one layer to plot."))
 
       # Parse inputs.
       site <- input$site
-      var_name <- input$var
-      selected_layers <- input$layers
+      var_name <- input$var[1]
+      selected_layers <- input[[layer_id(var_name)]]
       log_debug("Preparing plots for site '", site, "', variable '", var_name,
             "', selected layers: ", paste(selected_layers, collapse = ", "))
 
-      available_vars <- get_site_vars(site)
-      validate(need(var_name %in% available_vars,
+      validate(need(var_name %in% available_vars(),
                     "Selected variable is not available for this site."))
 
       ncol <- 1#input$ncol
@@ -511,13 +503,10 @@ ozflux_shiny <- function(sources,
       }
 
       graphs <- create_plots(gridcell, y_label, ncol = ncol,
-        do_timeseries = input$do_timeseries, do_pvo = do_pvo,
+        do_timeseries = FALSE, do_pvo = do_pvo,
         do_subannual = input$do_subannual, obs_lyr = obs_layer)
 
       title <- paste(site, var_display)
-      if (input$do_timeseries) {
-        graphs$timeseries <- plotly::layout(graphs$timeseries, title = title)
-      }
       if (!is.null(graphs$pvo)) {
         graphs$pvo <- plotly::layout(graphs$pvo, title = title)
       }
@@ -537,7 +526,10 @@ ozflux_shiny <- function(sources,
         log_debug("Timeseries plot disabled by toggle")
         return(NULL)
       }
-      plots()$timeseries
+      validate(need(input$line_by != "none" || input$point_by != "none",
+                    "Enable lines or points to draw the timeseries."))
+      ozflux_timeseries_plot(timeseries_data(), input$colour_by,
+        input$line_by, input$point_by, input$site)
     })
 
     output$pvo <- plotly::renderPlotly({
@@ -585,4 +577,137 @@ ozflux_shiny <- function(sources,
 
   app <- shinyApp(ui = ui, server = server)
   runApp(app, launch.browser = launch.browser)
+}
+
+# Align quantities within each source and aggregation level. Different levels
+# remain independent, so gridcell values are never replicated across patches.
+ozflux_timeseries_data <- function(records) {
+  groups <- list()
+  series <- list()
+  for (i in seq_along(records)) {
+    record <- records[[i]]
+    frame <- as.data.frame(record$data)
+    entities <- intersect(c("stand", "patch", "indiv"), names(frame))
+    required <- if ("indiv" %in% entities) c("stand", "patch", "indiv") else
+      if ("patch" %in% entities) c("stand", "patch") else entities
+    if (!all(required %in% entities)) stop("Missing entity columns in ", record$quantity)
+    frame$Date <- calc_date(frame)
+    if (anyNA(frame$Date)) stop("Invalid dates in ", record$quantity)
+    keys <- c("Date", entities)
+    if (anyDuplicated(frame[keys])) {
+      stop("Duplicate date/entity keys in ", record$quantity, " (", record$source, ")")
+    }
+    layers <- intersect(record$layers, setdiff(names(frame),
+      c("Date", "Lon", "Lat", "Year", "Day", "stand", "patch", "indiv")))
+    layers <- layers[vapply(frame[layers], is.numeric, logical(1))]
+    if (!length(layers)) next
+    group <- paste(record$source, paste(entities, collapse = "/"), sep = "::")
+    columns <- paste0("value_", i, "_", seq_along(layers))
+    present <- paste0("present_", i)
+    part <- frame[c(keys, layers)]
+    names(part) <- c(keys, columns)
+    part[[present]] <- TRUE
+    if (is.null(groups[[group]])) groups[[group]] <- part else
+      groups[[group]] <- merge(groups[[group]], part, by = keys, all = TRUE)
+    series[[length(series) + 1L]] <- list(group = group, columns = columns,
+      present = present, layers = layers, entities = entities,
+      quantity = record$quantity, source = record$source)
+  }
+  result <- list()
+  for (entry in series) {
+    frame <- groups[[entry$group]]
+    frame <- frame[!is.na(frame[[entry$present]]), , drop = FALSE]
+    # Style at each level uses the full ancestry, while the trace identity
+    # always uses the most detailed level available in this output.
+    hierarchy <- lapply(seq_len(3L), function(level) {
+      keys <- c("stand", "patch", "indiv")[seq_len(level)]
+      if (!all(keys %in% entry$entities)) return(rep(NA_character_, nrow(frame)))
+      labels <- lapply(keys, function(key) paste(key, frame[[key]]))
+      do.call(paste, c(labels, sep = ", "))
+    })
+    entity <- if (length(entry$entities)) hierarchy[[length(entry$entities)]] else
+      rep("Gridcell", nrow(frame))
+    for (j in seq_along(entry$columns)) {
+      result[[length(result) + 1L]] <- data.frame(
+        Date = frame$Date, Value = frame[[entry$columns[j]]],
+        Quantity = entry$quantity, Layer = entry$layers[j],
+        Source = entry$source, Entity = entity,
+        Stand = hierarchy[[1]], Patch = hierarchy[[2]], Cohort = hierarchy[[3]],
+        stringsAsFactors = FALSE)
+    }
+  }
+  if (!length(result)) stop("No numeric output columns selected.")
+  result <- do.call(rbind, result)
+  result$Series <- as.integer(interaction(result$Quantity, result$Layer,
+    result$Source, result$Entity, drop = TRUE))
+  result[order(result$Series, result$Date), ]
+}
+
+ozflux_entity_choices <- function(data) {
+  choices <- c("Vary by stand" = "Stand", "Vary by patch" = "Patch",
+               "Vary by cohort" = "Cohort")
+  choices[vapply(choices, function(column) any(!is.na(data[[column]])), logical(1))]
+}
+
+ozflux_timeseries_plot <- function(data, colour_by, line_by, point_by, site) {
+  mapping <- function(by, values) {
+    if (by %in% c("none", "constant")) return(rep(values[1], nrow(data)))
+    levels <- unique(data[[by]])
+    rep(values, length.out = length(levels))[match(data[[by]], levels)]
+  }
+  colour_count <- if (colour_by == "constant") 1L else length(unique(data[[colour_by]]))
+  colours <- mapping(colour_by, grDevices::hcl.colors(max(1L, colour_count), "Dark 3"))
+  lines <- mapping(line_by, c("solid", "dash", "dot", "dashdot", "longdash", "longdashdot"))
+  points <- mapping(point_by, c("circle", "square", "diamond", "cross", "x",
+    "triangle-up", "triangle-down", "star"))
+  mode <- if (line_by == "none") "markers" else
+    if (point_by == "none") "lines" else "lines+markers"
+  plot <- plotly::plot_ly()
+  for (id in unique(data$Series)) {
+    rows <- which(data$Series == id)
+    first <- rows[1]
+    trace <- data[rows, ]
+    label <- paste(trace$Quantity[1], trace$Layer[1], trace$Source[1],
+                   trace$Entity[1], sep = " / ")
+    plot <- plotly::add_trace(plot, x = trace$Date, y = trace$Value,
+      type = "scatter", mode = mode, name = label,
+      text = paste(label, get_y_label(trace$Quantity[1]), sep = "<br>"),
+      hovertemplate = "%{text}<br>%{x}<br>%{y}<extra></extra>",
+      line = if (line_by != "none") list(color = colours[first], dash = lines[first]) else NULL,
+      marker = if (point_by != "none") list(color = colours[first], symbol = points[first]) else NULL,
+      connectgaps = FALSE)
+  }
+  plotly::layout(plot, title = site, xaxis = list(title = "Date"),
+                 yaxis = list(title = "Value"))
+}
+
+ozflux_fresh_output_files <- function(site_out_dir, stale_threshold_secs = 10) {
+  log_debug("Looking for output files in ", site_out_dir)
+  files <- c(
+    list.files(site_out_dir, pattern = "\\.out$", full.names = TRUE),
+    list.files(site_out_dir, pattern = "\\.out\\.gz$", full.names = TRUE)
+  )
+  log_debug("Found ", length(files), " output files in ", site_out_dir)
+  if (length(files) < 1) {
+    log_debug("No output files found in ", site_out_dir)
+    return(character(0))
+  }
+
+  info <- file.info(files)
+  valid <- !is.na(info$mtime)
+  if (!any(valid)) {
+    log_debug("No valid output files found in ", site_out_dir, " (no mtime)")
+    return(character(0))
+  }
+
+  files <- files[valid]
+  info <- info[valid, , drop = FALSE]
+  newest <- max(info$mtime)
+  age_secs <- as.numeric(difftime(newest, info$mtime, units = "secs"))
+  fresh <- age_secs <= stale_threshold_secs
+
+  log_debug("Oldest fresh output file in ", site_out_dir, " is ", round(max(age_secs[fresh]), 1), " seconds old")
+  log_debug("Found ", sum(fresh), " fresh output files in ", site_out_dir, " (", sum(!fresh), " stale)")
+
+  files[fresh]
 }

@@ -1108,7 +1108,7 @@ get_panel_title <- function(vars) {
 #'
 calc_date <- function(data) {
     if ("Year" %in% names(data) && "Day" %in% names(data)) {
-        return(as.Date(paste0(data$Year, "-", data$Day), format = "%Y-%j"))
+        return(as.Date(paste0(data$Year, "-", data$Day + 1), format = "%Y-%j"))
     } else if ("Year" %in% names(data)) {
         return(as.Date(paste0(data$Year, "-12-31"), format = "%Y-%m-%d"))
     } else {

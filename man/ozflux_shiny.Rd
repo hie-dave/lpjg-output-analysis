@@ -5,10 +5,20 @@
 \title{Run a shiny app which generates interactive plots of site-level ozflux
 simulations against predictions.}
 \usage{
-ozflux_shiny(sources)
+ozflux_shiny(sources, launch.browser = FALSE, allow_unrecognised = FALSE)
 }
 \arguments{
 \item{sources}{List of \link[DGVMTools:Source]{DGVMTools::Source} objects to plot}
+\item{launch.browser}{Whether to launch the app in the default web browser.}
+\item{allow_unrecognised}{Whether to ignore unrecognised source formats with a warning instead of an error.}
+}
+\details{
+Select multiple outputs and choose columns separately for each output.
+Timeseries are aligned by date and, where present, stand, patch, and indiv.
+Different aggregation levels remain separate series. Annual values are dated
+December 31. Colour, line type, and point type can vary by column, quantity,
+source, stand, patch, or cohort (when present). The combined plot uses a shared value axis. Observed
+comparisons and subannual plots use the first selected output.
 }
 \value{
 Returns a \link[shiny:shinyApp]{shiny::shinyApp} object
