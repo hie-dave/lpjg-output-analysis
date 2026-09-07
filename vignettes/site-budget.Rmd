@@ -1,0 +1,394 @@
+---
+title: "Running an OzFlux site budget"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Running an OzFlux site budget}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+`render_site_budget()` renders a self-contained HTML report for one site's
+completed simulation, comparing model outputs with observations and plotting
+carbon, nitrogen, water, vegetation and soil diagnostics. The report template
+and stylesheet are installed with `daveanalysis`. There is no separate report
+to download, clone or edit. Render once per site.
+
+The repository's `scripts/` directory is excluded from package builds, but the
+report was moved to `inst/rmarkdown/site-budget/`. R installs the contents of
+`inst/` into the package directory, so the template, stylesheet and output
+manifest are all available after installation. For example, the template can
+be located with:
+
+```{r installed-template}
+system.file("rmarkdown", "site-budget", "site_budget.rmd",
+            package = "daveanalysis", mustWork = TRUE)
+```
+
+Neither helper requires a checkout of this analysis repository.
+
+Examples are not executed when building this vignette because they require
+simulation outputs.
+
+## Requirements
+
+1. Run an LPJ-GUESS/DAVE version that provides the diagnostic outputs listed
+   below for each site of interest. Standard LPJ-GUESS outputs alone are not
+   sufficient. Keep the daily and annual outputs from the same simulation.
+2. Install `daveanalysis` and its dependencies, plus `rmarkdown`.
+   Rendering HTML also requires Pandoc, available with RStudio or separately.
+3. Supply the simulation repository root, site name and PFT name. The wrapper
+   requires all three explicitly; it does not run the model or detect the PFT.
+4. Standard observations, including EucFACE soil moisture, are installed with
+   the package and registered when it loads. No observation path is needed.
+   Supplementary AWRA observations are external and optional.
+
+## Enable outputs before running the model
+
+Use the installed helper to configure all required output files:
+
+```{r enable-outputs}
+library(daveanalysis)
+repo <- "/path/to/simulation-repository"
+enable_required_outputs(repo)
+```
+
+This edits `<repo>/benchmarks/ozflux/outputs.ins` in place. It enables the
+98 common outputs plus both site-dependent soil-moisture outputs, and sets
+`ifdailyoutput` to `1`. It uncomments existing settings, appends missing ones,
+and replaces empty or custom output filenames with the filenames expected by
+the report. Unrelated settings, `outputdirectory`, and trailing comments are
+retained. Repeated calls make no further changes.
+
+If a required setting has multiple active definitions or an unrecognised value
+syntax, the helper reports an error before writing any changes. When there is
+an active definition, commented alternatives are left alone; otherwise only
+the first commented definition is enabled. The helper returns the absolute
+path to `outputs.ins` invisibly.
+
+**Next, run LPJ-GUESS for your sites**, then render the reports below. The helper
+does not run the model or generate missing results. Your model version must
+support the requested outputs, and the run's instructions must import this
+`outputs.ins` without overriding its settings later. Imported instruction
+files are not edited.
+
+## Render a report
+
+Keep your settings in a small R script:
+
+```{r render-budget}
+library(daveanalysis)
+
+report <- render_site_budget(
+  repo = "/path/to/simulation-repository",
+  site = "CumberlandPlain",
+  pft = "MRS",
+  output_file = "reports/CumberlandPlain.html",
+  source_id = "simulation_1",
+  source_label = "My simulation",
+  description = "Model revision, parameters and simulation period."
+)
+```
+
+`output_file` is relative to your working directory, or it can be absolute.
+Its parent directories are created if needed, and an existing report at that
+path is overwritten. The default is `<site>-budget.html` in your working
+directory. The function returns the absolute HTML path invisibly.
+
+The wrapper checks the benchmark layout and all required output filenames
+before rendering, listing missing files together. It does not check file
+contents, PFT columns or observation coverage. The report is rendered from a
+temporary copy of the installed template and stylesheet, so the package can
+be installed in a read-only location. Temporary files are removed on success
+or error. Observation-reader registrations, logging level and the ggplot theme
+changed by the report are restored afterwards.
+
+`source_id` identifies the simulation and `source_label` labels it in plots
+(defaulting to `source_id`). `description` should record the model revision,
+parameters and simulation period. The report includes its render parameters
+and R session information for reproducibility.
+
+Presentation settings go in `params`, for example:
+
+```{r presentation}
+render_site_budget(
+  repo = "/path/to/simulation-repository", site = "Warra", pft = "MRS",
+  params = list(fig_width = 16, dpi = 120),
+  quiet = TRUE
+)
+```
+
+The supported overrides and defaults are `aspect_ratio = 0.6`,
+`image_fmt = "png"`, `fig_width = 20`, `dpi = 96`, `retina = 2`,
+`fig_align = "center"` and `out_width = "100%"`.
+Use the explicit function arguments for simulation settings; `params` accepts
+only presentation settings. `quiet = TRUE` suppresses rendering progress.
+
+For multiple sites, loop over site names:
+
+```{r multiple-sites}
+for (site in c("CumberlandPlain", "Warra")) {
+  render_site_budget(
+    repo = "/path/to/simulation-repository", site = site, pft = "MRS",
+    output_file = file.path("reports", paste0(site, ".html")),
+    description = "Model revision, parameters and simulation period."
+  )
+}
+```
+
+Each call uses a fresh render environment. The developer script
+`scripts/generate_site_budgets` also calls this wrapper for batch rendering;
+ordinary package users do not need that script.
+
+## Simulation location
+
+`repo` is the root passed to `defineSource(..., format = OZFLUX)`. The reader
+expects this layout, where `out` is an example output directory:
+
+```text
+/path/to/simulation-repository/
+  benchmarks/
+    ozflux/
+      outputs.ins
+      CumberlandPlain/
+        CumberlandPlain.ins
+        gridlist.txt
+        out/
+          dave_lai.out
+          ...
+```
+
+`benchmarks/ozflux/outputs.ins` must contain an `outputdirectory` setting, for
+example `outputdirectory "out"`. The reader reads that file directly; it does
+not resolve this setting through imported instruction files. It locates outputs
+under `<repo>/benchmarks/ozflux/<site>/<outputdirectory>/`.
+The site instruction file is used for site discovery; `gridlist.txt` supplies
+coordinates, including for sites outside the package's standard site list.
+Use one site's coordinates and the exact site-directory name.
+
+The analysis does not need Git history or an executable to render completed
+runs: a directory preserving this structure is sufficient. A bare directory of
+`.out` files is not accepted by the report's current `repo` interface.
+
+## Required model outputs
+
+The following are the exact filename stems read by the active report chunks,
+including names constructed in loops. Append `.out` to each stem. The reader
+also supports `.out.gz`. Filenames must match these stems: the analysis does
+not map arbitrary output filenames from LPJ-GUESS instruction settings.
+
+The helper above enables the corresponding `file_<stem>` settings for you.
+For reference, these settings look like:
+
+```text
+file_dave_lai "dave_lai.out"
+file_dave_gpp "dave_gpp.out"
+```
+
+The model version must implement these settings. An unavailable diagnostic
+requires a compatible model version or a change to the report; renaming a
+standard output does not supply the missing diagnostic.
+
+All of these outputs are required for the full current report, even where a
+chunk reads a value that it subsequently does not use:
+
+```text
+dave_acmass_mort.out
+dave_acpool.out
+dave_aet.out
+dave_agpp.out
+dave_alpha_leaf.out
+dave_alpha_root.out
+dave_alpha_sap.out
+dave_alpha_storage.out
+dave_amort_age.out
+dave_amort_greff.out
+dave_ancohort.out
+dave_anee.out
+dave_anflux.out
+dave_anpp.out
+dave_anretranslocated.out
+dave_anstorage_drawdown.out
+dave_anuptake.out
+dave_aresp.out
+dave_cgrow_leaf.out
+dave_cgrow_root.out
+dave_cgrow_sap.out
+dave_cgrow_storage.out
+dave_clitter.out
+dave_cmass_leaf.out
+dave_cmass_leaf_limit.out
+dave_cmass_repr.out
+dave_cmass_root.out
+dave_cmass_root_limit.out
+dave_cmass_sap.out
+dave_cmass_sap_limit.out
+dave_cmass_standing_heart.out
+dave_cmass_standing_leaf.out
+dave_cmass_standing_repr.out
+dave_cmass_standing_root.out
+dave_cmass_standing_sap.out
+dave_cmass_storage.out
+dave_cmass_storage_limit.out
+dave_cpool.out
+dave_cton_leaf_max.out
+dave_cton_leaf_min.out
+dave_cton_root_max.out
+dave_cton_root_min.out
+dave_cton_sap_max.out
+dave_cton_sap_min.out
+dave_cturnover_leaf.out
+dave_cturnover_root.out
+dave_cturnover_sap.out
+dave_cue.out
+dave_density.out
+dave_diameter.out
+dave_dnpool.out
+dave_fnuptake.out
+dave_g1.out
+dave_gpp.out
+dave_height.out
+dave_lai.out
+dave_latosa.out
+dave_ltor.out
+dave_met_insol.out
+dave_met_temp.out
+dave_met_vpd.out
+dave_ndemand.out
+dave_nee.out
+dave_nitrogen_budget_annual.out
+dave_nitrogen_budget_daily.out
+dave_nlitter.out
+dave_nmass_leaf.out
+dave_nmass_repr.out
+dave_nmass_root.out
+dave_nmass_sap.out
+dave_nmass_storage.out
+dave_nmass_storage_max.out
+dave_npp.out
+dave_nretranslocated.out
+dave_nscal.out
+dave_nstorage_drawdown.out
+dave_nturnover_leaf.out
+dave_nturnover_root.out
+dave_nturnover_sap.out
+dave_patch_ba.out
+dave_resp.out
+dave_resp_growth.out
+dave_resp_leaf.out
+dave_resp_maintenance.out
+dave_resp_root.out
+dave_resp_sap.out
+dave_soil_psi_layer.out
+dave_sompool_cmass.out
+dave_sompool_decay_reduction.out
+dave_sompool_nimmob.out
+dave_sompool_nmass.out
+dave_sompool_nmin_gross.out
+dave_sw.out
+dave_swvol.out
+dave_water_budget_annual.out
+dave_water_budget_daily.out
+dave_weighted_psi.out
+dave_wscal.out
+```
+
+There is one additional site-dependent output:
+
+| Site | Additional required file |
+| --- | --- |
+| `CumberlandPlain` | `dave_swmm_100.out` |
+| Any other site | `dave_swavail_100.out` |
+
+`dave_aboveground_tree_biomass.out` is not required: its overview chunk is
+commented out. `dave_height.out` is required by the active allometry chunk even
+though its overview chunk is commented out. `dave_met_precip.out` appears only
+in a commented test chunk and is not required.
+
+### Required columns and simulation assumptions
+
+Keep the native LPJ-GUESS headers and units, including `Lon`, `Lat`, `Year`,
+and `Day` for daily outputs. Annual outputs use `Year`. Several calculations
+join on these columns, and the nitrogen-usage chunk explicitly selects day 365.
+The report mixes daily and annual diagnostics; annual files cannot replace
+required daily files. Use overlapping simulation and observation dates.
+
+The selected `pft` must be present in outputs read by PFT. Many other chunks
+assume one resulting model series and do not pass `pft` to the reader; selecting
+`pft` is not a report-wide filter for an arbitrary multi-PFT simulation.
+The existing batch script describes single-PFT, single-cohort, single-patch
+runs. Start with that setup; broader configurations need validation.
+
+The report explicitly selects these non-PFT columns:
+
+| Outputs | Columns |
+| --- | --- |
+| `dave_acpool`, `dave_cpool` | `VegC`, `StandingC`, `LitterC`, `SoilC`, `total` |
+| `dave_dnpool` | `VegN`, `StandingN`, `LitterN`, `SoilN`, `AvailN` |
+| `dave_clitter`, `dave_nlitter` | `SURFMETA`, `SURFSTRUCT`, `SURFCWD`, `SURFFWD` |
+| All listed `dave_sompool_*` outputs | `SURFSTRUCT`, `SOILSTRUCT`, `SOILMICRO`, `SURFHUMUS`, `SURFMICRO`, `SURFMETA`, `SURFFWD`, `SURFCWD`, `SOILMETA`, `SLOWSOM`, `PASSIVESOM`, `total` |
+| `dave_sw` | `sw_0` through `sw_14` |
+| `dave_soil_psi_layer` | `soil_psi0` through `soil_psi14` |
+| Both `dave_water_budget_*` outputs | `precip`, `evap`, `transp`, `interception`, `surfrunoff`, `drainrunoff`, `baserunoff`, `flux` |
+| Both `dave_nitrogen_budget_*` outputs | `deposition`, `fixation`, `uptake`, `gross_mineralisation`, `immobilisation`, `net_mineralisation`, `min_leach`, `org_leach`, `volatilisation`, `gas_emissions`, `flux`, `flux_avail`, `avail`, `totaln` |
+| `dave_anflux` | `MANUREN`, `NFERT`, `ESTN`, `HARVESTN`, `SEEDN`, `NH3_FIRE`, `NOx_FIRE`, `N2O_FIRE`, `N2_FIRE`, `NH3_SOIL`, `NO_SOIL`, `N2O_SOIL`, `N2_SOIL`, `NET_NITRIF`, `NET_DENITRIF`, `GROSS_NITRIF`, `GROSS_DENITRIF` |
+
+The fire section additionally expects `total` in `dave_cmass_standing_leaf`.
+
+## Observations
+
+The package's `inst/data/` contains MODIS and TERN LAI, GOSIF GPP, flux-tower
+precipitation, temperature, radiation, soil moisture, ET and carbon fluxes,
+SMIPS soil moisture and ET, forest inventory measurements, and EucFACE soil
+moisture. These are located through `system.file("data", package = "daveanalysis")`
+and registered automatically by the package's observation-reader registry.
+Users do not need to configure their location.
+
+Bundled data do not guarantee observations for every site or date. The current
+report explicitly renames `flux_nee`, `flux_gpp`, `flux_resp`, `gosif-gpp` and
+`flux_rsds` columns. Missing observational series can therefore stop rendering;
+the full report is not currently a general observation-free site budget.
+
+### Optional AWRA observations
+
+To add AWRA comparisons, pass `data_dir` as the root containing your `awra/`
+subdirectory:
+
+```{r supplementary-observations}
+render_site_budget(
+  repo = "/path/to/simulation-repository", site = "Warra", pft = "MRS",
+  data_dir = "/path/to/supplementary-observations"
+)
+```
+
+The wrapper checks that this subdirectory exists. Its contents must be the
+AWRA CSV files expected by `register_supplementary_observations()`.
+Leave `data_dir = NULL` (the default) to use registered observations without
+adding AWRA readers. This does not trigger a missing-AWRA warning.
+`data_dir` does not relocate the bundled observations. CumberlandPlain uses
+the bundled EucFACE reader directly, with no machine-specific path.
+
+## Updating and customising the workflow
+
+Keep your render script outside the installed package. Updating `daveanalysis`
+updates its report template while leaving your settings in your own script,
+so there are no local report edits to merge. Record or pin the package version
+alongside the model revision when you need reproducible results.
+
+For maintainers, the canonical template is now
+`inst/rmarkdown/site-budget/site_budget.rmd`, with its stylesheet and a
+`required-outputs.txt` manifest beside it. The wrapper uses this manifest for
+file validation, adding the site-dependent soil-moisture output. When report
+chunks change, update the manifest and this vignette's output/column lists
+together. The exported `enable_required_outputs()` helper uses the same manifest.
+The old `scripts/enable_required_outputs -r <repo>` command remains as a thin
+Rscript entry point calling that installed helper. The old
+`scripts/site_budget.rmd` has moved; scripts that previously called `rmarkdown::render()` on it should call `render_site_budget()` instead.
+
+Further improvements could validate output columns and observation coverage
+before rendering, or offer optional sections with their own requirements.
+The current wrapper retains the full report's scientific calculations and
+site/PFT assumptions described above.

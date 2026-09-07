@@ -7,15 +7,15 @@ output:
         css: ozflux-benchmarks.css
         self_contained: true
 params:
-  repo: "~/code/lpj-guess/dave"
-  data_dir: "~/code/lpj-guess/scripts/ozflux-lpjg/data"
+  repo: null
+  data_dir: null
   source_id: "dave"
   source_label: "dave"
-  site: "SturtPlains"
-  pft: "C4G_perennial"
-  description: "A description of the simulations. If you're seeing this in a rendered .html file, then someone forgot to set the description when rendering the document. This can be done with `rmarkdown::render(\"site_budget.rmd\", params = list(description = \"A description of the simulations\"))`"
+  site: "CumberlandPlain"
+  pft: "MRS"
+  description: ""
   aspect_ratio: 0.6
-  image_fmt: "svg"
+  image_fmt: "png"
   fig_width: 20
   dpi: 96
   retina: 2
@@ -27,7 +27,6 @@ params:
 library("daveanalysis")
 library("ggpubr")
 library("tidyr")
-library("lubridate")
 library("plotly")
 library("dplyr")
 
@@ -59,7 +58,9 @@ dave_config(log_level = 0)
 # Set ggplot theme.
 theme_set(theme_bw(base_size = 16))
 
-daveanalysis:::register_supplementary_observations(params$data_dir)
+if (!is.null(params$data_dir)) {
+    register_supplementary_observations(params$data_dir)
+}
 ```
 
 ```{r helper_functions}
@@ -373,29 +374,22 @@ ozflux_panel(src, "dave_aet", site)
 ### Diameter
 
 ```{r benchmark_diameter}
-# ozflux_panel(src, "dave_diameter", site)
+data <- read_data("dave_diameter")
+ozflux_panel(src, "dave_diameter", site)
+```
+
+### Basal Area
+
+```{r benchmark_basal_area}
+quant <- defineQuantity("dave_patch_ba", "Basal Area", "m^2/ha")
+ozflux_panel(src, quant, site)
 ```
 
 ### Soil Moisture
 
 ```{r benchmark_soil_moisture}
-# Register an observation reader for EucFACE soil moisture.
+# The EucFACE reader is registered automatically from the bundled data.
 if (site == "CumberlandPlain") {
-    eucface_path <- "~/code/lpj-guess/scripts/ozflux-lpjg/data/eucface"
-    filename <- "EucFACE_soil_moisture_1m_sitecol.csv"
-    eucface_file <- file.path(eucface_path, filename)
-    eucface_reader <- create_csv_reader("EucFACE_soil_moisture_1m",
-                                        "EucFACE_soil_moisture_1m",
-                                        eucface_file,
-                                        "swmm_100",
-                                        layers = list("swmm_100" = "swc.sum"),
-                                        site_col = "site",
-                                        lat_col = NULL,
-                                        lon_col = NULL,
-                                        time_col = "Date",
-                                        time_fmt = "%Y-%m-%d",
-                                        infer_site = TRUE)
-    register_reader(eucface_reader)
     var <- "dave_swmm_100"
 } else {
     var <- "dave_swavail_100"
@@ -1604,7 +1598,7 @@ ggplot(cton_norm_long) +
 
 ```{r allometry}
 # fixme: eliminate whitespace
-vars <- c("dave_height", "dave_diameter", "dave_basalarea", "dave_density")
+vars <- c("dave_height", "dave_diameter", "dave_patch_ba", "dave_density")
 data <- read_data(vars, read_obs = FALSE)
 data$date <- calc_date(data$Year, data$Day)
 newnames <- gsub("dave_", "", vars)
@@ -1881,6 +1875,9 @@ ggplot(data_long, aes(x = date, y = value, color = type)) +
 ### Litter Carbon
 
 ```{r litter_carbon}
+# surface: litter
+# near-surface: grass and shrub live biomass
+# 
 litter_som_pools <- c("SURFSTRUCT", "SURFMETA")
 som <- read_data("dave_sompool_cmass", layers = litter_som_pools)
 
@@ -1899,4 +1896,15 @@ ggplot(data_long) +
     ylab("Carbon (kgC/m2)") +
     labs(title = paste(site, "Litter Carbon")) +
     theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+## Reproducibility
+
+The run description above should identify the model revision and simulation
+settings. The parameters and R session below record how this report was rendered.
+
+```{r reproducibility}
+print(params)
+sessionInfo()
 ```
