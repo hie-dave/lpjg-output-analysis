@@ -4,32 +4,15 @@ library("daveanalysis")
 library("RColorBrewer")
 library("xtable")
 
-get_predicted_name <- function(gc, obs_lyr) {
-    names <- names(gc)
-    if (length(names) == 0) {
-        log_error("Unable to plot: data contains no layers")
-    }
-    if (length(names) == 1) {
-        predicted_name <- names[1]
-    } else {
-        if (names[1] == obs_lyr) {
-            predicted_name <- names[2]
-        } else {
-            predicted_name <- names[1]
-        }
-    }
-
-    predicted_name <- names(gc)[[length(names(gc))]]
-    return(predicted_name)
-}
-
 get_data_var <- function(sources, sites, var) {
 
     # Sanitise variables to be plotted.
     var <- daveanalysis:::sanitise_variable(var)
 
     # Read data for this gridcell.
-    data <- daveanalysis:::read_data(list(var), sources, site = sites)
+    data <- daveanalysis:::read_data(sources, list(var), sites = sites)
+    data <- daveanalysis:::filter_default_plot_layers(data, sources,
+                                                      list(var), sites)
 
     nsite <- nrow(sites)
     result <- list()
@@ -38,10 +21,12 @@ get_data_var <- function(sources, sites, var) {
 
         gc <- daveanalysis:::get_gridcell(data, row$Lat, row$Lon, row$Name)
         obs_lyr <- daveanalysis:::get_global("obs_lyr")
-        predicted_name <- get_predicted_name(gc, obs_lyr)
-
-        obs <- unlist(gc@data[, ..obs_lyr])
-        pred <- unlist(gc@data[, ..predicted_name])
+        obs_data <- gc[source == obs_lyr, .(Year, Day, observed = value)]
+        pred_data <- gc[source != obs_lyr, .(Year, Day, predicted = value)]
+        paired <- merge(pred_data, obs_data, by = c("Year", "Day"))
+        paired <- paired[!is.na(observed) & !is.na(predicted)]
+        obs <- paired$observed
+        pred <- paired$predicted
 
         if (length(obs) == 0 || length(pred) == 0) {
             gc <- daveanalysis:::get_gridcell(data, row$Lat, row$Lon, row$Name)

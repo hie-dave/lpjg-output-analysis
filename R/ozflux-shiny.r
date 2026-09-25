@@ -479,11 +479,11 @@ ozflux_shiny <- function(sources,
       if (identical(obs_layer, "")) {
         obs_layer <- NULL
       }
-      if (!is.null(obs_layer) && !(obs_layer %in% names(gridcell@data))) {
+      if (!is.null(obs_layer) && !(obs_layer %in% unique(gridcell$source))) {
         obs_layer <- NULL
       }
       if (is.null(obs_layer)) {
-        avail_obs <- obs_candidates[obs_candidates %in% names(gridcell@data)]
+        avail_obs <- obs_candidates[obs_candidates %in% unique(gridcell$source)]
         if (length(avail_obs) > 0) {
           obs_layer <- avail_obs[1]
         }

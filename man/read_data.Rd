@@ -23,7 +23,7 @@ read_data(
 \item{sites}{The ozflux sites for which data will be read (see:
 \link{sanitise_ozflux_sites}).}
 
-\item{layers}{Names of layers to be read.}
+\item{layers}{Names of layers to be read. \code{NULL} reads all available layers.}
 
 \item{correct_leaps}{Never set to TRUE unless you know what you're doing.}
 
@@ -38,8 +38,9 @@ false, only the predictions which have a
 matching observation will be returned.}
 }
 \value{
-A single \link[DGVMTools:Field]{DGVMTools::Field} with a layer of observations, and one
-layer for each source specified in sources.
+A long \link[data.table:data.table]{data.table::data.table} with columns identifying
+the spatiotemporal record plus \code{source}, \code{quantity}, \code{layer}, and
+\code{value}.
 }
 \description{
 Read data for the specified variable.

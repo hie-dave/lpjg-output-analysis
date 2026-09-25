@@ -458,30 +458,258 @@ plot_timeseries <- function(
     colours = NULL,
     allow_points = TRUE) {
 
-    ncolour <- ifelse(is.null(layers), length(names(gc)), length(layers))
+    gc <- data.table::as.data.table(gc)
+    if (!("value" %in% names(gc))) {
+        log_error("Unable to plot: data is not in read_data() long format")
+    }
+    if (!is.null(layers)) {
+        gc <- gc[layer %in% layers]
+    }
+    if (nrow(gc) == 0) {
+        log_error("Unable to plot: no rows are available")
+    }
+    gc[, date := calc_date(gc)]
+    gc[, series := get_series_labels(.SD)]
+
+    ncolour <- length(unique(gc$series))
     if (is.null(colours)) {
         colours <- get_colour_palette(ncolour)
+        colours <- setNames(colours, unique(gc$series))
     }
 
-    non_data_layers <- c("Site")
-    if (is.null(layers)) {
-        lyrs <- setdiff(names(gc), non_data_layers)
-    } else {
-        lyrs <- layers
+    plt <- ggplot2::ggplot(gc[!is.na(value)],
+                           ggplot2::aes(x = date, y = value, color = series,
+                                        group = series)) +
+        ggplot2::geom_line() +
+        ggplot2::theme_bw() +
+        ggplot2::labs(x = xlab, y = ylab, title = NULL, subtitle = subtitle) +
+        ggplot2::theme(legend.position = "bottom",
+                       legend.title = ggplot2::element_blank())
+    if (!is.null(colours)) {
+        plt <- plt + ggplot2::scale_color_manual(values = colours)
     }
+    if (!is.null(ylim)) {
+        plt <- plt + ggplot2::scale_y_continuous(limits = ylim)
+    }
+    plt <- set_text_multiplier(plt, text_multiplier)
+    return(plt)
+}
 
-    chr_layers <- c()
-    for (lyr in lyrs) {
-        if (class(gc@data[[lyr]]) == "character") {
-            chr_layers <- c(chr_layers, lyr)
+get_series_labels <- function(data) {
+    data <- data.table::as.data.table(data)
+    components <- intersect(c("source", "quantity", "layer"), names(data))
+    components <- components[vapply(components, function(column) {
+        length(unique(data[[column]])) > 1
+    }, logical(1))]
+    if (length(components) == 0) {
+        return(rep("value", nrow(data)))
+    }
+    labels <- do.call(paste, c(data[, components, with = FALSE], sep = ": "))
+    as.character(labels)
+}
+
+filter_default_plot_layers <- function(data, sources, vars, sites) {
+    data <- data.table::as.data.table(data)
+    source_ids <- vapply(sources, function(source) source@id, character(1))
+    keep <- !(data$source %in% source_ids)
+    any_defaults <- FALSE
+    for (source in sources) {
+        for (var in vars) {
+            default_layers <- get_default_layers(source, var, sites$Name)
+            if (is.null(default_layers)) {
+                keep <- keep | (data$source == source@id & data$quantity == var@id)
+            } else {
+                any_defaults <- TRUE
+                keep <- keep | (data$source == source@id &
+                                data$quantity == var@id &
+                                data$layer %in% default_layers)
+            }
         }
     }
-    lyrs <- setdiff(lyrs, chr_layers)
+    if (!any_defaults) {
+        return(data)
+    }
+    data[keep]
+}
 
-    return(plot_temporal(gc, layers = lyrs, cols = colours
-        , text.multiplier = text_multiplier, text.expression = FALSE
-        , y.lim = ylim, x.label = xlab, y.label = ylab, subtitle = NULL
-        , title = NULL))
+get_entity_columns <- function(data, entity_level = "auto") {
+    entity_level <- match.arg(entity_level,
+                              c("auto", "stand", "patch", "indiv", "gridcell"))
+    available <- intersect(c("stand", "patch", "indiv"), names(data))
+    if (entity_level == "gridcell" || length(available) == 0) {
+        return(character(0))
+    }
+    if (entity_level == "auto") {
+        if ("indiv" %in% available) return(c("stand", "patch", "indiv"))
+        if ("patch" %in% available) return(c("stand", "patch"))
+        if ("stand" %in% available) return("stand")
+        return(character(0))
+    }
+    levels <- c("stand", "patch", "indiv")
+    selected <- levels[seq_len(match(entity_level, levels))]
+    intersect(selected, available)
+}
+
+add_entity_column <- function(data, entity_level = "auto") {
+    data <- data.table::as.data.table(data)
+    entity_cols <- get_entity_columns(data, entity_level)
+    if (length(entity_cols) == 0) {
+        data[, entity := "gridcell"]
+        return(data)
+    }
+    labels <- lapply(entity_cols, function(column) {
+        paste(column, data[[column]])
+    })
+    data[, entity := do.call(paste, c(labels, sep = " / "))]
+    data
+}
+
+add_site_column <- function(data, sites = NULL) {
+    data <- data.table::as.data.table(data)
+    if ("Site" %in% names(data) && any(!is.na(data$Site))) {
+        data[is.na(Site), Site := "Unknown"]
+        return(data)
+    }
+    if (is.null(sites) || nrow(sites) == 0 ||
+        !all(c("Lon", "Lat", "Name") %in% names(sites))) {
+        data[, Site := "Site"]
+        return(data)
+    }
+    data[, Site := NA_character_]
+    tol <- get_global("merge_tol")
+    for (i in seq_len(nrow(sites))) {
+        data[abs(Lon - sites$Lon[[i]]) < tol & abs(Lat - sites$Lat[[i]]) < tol,
+             Site := sites$Name[[i]]]
+    }
+    data[is.na(Site), Site := "Unknown"]
+    data
+}
+
+normalise_layerwise_mapping <- function(mapping, allowed, arg_name,
+                                        allow_none = TRUE) {
+    if (is.null(mapping)) {
+        return(NULL)
+    }
+    if (allow_none) {
+        mapping <- setdiff(mapping, "none")
+    }
+    if (length(mapping) == 0) {
+        return(NULL)
+    }
+    missing <- setdiff(mapping, allowed)
+    if (length(missing) > 0) {
+        stop(arg_name, " contains unknown column(s): ",
+             paste(missing, collapse = ", "))
+    }
+    mapping
+}
+
+plot_layerwise_table <- function(
+    data,
+    facet_by = "layer",
+    entity_layout = c("series", "facet", "aggregate"),
+    entity_level = c("auto", "stand", "patch", "indiv", "gridcell"),
+    colour_by = "source",
+    linetype_by = NULL,
+    shape_by = NULL,
+    geometry = c("auto", "line", "point", "line_point"),
+    axis = c("free", "shared"),
+    title = NULL,
+    ylab = NULL) {
+
+    data <- data.table::as.data.table(data)
+    entity_layout <- match.arg(entity_layout)
+    entity_level <- match.arg(entity_level)
+    geometry <- match.arg(geometry)
+    axis <- match.arg(axis)
+
+    if (!("value" %in% names(data))) {
+        log_error("Unable to plot: data is not in read_data() long format")
+    }
+    if (nrow(data) == 0) {
+        log_error("Unable to plot: no rows are available")
+    }
+
+    data <- data.table::copy(data)
+    data <- add_entity_column(data, entity_level)
+    data[, date := calc_date(data)]
+
+    allowed_mappings <- intersect(c("source", "quantity", "layer", "Site",
+                                    "entity", "pft"), names(data))
+    facet_by <- normalise_layerwise_mapping(facet_by, allowed_mappings,
+                                            "facet_by")
+    colour_by <- normalise_layerwise_mapping(colour_by, allowed_mappings,
+                                             "colour_by")
+    linetype_by <- normalise_layerwise_mapping(linetype_by, allowed_mappings,
+                                               "linetype_by")
+    shape_by <- normalise_layerwise_mapping(shape_by, allowed_mappings,
+                                            "shape_by")
+
+    if (entity_layout == "facet") {
+        facet_by <- unique(c(facet_by, "entity"))
+    } else if (entity_layout == "aggregate") {
+        grouping <- unique(c("date", "Year", "Day", "Lon", "Lat", "Site",
+                             "source", "quantity", "layer"))
+        grouping <- intersect(grouping, names(data))
+        data <- data[!is.na(value),
+                     .(value = mean(value, na.rm = TRUE)),
+                     by = grouping]
+        data[, entity := "aggregate"]
+    }
+
+    facet_by <- facet_by[vapply(facet_by, function(column) {
+        length(unique(data[[column]])) > 1
+    }, logical(1))]
+
+    group_cols <- unique(c("source", "quantity", "layer", "Site", "pft",
+                           if (entity_layout == "series") "entity",
+                           colour_by, linetype_by, shape_by))
+    group_cols <- intersect(group_cols, names(data))
+    data[, group_id := do.call(paste, c(.SD, sep = " | ")), .SDcols = group_cols]
+
+    mapping <- ggplot2::aes(x = date, y = value, group = group_id)
+    if (!is.null(colour_by)) {
+        mapping$colour <- as.name(colour_by)
+    }
+    if (!is.null(linetype_by)) {
+        mapping$linetype <- as.name(linetype_by)
+    }
+    if (!is.null(shape_by)) {
+        mapping$shape <- as.name(shape_by)
+    }
+
+    plot_data <- data[!is.na(value)]
+    plt <- ggplot2::ggplot(plot_data, mapping) +
+        ggplot2::theme_bw() +
+        ggplot2::labs(x = "Date", y = ylab, title = title) +
+        ggplot2::theme(legend.position = "bottom")
+
+    if (geometry == "line") {
+        plt <- plt + ggplot2::geom_line()
+    } else if (geometry == "point") {
+        plt <- plt + ggplot2::geom_point()
+    } else if (geometry == "line_point") {
+        plt <- plt + ggplot2::geom_line() + ggplot2::geom_point()
+    } else {
+        group_counts <- plot_data[, .N, by = group_id]
+        sparse_groups <- group_counts[N < 30]$group_id
+        line_data <- plot_data[!(group_id %in% sparse_groups)]
+        point_data <- plot_data[group_id %in% sparse_groups]
+        if (nrow(line_data) > 0) {
+            plt <- plt + ggplot2::geom_line(data = line_data)
+        }
+        if (nrow(point_data) > 0) {
+            plt <- plt + ggplot2::geom_point(data = point_data)
+        }
+    }
+
+    if (length(facet_by) > 0) {
+        scales <- if (axis == "free") "free_y" else "fixed"
+        formula <- stats::as.formula(paste("~", paste(facet_by, collapse = "+")))
+        plt <- plt + ggplot2::facet_wrap(formula, scales = scales)
+    }
+
+    plt
 }
 
 plot_pvo <- function(
@@ -493,63 +721,52 @@ plot_pvo <- function(
     obs_name = NULL,
     units = NULL) {
 
-    if (is.null(colours)) {
-        colours <- get_colour_palette(length(names(gc)))
-        colours <- setNames(colours, names(gc))
-    }
-
-    # predicted_name <- names(gc)[[length(names(gc))]]
-    log_debug("[plot_pvo] names(gc) = ", paste(names(gc), collapse = ", "))
-    # plt <- DGVMTools::plotScatter(gc, layer.x = get_global("obs_lyr")
-    #     , layer.y = predicted_name, text.multiplier = text_multiplier)
+    gc <- data.table::as.data.table(gc)
     if (is.null(obs_name)) {
         obs_name <- get_global("obs_lyr")
     }
 
-    readers <- find_readers_for_var(trim_dave(gc@quant@id))
-    if (!obs_name %in% names(gc@data) && length(readers) > 0) {
-        obs_name <- names(readers)[1]
-        log_debug("Using reader ", obs_name, " as default observed layer")
+    obs <- gc[source == obs_name]
+    pred <- gc[source != obs_name]
+    if (nrow(obs) == 0 || nrow(pred) == 0) {
+        log_error("Unable to plot: observed and predicted rows are required")
     }
 
-    ignored_names <- c("Site", obs_name)
-    ynames <- setdiff(names(gc), ignored_names)
-    log_debug("[plot_pvo] ynames = ", paste(ynames, collapse = ", "))
-    # Filter out non-numeric layers.
-    ynames <- ynames[unlist(lapply(ynames, function(n) is.numeric(gc@data[[n]])))]
-    log_debug("[plot_pvo] ynames (numeric) = ", paste(ynames, collapse = ", "))
-    if (length(ynames) == 0) {
-        log_error("Unable to plot: data contains no numeric non-observed layers")
+    key_cols <- intersect(c("Lon", "Lat", "Year", "Day", "Site", "stand",
+                            "patch", "indiv", "quantity"),
+                          names(gc))
+    obs <- obs[, c(key_cols, "value"), with = FALSE]
+    data.table::setnames(obs, "value", "observed")
+    pred <- pred[, c(key_cols, "source", "layer", "value"), with = FALSE]
+    data <- merge(pred, obs, by = key_cols, allow.cartesian = TRUE)
+    if (nrow(data) == 0) {
+        log_error("Unable to plot: predictions do not overlap observations")
     }
-
-    # alpha <- 1
-    data <- gc@data
-    data <- data %>% tidyr::pivot_longer(cols = ynames, names_to = "layer", values_to = "value")
 
     # Initialise the plot object.
-    plt <- ggplot2::ggplot(data, aes(x = .data[[obs_name]], y = value, color = layer))
+    data[, series := get_series_labels(.SD)]
+    plt <- ggplot2::ggplot(data, ggplot2::aes(x = observed, y = value,
+                                              color = series))
     plt <- plt + ggplot2::geom_point(size = marker_size) + ggplot2::theme_bw()
 
     # Set correct colours (use named mapping when available).
-    pred_cols <- colours
-    if (!is.null(names(pred_cols))) {
-        pred_cols <- pred_cols[ynames]
-    } else {
-        pred_cols <- pred_cols[seq_along(ynames)]
+    if (!is.null(colours)) {
+        pred_cols <- colours[intersect(names(colours), unique(data$series))]
+        if (length(pred_cols) > 0) {
+            plt <- plt + ggplot2::scale_color_manual(values = pred_cols)
+        }
     }
-    scale <- ggplot2::scale_color_manual(values = pred_cols, labels = ynames)
-    plt <- plt + scale
 
     # Set text size.
     plt <- set_text_multiplier(plt, text_multiplier)
 
     if (is.null(units) || !nzchar(units)) {
-        metadata <- resolve_quantity_metadata(gc@quant@id)
+        metadata <- resolve_quantity_metadata(gc$quantity[[1]])
         if (!is.null(metadata) && !is.null(metadata$units) &&
             nzchar(metadata$units)) {
             units <- metadata$units
         } else {
-            units <- gc@quant@units
+            units <- ""
         }
     }
     units <- DGVMTools:::standardiseUnitString(units)
@@ -585,72 +802,27 @@ plot_subannual <- function(
     text_multiplier = NULL,
     colours = NULL) {
 
+    gc <- data.table::as.data.table(gc)
+    if (!("Day" %in% names(gc))) {
+        log_error("Unable to plot subannual cycle: data has no Day column")
+    }
+    data <- gc[!is.na(value),
+               .(value = mean(value, na.rm = TRUE)),
+               by = .(Day, source, quantity, layer)]
+    data[, series := get_series_labels(.SD)]
+
     if (is.null(colours)) {
-        colours <- get_colour_palette(length(names(gc)))
-        colours <- setNames(colours, names(gc))
+        colours <- get_colour_palette(length(unique(data$series)))
+        colours <- setNames(colours, unique(data$series))
     }
 
-    # Create the base plot
-    plt <- ggplot2::ggplot() +
-           ggplot2::theme_bw() +
-           ggplot2::labs(x = "Day") +
-           ggplot2::scale_color_manual(values = colours)
-
-    # Filter data down to only those dates for which all layers are available.
-    # Otherwise, we will be plotting over different time periods for each layer.
-    # filtered <- gc@data[complete.cases(gc@data), ]
-    # if (nrow(filtered) == 0) {
-    #     log_warning("[plot_subannual] When plotting ", gc@quant@name, ", the available layers (", paste(names(gc), collapse = ", "), ") do not cover the same time period. In other words, there is no date on which all layers have a value. The resultant subannual plot will therefore not be filtered by date, so you must be careful when interpreting it, because the subannual pattern that is rendered will have a different 'meaning' for each layer, because the timeseries cover different time periods.")
-    # } else {
-    #     gc@data <- filtered
-    # }
-
-    ignored_names <- c("Site")
-    ynames <- setdiff(names(gc), ignored_names)
-    log_debug("[plot_subannual] ynames = ", paste(ynames, collapse = ", "))
-
-    # Filter out non-numeric layers.
-    ynames <- ynames[unlist(lapply(ynames,
-                                   function(n) is.numeric(gc@data[[n]])))]
-    log_debug("[plot_subannual] ynames (numeric) = ",
-              paste(ynames, collapse = ", "))
-    if (length(ynames) == 0) {
-        log_error("Unable to plot: data contains no numeric layers")
-    }
-
-    # Process and plot each layer separately
-    for (layer_name in ynames) {
-        log_diag("Plotting layer ", layer_name)
-        # Create a temporary gc with just this layer
-        temp_gc <- DGVMTools::selectLayers(gc, layer_name)
-        log_diag("Found ", nrow(temp_gc@data), " rows")
-
-        # Remove rows with NA values for this layer
-        temp_gc@data <- temp_gc@data[!is.na(temp_gc@data[[layer_name]]), ]
-        log_diag("After removing NAs, ", nrow(temp_gc@data), " rows remain")
-
-        # Only proceed if we have data
-        if (nrow(temp_gc@data) > 0) {
-            # Aggregate this layer
-            agg_result <- DGVMTools::aggregateYears(temp_gc)
-
-            # Convert to long format for this layer only
-            df_layer <- tidyr::pivot_longer(
-                agg_result@data,
-                cols = layer_name,
-                names_to = "variable",
-                values_to = "value"
-            )
-
-            # Add this layer to the plot
-            plt <- plt + ggplot2::geom_line(
-                data = df_layer,
-                ggplot2::aes(x = Day, y = value, color = variable)
-            )
-        } else {
-            log_warning("[plot_subannual] No data found for layer ", layer_name)
-        }
-    }
+    plt <- ggplot2::ggplot(data, ggplot2::aes(x = Day, y = value,
+                                              color = series,
+                                              group = series)) +
+        ggplot2::geom_line() +
+        ggplot2::theme_bw() +
+        ggplot2::labs(x = "Day") +
+        ggplot2::scale_color_manual(values = colours)
 
     if (!is.null(ylim)) {
         plt <- plt + ggplot2::scale_y_continuous(limits = ylim)
@@ -669,7 +841,7 @@ get_stats_lyr_name <- function(var_name, src_name) {
 }
 
 get_stats_lyr <- function(var, src) {
-    return(get_stats_lyr_name(var@id, src@name))
+    return(get_stats_lyr_name(var@id, src@id))
 }
 
 create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
@@ -677,15 +849,15 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
         , do_subannual = TRUE, marker_size = 3, ylim = NULL
         , obs_lyr = NULL) {
 
-    ylab_default <- get_y_label(gc@quant)
-    ylab_has_units <- !is.null(ylab) && is.character(ylab) && length(ylab) == 1 &&
-        grepl("\\([^\\)]*\\)", ylab)
-    if (is.null(ylab) || !ylab_has_units) {
-        ylab <- ylab_default
+    gc <- data.table::as.data.table(gc)
+    quantity_id <- unique(gc$quantity)
+    quantity_id <- quantity_id[!is.na(quantity_id)][[1]]
+    if (is.null(ylab)) {
+        ylab <- quantity_id
     }
 
-    quantity_units <- gc@quant@units
-    metadata <- resolve_quantity_metadata(gc@quant@id)
+    quantity_units <- ""
+    metadata <- resolve_quantity_metadata(quantity_id)
     if (!is.null(metadata) && !is.null(metadata$units) &&
         nzchar(metadata$units)) {
         quantity_units <- metadata$units
@@ -694,19 +866,19 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     # Compute (and store) statistics).
     if (is.null(obs_lyr)) {
         log_debug("No observed layer was specified, so will attempt to find one")
-        readers <- find_readers_for_var(trim_dave(gc@quant@id))
+        readers <- find_readers_for_var(trim_dave(quantity_id))
         log_debug("Found ", length(readers), " readers")
         if (length(readers) > 0) {
             reader_names <- names(readers)
             src_ids <- unlist(lapply(readers, function(r) r@src@id))
             reader_names <- unique(c(reader_names, src_ids))
             log_debug("Reader names: ", paste(reader_names, collapse = ", "))
-            avail_readers <- reader_names[reader_names %in% names(gc)]
+            avail_readers <- reader_names[reader_names %in% unique(gc$source)]
             log_debug("Available readers: ", paste(avail_readers, collapse = ", "))
             if (length(avail_readers) > 0) {
                 # Choose the reader with the most data points.
                 nvalues <- sapply(avail_readers, function(r)
-                    length(which(!is.na(gc@data[[r]]))))
+                    nrow(gc[source == r & !is.na(value)]))
                 obs_lyr <- avail_readers[which.max(nvalues)]
                 log_debug("Using reader ", obs_lyr,
                           " as default, as it has the most data points")
@@ -717,24 +889,16 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
             obs_lyr <- get_global("obs_lyr")
         }
     }
-    if (!(obs_lyr %in% names(gc@data))) {
+    if (!(obs_lyr %in% unique(gc$source))) {
         log_warning("Observed layer '", obs_lyr,
                     "' is not present in data; disabling observed-dependent plots")
         obs_lyr <- NULL
     }
     log_debug("obs_lyr=", obs_lyr)
 
-    ignored_names <- c("Site")
-    if (!is.null(obs_lyr)) {
-        ignored_names <- c(ignored_names, obs_lyr)
-    }
-    names <- setdiff(names(gc), ignored_names)
-    # Ignore any non-numeric layers that may be present.
-    log_debug("All names: ", paste(names, collapse = ", "))
-    names <- names[unlist(lapply(names, function(n) is.numeric(gc@data[[n]])))]
-    log_debug("Numeric names: ", paste(names, collapse = ", "))
-    if (length(names) == 0) {
-        log_error("Unable to plot: data contains no numeric layers")
+    pred_sources <- setdiff(unique(gc$source), obs_lyr)
+    if (length(pred_sources) == 0) {
+        log_error("Unable to plot: data contains no predicted sources")
     }
 
     r2 <- list()
@@ -744,14 +908,20 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     bias <- list()
     # Compute stats for each source.
     if (!is.null(obs_lyr)) {
-        for (name in names) {
-            log_debug("Computing stats with xlayer='", obs_lyr, "', ylayer='", name,
-                      "'")
-            df <- gc@data
-            df <- df[!is.na(df[[obs_lyr]]) & !is.na(df[[name]]), ]
-            obs <- df[[obs_lyr]]
-            pred <- df[[name]]
-            lyr_name <- get_stats_lyr_name(gc@quant@id, name)
+        key_cols <- intersect(c("Lon", "Lat", "Year", "Day", "Site", "stand",
+                                "patch", "indiv", "quantity"),
+                              names(gc))
+        obs_data <- gc[source == obs_lyr, c(key_cols, "value"), with = FALSE]
+        data.table::setnames(obs_data, "value", "observed")
+        for (name in pred_sources) {
+            log_debug("Computing stats with observed source='", obs_lyr,
+                      "', predicted source='", name, "'")
+            pred_data <- gc[source == name, c(key_cols, "value"), with = FALSE]
+            df <- merge(pred_data, obs_data, by = key_cols)
+            df <- df[!is.na(observed) & !is.na(value)]
+            obs <- df$observed
+            pred <- df$value
+            lyr_name <- get_stats_lyr_name(quantity_id, name)
 
             r2[[lyr_name]] <- if (length(obs) > 0) compute_r2(obs, pred) else NA
             rmse[[lyr_name]] <- if (length(obs) > 0) compute_rmse(obs, pred) else NA
@@ -767,40 +937,20 @@ create_plots <- function(gc, ylab, ncol = 2, use_plotly = TRUE
     # rather than dereferencing the value stored in the variable. What an
     # amazing language this is.
     if (is.null(ylim)) {
-        ymin <- Inf
-        ymax <- -Inf
-        if (!is.null(obs_lyr)) {
-            v <- gc@data[which(!is.na(gc@data[[obs_lyr]])), ][[obs_lyr]]
-            if (length(v) > 0) {
-                ymin <- min(ymin, min(v))
-                ymax <- max(ymax, max(v))
-            }
-        }
-        for (lyr_name in names) {
-            v <- gc@data[which(!is.na(gc@data[[lyr_name]])), ][[lyr_name]]
-            if (length(v) > 0) {
-                ymin <- min(ymin, min(v))
-                ymax <- max(ymax, max(v))
-            }
-        }
-        if (!is.finite(ymin) || !is.finite(ymax)) {
-            ymin <- 0
-            ymax <- 1
-        }
-        ylim <- c(ymin, ymax)
+        ylim <- get_ylim(gc)
     }
 
-    numeric_layers <- names[unlist(lapply(names, function(n)
-        is.numeric(gc@data[[n]])))]
     colours <- c()
-    if (!is.null(obs_lyr) && obs_lyr %in% names(gc@data) &&
-        is.numeric(gc@data[[obs_lyr]])) {
-        colours[obs_lyr] <- "#000000"
+    labelled_gc <- data.table::copy(gc)
+    labelled_gc[, series := get_series_labels(labelled_gc)]
+    if (!is.null(obs_lyr)) {
+        obs_series <- unique(labelled_gc[source == obs_lyr]$series)
+        colours[obs_series] <- "#000000"
     }
-    pred_layers <- setdiff(numeric_layers, obs_lyr)
-    if (length(pred_layers) > 0) {
-        pred_cols <- get_colour_palette(length(pred_layers))
-        pred_cols <- setNames(pred_cols, pred_layers)
+    pred_series <- unique(labelled_gc[source %in% pred_sources]$series)
+    if (length(pred_series) > 0) {
+        pred_cols <- get_colour_palette(length(pred_series))
+        pred_cols <- setNames(pred_cols, pred_series)
         colours <- c(colours, pred_cols)
     }
 
@@ -1060,7 +1210,7 @@ ozflux_plot_site <- function(
 
     # Extract data for the required grid cell.
     gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
-    if (nrow(gridcell@data) == 0) {
+    if (nrow(gridcell) == 0) {
         log_error("No data found for site ", site$Name, " (", site$Lon, ", "
             , site$Lat, ")")
     }

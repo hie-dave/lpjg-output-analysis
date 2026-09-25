@@ -223,6 +223,7 @@ ozflux_benchmarks <- function(
         data <- read_data(sources, list(var), sites,
                           show_all_observations = show_all_observations,
                           show_all_predictions = show_all_predictions)
+        data <- filter_default_plot_layers(data, sources, list(var), sites)
         iter <- 0
         for (i in seq_len(nrow(sites))) {
             iter <- iter + 1
@@ -234,12 +235,12 @@ ozflux_benchmarks <- function(
 
             readers <- find_readers_for_var(trim_dave(var@id))
             obs_name <- get_global("obs_lyr")
-            if (!obs_name %in% names(gc@data) && length(readers) > 0) {
+            if (!obs_name %in% unique(gc$source) && length(readers) > 0) {
                 obs_name <- names(readers)[1]
                 log_debug("Using reader ", obs_name, " as default for site ", row$Name)
             }
 
-            if (nrow(gc@data) == 0 || !(obs_name %in% names(gc@data))) {
+            if (nrow(gc) == 0 || !(obs_name %in% unique(gc$source))) {
                 msg <- paste0("No ", var@name, " data for site ", row$Name, "; skipping...")
                 log_warning(msg)
                 warning(msg)

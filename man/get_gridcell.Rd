@@ -16,7 +16,7 @@ get_gridcell(data, lat, lon, site_name = NULL)
 \item{site_name}{Name of the ozflux site (optional).}
 }
 \value{
-Returns a \link[DGVMTools:Source]{DGVMTools::Source} object containing data only for the
+Returns a \link[data.table:data.table]{data.table::data.table} containing data only for the
 specified location.
 }
 \description{

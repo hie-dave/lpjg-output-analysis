@@ -126,7 +126,9 @@ get_ignored_layers <- function() {
         "day",
         "timestep",
         "patch",
-        "stand"
+        "stand",
+        "indiv",
+        "pft"
     ))
 }
 
@@ -219,7 +221,7 @@ get_obs_layer <- function(quant) {
 #' @param vars The variables to be read (see: [sanitise_variable]).
 #' @param sites The ozflux sites for which data will be read (see:
 #'               [sanitise_ozflux_sites]).
-#' @param layers Names of layers to be read.
+#' @param layers Names of layers to be read. `NULL` reads all available layers.
 #' @param correct_leaps Never set to TRUE unless you know what you're doing.
 #' @param show_all_observations If true, all observations will be returned (ie
 #'                               the predicted data may contain NA values). If
@@ -231,8 +233,9 @@ get_obs_layer <- function(quant) {
 #'                              matching observation will be returned.
 #' @keywords internal
 #'
-#' @return A single [DGVMTools::Field] with a layer of observations, and one
-#'         layer for each source specified in sources.
+#' @return A long [data.table::data.table] with columns identifying the
+#'         spatiotemporal record plus `source`, `quantity`, `layer`, and
+#'         `value`.
 #' @export
 #'
 #' @seealso [ObservationReader], [find_readers_for_var], [register_reader]
@@ -262,19 +265,44 @@ read_data <- function(sources
     # }
 
     data <- NULL
+    layer_metadata <- data.table::data.table(
+        field_layer = character(),
+        source = character(),
+        quantity = character(),
+        layer = character()
+    )
     nvar <- length(vars)
     original_layer <- layers
+
+    add_layer_metadata <- function(field_layers, source_id, quantity_id,
+                                   layers) {
+        if (length(field_layers) != length(layers)) {
+            log_warning("Unable to preserve all layer metadata for source ",
+                        source_id, " and quantity ", quantity_id,
+                        "; falling back to field layer names")
+            layers <- field_layers
+        }
+        layer_metadata <<- rbind(
+            layer_metadata,
+            data.table::data.table(
+                field_layer = field_layers,
+                source = source_id,
+                quantity = quantity_id,
+                layer = unname(layers)
+            )
+        )
+    }
+
+    get_field_value_layers <- function(field) {
+        ignored <- c(get_ignored_layers(), "Lon", "Lat", "Site", "Date")
+        setdiff(names(field), ignored)
+    }
 
     for (var in vars) {
 
         # Get the observation layer name for this variable
         var_id <- trim_dave(var@id)
-        obs_lyr <- var_id
-
         layers <- original_layer
-        if (is.null(layers)) {
-            layers <- obs_lyr
-        }
 
         # Find readers that support this variable using the registry
         log_diag("Searching for readers which contain variable ", var_id)
@@ -307,19 +335,28 @@ read_data <- function(sources
                 } else if (is.null(data)) {
                     log_debug(reader_id, " is the first reader for variable ", var_id)
                     data <- obs_field
-                    if (length(layers) == 1 && layers %in% names(data)) {
-                        DGVMTools::renameLayers(data, layers, reader_id)
-                    } else {
-                        # Get first layer that's not "Site"
-                        lyrs <- names(data)[names(data) != "Site"]
-                        if (length(lyrs) > 0) {
-                            DGVMTools::renameLayers(data, lyrs[1], reader_id)
+                    obs_layers <- layers
+                    if (is.null(obs_layers)) {
+                        obs_layers <- get_field_value_layers(data)
+                    }
+                    obs_layers <- obs_layers[obs_layers %in% names(data)]
+                    if (length(obs_layers) > 0) {
+                        obs_names <- if (length(obs_layers) == 1) {
+                            reader_id
+                        } else {
+                            paste(reader_id, obs_layers, sep = "_")
                         }
+                        DGVMTools::renameLayers(data, obs_layers, obs_names)
+                        add_layer_metadata(obs_names, reader@src@id,
+                                           var@id, obs_layers)
                     }
                 } else {
                     layers_old <- layers
+                    if (is.null(layers_old)) {
+                        layers_old <- get_field_value_layers(obs_field)
+                    }
                     if (!all(layers_old %in% names(obs_field))) {
-                        available_layers <- names(obs_field)[names(obs_field) != "Site"]
+                        available_layers <- get_field_value_layers(obs_field)
                         if (length(available_layers) == 1) {
                             layers_old <- available_layers[1]
                         } else if (length(available_layers) == length(layers_old)) {
@@ -332,11 +369,18 @@ read_data <- function(sources
                     # Always keep all observations...for now. We can filter out
                     # non-comparable data points later when we merge in
                     # predictions.
+                    obs_names <- if (length(layers_old) == 1) {
+                        reader_id
+                    } else {
+                        paste(reader_id, layers_old, sep = "_")
+                    }
                     data <- DGVMTools::copyLayers(obs_field, data, layers_old,
-                                                  new.layer.names = reader_id,
+                                                  new.layer.names = obs_names,
                                                   tolerance = get_global("merge_tol"),
                                                   keep.all.from = TRUE,
                                                   keep.all.to = TRUE)
+                    add_layer_metadata(obs_names, reader@src@id, var@id,
+                                       layers_old)
                     log_debug("After merging, data has ", nrow(data@data),
                               " rows")
                 }
@@ -353,12 +397,11 @@ read_data <- function(sources
         for (source in sources) {
 
             layers <- original_layer
-            if (is.null(layers)) {
-                layers <- get_default_layers(source, var, sites$Name)
-            } else if (length(layers) == 0 && source@format@id == "OZFLUX") {
+            if (!is.null(layers) && length(layers) == 0 &&
+                source@format@id == "OZFLUX") {
                 layers <- available_layers_ozflux(source, var, sites$Name)
             }
-            lyr_disp <- paste(layers, collapse = ", ")
+            lyr_disp <- if (is.null(layers)) "<all>" else paste(layers, collapse = ", ")
             log_diag("Reading layers: ", lyr_disp, " from source ", source@name)
 
             # fixme: not all of the dave output files have a total column, and even
@@ -412,6 +455,7 @@ read_data <- function(sources
                 if (any(layers != layer_names)) {
                     DGVMTools::renameLayers(data, layers, layer_names)
                 }
+                add_layer_metadata(layer_names, source@id, var@id, layers)
             } else {
                 nr <- nrow(data@data)
                 log_debug("Merging data from source ", source@name,
@@ -429,6 +473,7 @@ read_data <- function(sources
                     , new.layer.names = layer_names
                     , tolerance = get_global("merge_tol"), keep.all.from = show_all_predictions
                     , keep.all.to = show_all_observations)#, allow.cartesian = TRUE
+                add_layer_metadata(layer_names, source@id, var@id, layers)
                 log_debug("After merging, data has ", nrow(data@data), " rows")
                 # Note: if using a "non-standard" ozflux site (such as Abisko),
                 # we will have observations for all standard sites but not this
@@ -444,6 +489,7 @@ read_data <- function(sources
                     if (length(source) > 1) {
                         DGVMTools::renameLayers(data, layers, layer_names)
                     }
+                    add_layer_metadata(layer_names, source@id, var@id, layers)
                 }
                 log_debug("Successfully merged data from source ", source@name
                     , " for variable ", var@name)
@@ -458,7 +504,38 @@ read_data <- function(sources
 
     log_debug("Successfully read all data")
 
-    return(data)
+    return(field_to_long_table(data, layer_metadata))
+}
+
+field_to_long_table <- function(field, layer_metadata) {
+    if (is.null(field) || nrow(field@data) == 0) {
+        return(data.table::data.table())
+    }
+
+    layer_metadata <- layer_metadata[!duplicated(field_layer)]
+    dt <- data.table::as.data.table(field@data)
+    value_cols <- intersect(layer_metadata$field_layer, names(dt))
+    if (length(value_cols) == 0) {
+        return(data.table::data.table())
+    }
+
+    id_cols <- setdiff(names(dt), value_cols)
+    result <- data.table::melt(
+        dt,
+        id.vars = id_cols,
+        measure.vars = value_cols,
+        variable.name = "field_layer",
+        value.name = "value",
+        variable.factor = FALSE
+    )
+    result <- merge(result, layer_metadata, by = "field_layer", all.x = TRUE,
+                    sort = FALSE)
+    result[, field_layer := NULL]
+    data.table::setcolorder(
+        result,
+        c(id_cols, "source", "quantity", "layer", "value")
+    )
+    result[]
 }
 
 #'
@@ -469,16 +546,20 @@ read_data <- function(sources
 #' @param lon Longitude of the gridcell.
 #' @param site_name Name of the ozflux site (optional).
 #'
-#' @return Returns a [DGVMTools::Source] object containing data only for the
+#' @return Returns a [data.table::data.table] containing data only for the
 #' specified location.
 #' @keywords internal
 #'
 get_gridcell <- function(data, lat, lon, site_name = NULL) {
   log_debug("Extracting data for gridcell", ifelse(!is.null(site_name)
       , paste0(" ", site_name), ""), " (", lon, ", ", lat, ")")
-  gc <- DGVMTools::selectGridcells(data, c(lon, lat)
-      , spatial.extent.id = site_name, decimal.places = get_global("merge_ndp"))
-  log_debug("Successfully extracted ", nrow(gc@data), " rows of data for gridcell ", site_name, ")")
+  data <- data.table::as.data.table(data)
+  tol <- get_global("merge_tol")
+  gc <- data[abs(Lon - lon) < tol & abs(Lat - lat) < tol]
+  if (!is.null(site_name) && "Site" %in% names(gc)) {
+      gc <- gc[is.na(Site) | Site == site_name]
+  }
+  log_debug("Successfully extracted ", nrow(gc), " rows of data for gridcell ", site_name, ")")
   return(gc)
 }
 
@@ -507,13 +588,12 @@ get_ylim <- function(data, common_yaxis = TRUE) {
     if (!common_yaxis) {
         return(NULL)
     }
-    ymin <- 1e300
-    ymax <- -1e300
-    for (lyr_name in names(data)) {
-        v <- data@data[which(!is.na(data@data[[lyr_name]])), ][[lyr_name]]
-        ymin <- min(ymin, min(v))
-        ymax <- max(ymax, max(v))
+    if (!("value" %in% names(data))) {
+        return(NULL)
     }
-    return(c(ymin, ymax))
+    v <- data$value[!is.na(data$value)]
+    if (length(v) == 0) {
+        return(NULL)
+    }
+    return(range(v))
 }
-

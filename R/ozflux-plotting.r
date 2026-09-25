@@ -50,6 +50,7 @@ ozflux_plot <- function(
                       show_all_observations = show_all_observations,
                       show_all_predictions = show_all_predictions,
                       read_obs = show_obs)
+    data <- filter_default_plot_layers(data, sources, vars, sites)
 
     # Get upper/lower limits of y-axis data.
     if (common_yaxis) {
@@ -60,7 +61,7 @@ ozflux_plot <- function(
 
     # Get plot and axis titles.
     xlab <- "Date"
-    ylab <- get_y_label(data@quant)
+    ylab <- if (length(vars) == 1) get_y_label(vars[[1]]) else "Value"
     title <- get_panel_title(vars)
 
     plots <- list()
@@ -135,6 +136,7 @@ ozflux_panel <- function(
     data <- read_data(sources, list(var), sites = sites,
                       show_all_observations = show_all_observations,
                       show_all_predictions = show_all_predictions)
+    data <- filter_default_plot_layers(data, sources, list(var), sites)
 
     # Get upper/lower limits of y-axis data.
     ylim <- get_ylim(data, common_yaxis)
@@ -176,22 +178,50 @@ ozflux_panel <- function(
 #' (In this nomenclature, a "layer" technically refers to a column in the output
 #' file).
 #'
+#' The plotting controls are semantic rather than ggplot-specific. `facet_by`
+#' chooses which data columns become small multiples. `site_layout` controls
+#' whether sites are returned as separate plots, included as facets, or overlaid.
+#' `entity_layout` controls stand/patch/individual output. When
+#' `entity_level = "auto"`, individual-level data are grouped by
+#' stand/patch/individual, patch-level data by stand/patch, stand-level data by
+#' stand, and gridcell-level data as a single entity. Entities are separate time
+#' series by default.
+#'
 #' @param sources Data sources to be plotted (see: [sanitise_source])
 #' @param var The single variable to be plotted (see: [sanitise_variable])
 #' @param sites Sites to be plotted (see: [sanitise_ozflux_sites])
 #' @param layers The layers to be plotted. E.g. `paste0("sw_", 0:14)`
-#' @param title The desired panel titles
-#' @param separate_plots iff TRUE, draw each layer in a separate plot. FALSE to
-#' draw all layers in a single plot
+#' @param title The desired plot title. For separate site plots, the site name
+#' is prepended.
+#' @param facet_by Columns to draw as separate facets. Common values are
+#' `"layer"`, `"quantity"`, `"source"`, `"Site"`, `"entity"`, and `"pft"`.
+#' Use `NULL` or `"none"` for no faceting. Facets with only one value are
+#' omitted.
+#' @param site_layout How multiple sites should be shown. `"separate"` returns
+#' one plot per site, `"facet"` adds site to the facets, and `"overlay"` draws
+#' all sites in the same facets.
+#' @param entity_layout How stand/patch/individual output should be shown.
+#' `"series"` draws each entity as a separate time series, `"facet"` facets by
+#' entity, and `"aggregate"` plots the mean value across entities.
+#' @param entity_level Entity detail to show. `"auto"` uses the finest level
+#' present in the data: individual, then patch, then stand, then gridcell.
+#' @param colour_by Column used for line/point colour. Use `NULL` or `"none"`
+#' for a constant colour.
+#' @param linetype_by Column used for line type. Use `NULL` or `"none"` for a
+#' constant line type.
+#' @param shape_by Column used for point shape. Use `NULL` or `"none"` for a
+#' constant point shape.
+#' @param geometry One of `"auto"`, `"line"`, `"point"`, or `"line_point"`.
+#' `"auto"` draws sparse series as points and denser series as lines.
+#' @param axis `"free"` allows each facet to choose its own y-axis; `"shared"`
+#' uses one y-axis scale for all facets.
 #' @param use_plotly iff TRUE, generate [plotly] outputs, FALSE to use [ggplot2::ggplot]
-#' @param common_yaxis iff TRUE, use a common y-axis for all plots. False otherwise
 #' @param show_all_observations If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.
 #' @param show_all_predictions If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.
-#' @param combine_sites iff TRUE, combine all sites into a single plot. False otherwise
-#' @param allow_points iff TRUE, allow points to be plotted for sparse datasets. FALSE will ensure that all data is plotted using lines.
 #'
-#' @return Returns a list of [ggplot2::ggplot] objects. If use_plotly is TRUE,
-#' returns [plotly] objects instead.
+#' @return Returns a [ggplot2::ggplot] object for one site or combined site
+#' layouts. With `site_layout = "separate"` and multiple sites, returns one plot
+#' per site as a list. If `use_plotly` is TRUE, returns [plotly] objects instead.
 #' @export
 #'
 ozflux_plot_layerwise <- function(
@@ -200,19 +230,24 @@ ozflux_plot_layerwise <- function(
     sites = NULL,
     layers = NULL,
     title = NULL,
-    separate_plots = TRUE,
-    combine_sites = FALSE,
+    facet_by = "layer",
+    site_layout = c("separate", "facet", "overlay"),
+    entity_layout = c("series", "facet", "aggregate"),
+    entity_level = c("auto", "stand", "patch", "indiv", "gridcell"),
+    colour_by = "source",
+    linetype_by = NULL,
+    shape_by = NULL,
+    geometry = c("auto", "line", "point", "line_point"),
+    axis = c("free", "shared"),
     use_plotly = FALSE,
-    common_yaxis = FALSE,
     show_all_observations = TRUE,
     show_all_predictions = TRUE,
-    allow_points = TRUE,
     show_obs = TRUE) {
-    # TODO: refactor this function out of the package. The layers should be an
-    # optional argument to ozflux_plot(). If absent, they're determined using
-    # the current algorithm (ie try total/mean). If present, there should be
-    # a second optional argument which determines whether one plot is generated
-    # per layer, or if all layers are to be plotted on the same plot.
+    site_layout <- match.arg(site_layout)
+    entity_layout <- match.arg(entity_layout)
+    entity_level <- match.arg(entity_level)
+    geometry <- match.arg(geometry)
+    axis <- match.arg(axis)
 
     # Sanitise data sources.
     sources <- sanitise_sources(sources)
@@ -234,63 +269,47 @@ ozflux_plot_layerwise <- function(
                       show_all_observations = show_all_observations,
                       show_all_predictions = show_all_predictions,
                       read_obs = show_obs)
+    data <- add_site_column(data, sites)
 
-    panels <- list()
-    nsite <- nrow(sites)
-    for (i in seq_len(nsite)) {
-        row <- sites[i, ]
-        site <- list(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
-        gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
+    if (is.null(title)) {
+        title <- trim_dave(var@name)
+    }
+    ylab <- get_y_label(var)
 
-        # Get upper/lower limits of y-axis data.
-        ylim <- get_ylim(gridcell, common_yaxis)
+    make_plot <- function(plot_data, plot_title) {
+        plt <- plot_layerwise_table(
+            plot_data,
+            facet_by = facet_by,
+            entity_layout = entity_layout,
+            entity_level = entity_level,
+            colour_by = colour_by,
+            linetype_by = linetype_by,
+            shape_by = shape_by,
+            geometry = geometry,
+            axis = axis,
+            title = plot_title,
+            ylab = ylab
+        )
+        convert_plot(plt, use_plotly)
+    }
 
+    if (site_layout == "separate") {
         plots <- list()
-        nobs <- ifelse(any(!(layers %in% names(gridcell))), 1, 0)
-        if (separate_plots) {
-            for (layer in layers) {
-                layers_to_plot <- get_layer_names_for_sources(var, 1, layer,
-                    sources, nlayer = length(layers), nsource_additional = nobs)
-                multiplot <- length(layers) > 1 || nrow(sites) > 1
-                xlab <- if (multiplot) "" else NULL
-                ylab <- if (multiplot) "" else NULL
-                plt <- plot_timeseries(gridcell, layers = layers_to_plot, ylim = ylim, xlab = xlab, ylab = ylab, allow_points = allow_points)
-                plt <- convert_plot(plt, use_plotly)
-                plt <- set_title(plt, layer, use_plotly)
-                plots[[length(plots) + 1]] <- plt
-            }
-        } else {
-            lyrs <- get_layer_names_for_sources(var, 1, layers, sources)
-            plt <- plot_timeseries(gridcell, layers = lyrs, ylim = ylim, allow_points = allow_points)
-            plt <- trim_ggplot(plt)
-            plt <- convert_plot(plt, use_plotly)
-            plots[[length(plots) + 1]] <- plt
+        for (i in seq_len(nrow(sites))) {
+            row <- sites[i, ]
+            site <- list(Lon = row$Lon, Lat = row$Lat, Name = row$Name)
+            gridcell <- get_gridcell(data, site$Lat, site$Lon, site$Name)
+            plot_title <- paste(site$Name, title)
+            plots[[site$Name]] <- make_plot(gridcell, plot_title)
         }
-        xlab <- "Date"
-        ylab <- get_y_label(var, site$Name)
-        if (is.null(title)) {
-            title <- trim_dave(var@name)
+        if (length(plots) == 1) {
+            return(plots[[1]])
         }
-        site_title <- paste(site$Name, title)
-        if (length(plots) > 1) {
-            args <- c(plots, use_plotly = use_plotly, xlab = xlab, ylab = ylab
-                , title = site_title)
-            panel <- do.call(create_square_panel, args)
-            panels[[length(panels) + 1]] <- panel
-        } else {
-            plt <- set_title(plots[[1]], site_title, use_plotly)
-            panels[[length(panels) + 1]] <- plt
-        }
+        return(plots)
     }
-    if (length(panels) == 1) {
-        return(panels[[1]])
+
+    if (site_layout == "facet") {
+        facet_by <- unique(c("Site", facet_by))
     }
-    if (combine_sites && !separate_plots && length(sites) > 1) {
-        if (is.null(title)) {
-            title <- var@name
-        }
-        panel <- dave_panel(panels, xlab, ylab, title, use_plotly, sites)
-        return(panel)
-    }
-    return(panels)
+    make_plot(data, title)
 }

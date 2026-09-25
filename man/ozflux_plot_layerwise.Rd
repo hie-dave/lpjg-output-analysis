@@ -10,13 +10,18 @@ ozflux_plot_layerwise(
   sites = NULL,
   layers = NULL,
   title = NULL,
-  separate_plots = TRUE,
-  combine_sites = FALSE,
+  facet_by = "layer",
+  site_layout = c("separate", "facet", "overlay"),
+  entity_layout = c("series", "facet", "aggregate"),
+  entity_level = c("auto", "stand", "patch", "indiv", "gridcell"),
+  colour_by = "source",
+  linetype_by = NULL,
+  shape_by = NULL,
+  geometry = c("auto", "line", "point", "line_point"),
+  axis = c("free", "shared"),
   use_plotly = FALSE,
-  common_yaxis = FALSE,
   show_all_observations = TRUE,
   show_all_predictions = TRUE,
-  allow_points = TRUE,
   show_obs = TRUE
 )
 }
@@ -29,32 +34,65 @@ ozflux_plot_layerwise(
 
 \item{layers}{The layers to be plotted. E.g. \code{paste0("sw_", 0:14)}}
 
-\item{title}{The desired panel titles}
+\item{title}{The desired plot title. For separate site plots, the site name
+is prepended.}
 
-\item{separate_plots}{iff TRUE, draw each layer in a separate plot. FALSE to
-draw all layers in a single plot}
+\item{facet_by}{Columns to draw as separate facets. Common values are
+\code{"layer"}, \code{"quantity"}, \code{"source"}, \code{"Site"}, \code{"entity"}, and \code{"pft"}.
+Use \code{NULL} or \code{"none"} for no faceting. Facets with only one value are
+omitted.}
 
-\item{combine_sites}{iff TRUE, combine all sites into a single plot. False otherwise}
+\item{site_layout}{How multiple sites should be shown. \code{"separate"} returns
+one plot per site, \code{"facet"} adds site to the facets, and \code{"overlay"} draws
+all sites in the same facets.}
+
+\item{entity_layout}{How stand/patch/individual output should be shown.
+\code{"series"} draws each entity as a separate time series, \code{"facet"} facets by
+entity, and \code{"aggregate"} plots the mean value across entities.}
+
+\item{entity_level}{Entity detail to show. \code{"auto"} uses the finest level
+present in the data: individual, then patch, then stand, then gridcell.}
+
+\item{colour_by}{Column used for line/point colour. Use \code{NULL} or \code{"none"}
+for a constant colour.}
+
+\item{linetype_by}{Column used for line type. Use \code{NULL} or \code{"none"} for a
+constant line type.}
+
+\item{shape_by}{Column used for point shape. Use \code{NULL} or \code{"none"} for a
+constant point shape.}
+
+\item{geometry}{One of \code{"auto"}, \code{"line"}, \code{"point"}, or \code{"line_point"}.
+\code{"auto"} draws sparse series as points and denser series as lines.}
+
+\item{axis}{\code{"free"} allows each facet to choose its own y-axis; \code{"shared"}
+uses one y-axis scale for all facets.}
 
 \item{use_plotly}{iff TRUE, generate \link{plotly} outputs, FALSE to use \link[ggplot2:ggplot]{ggplot2::ggplot}}
-
-\item{common_yaxis}{iff TRUE, use a common y-axis for all plots. False otherwise}
 
 \item{show_all_observations}{If true, all observations will be returned (ie the predicted data may contain NA values). If false, only the observations which have a matching prediction will be returned.}
 
 \item{show_all_predictions}{If true, all predictions will be returned (ie the observed data may contain NA values). If false, only the predictions which have a matching observation will be returned.}
 
-\item{allow_points}{iff TRUE, allow points to be plotted for sparse datasets. FALSE will ensure that all data is plotted using lines.}
 }
 \value{
-Returns a list of \link[ggplot2:ggplot]{ggplot2::ggplot} objects. If use_plotly is TRUE,
-returns \link{plotly} objects instead.
+Returns a \link[ggplot2:ggplot]{ggplot2::ggplot} object for one site or combined site
+layouts. With \code{site_layout = "separate"} and multiple sites, returns one plot
+per site as a list. If \code{use_plotly} is TRUE, returns \link{plotly} objects instead.
 }
 \description{
-Create a panel of plots, where each plot in the panel contains one of the
-layers of the specified variable. One panel will be generated for each site.
+Create ozflux site-level layerwise plots.
 }
 \details{
 (In this nomenclature, a "layer" technically refers to a column in the output
 file).
+
+The plotting controls are semantic rather than ggplot-specific. \code{facet_by}
+chooses which data columns become small multiples. \code{site_layout} controls
+whether sites are returned as separate plots, included as facets, or overlaid.
+\code{entity_layout} controls stand/patch/individual output. When
+\code{entity_level = "auto"}, individual-level data are grouped by
+stand/patch/individual, patch-level data by stand/patch, stand-level data by
+stand, and gridcell-level data as a single entity. Entities are separate time
+series by default.
 }

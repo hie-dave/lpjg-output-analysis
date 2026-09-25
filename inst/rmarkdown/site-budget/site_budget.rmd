@@ -65,8 +65,37 @@ if (!is.null(params$data_dir)) {
 
 ```{r helper_functions}
 read_data <- function(vars, layers = NULL, ...) {
+    if (is.null(layers) && length(vars) == 1) {
+        layers <- daveanalysis:::get_default_layers(
+            src,
+            daveanalysis:::sanitise_variable(vars),
+            site
+        )
+    }
     data <- daveanalysis::read_data(src, vars, site, layers = layers, ...)
-    data <- data@data
+    id_cols <- setdiff(names(data), c("source", "quantity", "layer", "value"))
+    nsource <- length(unique(data$source))
+    nquantity <- length(unique(data$quantity))
+    nlayer <- length(unique(data$layer))
+    data$wide_name <- if (nquantity > 1 && nlayer > 1) {
+        paste(data$quantity, data$layer, sep = "_")
+    } else if (nquantity > 1) {
+        data$quantity
+    } else if (nlayer > 1) {
+        data$layer
+    } else if (nsource > 1) {
+        data$source
+    } else {
+        data$layer
+    }
+    if (nsource > 1) {
+        is_pred <- data$source == src@id
+        data$wide_name[!is_pred] <- paste("observed", data$wide_name[!is_pred],
+                                          sep = "_")
+    }
+    data <- tidyr::pivot_wider(data, id_cols = dplyr::all_of(id_cols),
+                               names_from = "wide_name",
+                               values_from = "value")
     # Remove Lon/Lat columns, which are redundant when dealing with one site.
     data <- select(data, -c("Lon", "Lat"))
     return(data)
