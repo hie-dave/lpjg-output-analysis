@@ -204,7 +204,7 @@ ozflux_shiny <- function(sources,
 
       # Sidebar panel for inputs.
       sidebarPanel(
-        # Custom CSS to show a "loading" banner when data is being processed.
+        # Show the banner only while plot-related outputs are recalculating.
         tags$head(
           tags$style(HTML(".multicol {-webkit-column-count: 3; /* Chrome, Safari, Opera */-moz-column-count: 3; /* Firefox */column-count: 3;}")),
           tags$style(type="text/css", "#loadmessage {position: fixed;top: 0px;left: 0px;width: 100%;padding: 5px 0px 5px 0px;text-align: center;font-weight: bold;font-size: 100%;color: #000000;background-color: #CCFF66;z-index: 105;}"),
@@ -223,9 +223,38 @@ ozflux_shiny <- function(sources,
             #var ~ .selectize-control .selectize-dropdown-content {
               max-height: 420px;
             }
-          ")
+          "),
+          tags$script(HTML("
+            $(function() {
+              var tracked = {
+                timeseries: true, pvo: true, subannual: true,
+                quantity_layers: true
+              };
+              var recalculating = Object.create(null);
+
+              function updateBanner() {
+                $('#loadmessage').toggle(Object.keys(recalculating).length > 0);
+              }
+
+              $(document).on('shiny:recalculating', function(event) {
+                var id = event.target.id;
+                if (tracked[id]) {
+                  recalculating[id] = true;
+                  updateBanner();
+                }
+              });
+
+              $(document).on('shiny:recalculated shiny:error shiny:unbound', function(event) {
+                var id = event.target.id;
+                if (tracked[id]) {
+                  delete recalculating[id];
+                  updateBanner();
+                }
+              });
+            });
+          "))
         ),
-        conditionalPanel(condition="$('html').hasClass('shiny-busy')",tags$div("Loading...",id="loadmessage")),
+        tags$div("Loading...", id = "loadmessage", style = "display: none;"),
 
         # The input controls.
         selectInput(inputId = "site",

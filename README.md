@@ -1,13 +1,13 @@
-# LPJ-Guess Output Analysis and Benchmarking
+# LPJ-GUESS Output Analysis and Benchmarking
 
-This repository contains R code for visualising LPJ-Guess outputs, and for
+This repository contains R code for visualising LPJ-GUESS outputs, and for
 generating the ozflux site-level benchmarks report.
 
-See the [site budget vignette](vignettes/site-budget.Rmd) for required model
+See the [site budget vignette](vignettes/site-budget.Rmd) for required LPJ-GUESS model
 outputs, observation data, simulation layout and rendering instructions.
 
 The code is structured as an R package, and provides a number of convenient
-functions for visualising model outputs. Currently, these are mainly targeted at
+functions for visualising LPJ-GUESS model outputs. Currently, these are mainly targeted at
 point-level simulations.
 
 To install the package, run the following R code:
