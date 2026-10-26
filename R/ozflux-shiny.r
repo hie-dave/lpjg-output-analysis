@@ -591,7 +591,7 @@ ozflux_timeseries_data <- function(records) {
     required <- if ("indiv" %in% entities) c("stand", "patch", "indiv") else
       if ("patch" %in% entities) c("stand", "patch") else entities
     if (!all(required %in% entities)) stop("Missing entity columns in ", record$quantity)
-    frame$Date <- calc_date(frame)
+    frame$Date <- if ("date" %in% names(frame)) frame$date else calc_date(frame)
     if (anyNA(frame$Date)) stop("Invalid dates in ", record$quantity)
     keys <- c("Date", entities)
     if (anyDuplicated(frame[keys])) {

@@ -10,7 +10,7 @@ ozflux_plot_layerwise(
   sites = NULL,
   layers = NULL,
   title = NULL,
-  facet_by = "layer",
+  facet_by = "variable",
   site_layout = c("separate", "facet", "overlay"),
   entity_layout = c("series", "facet", "aggregate"),
   entity_level = c("auto", "stand", "patch", "indiv", "gridcell"),
@@ -38,9 +38,9 @@ ozflux_plot_layerwise(
 is prepended.}
 
 \item{facet_by}{Columns to draw as separate facets. Common values are
-\code{"layer"}, \code{"quantity"}, \code{"source"}, \code{"Site"}, \code{"entity"}, and \code{"pft"}.
-Use \code{NULL} or \code{"none"} for no faceting. Facets with only one value are
-omitted.}
+\code{"variable"}, \code{"quantity"}, \code{"source"}, \code{"Site"}, \code{"entity"}, \code{"pft"}, and
+\code{"layer"}. Use \code{NULL} or \code{"none"} for no faceting. Facets with only one
+value are omitted.}
 
 \item{site_layout}{How multiple sites should be shown. \code{"separate"} returns
 one plot per site, \code{"facet"} adds site to the facets, and \code{"overlay"} draws
@@ -81,12 +81,11 @@ layouts. With \code{site_layout = "separate"} and multiple sites, returns one pl
 per site as a list. If \code{use_plotly} is TRUE, returns \link{plotly} objects instead.
 }
 \description{
-Create ozflux site-level layerwise plots.
+Create site-level plots for one or more output variables/layers. By default,
+the requested output variables are drawn as separate facets, with one plot
+returned for each site.
 }
 \details{
-(In this nomenclature, a "layer" technically refers to a column in the output
-file).
-
 The plotting controls are semantic rather than ggplot-specific. \code{facet_by}
 chooses which data columns become small multiples. \code{site_layout} controls
 whether sites are returned as separate plots, included as facets, or overlaid.

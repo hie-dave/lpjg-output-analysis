@@ -124,7 +124,9 @@ get_ignored_layers <- function() {
         "year",
         "month",
         "day",
+        "date",
         "timestep",
+        "layer",
         "patch",
         "stand",
         "indiv",
@@ -233,9 +235,12 @@ get_obs_layer <- function(quant) {
 #'                              matching observation will be returned.
 #' @keywords internal
 #'
-#' @return A long [data.table::data.table] with columns identifying the
-#'         spatiotemporal record plus `source`, `quantity`, `layer`, and
-#'         `value`.
+#' @return A long [data.table::data.table] with a `date` column (`POSIXct` in
+#'         UTC when `timestep` is available with `Year` and `Day`, otherwise
+#'         `Date`), columns identifying the spatiotemporal record, and
+#'         `source`, `quantity`, `variable`, and `value`. `Day` is zero-based;
+#'         annual records are dated December 31. Subdaily intervals are inferred
+#'         from the highest zero-based `timestep` in the returned data.
 #' @export
 #'
 #' @seealso [ObservationReader], [find_readers_for_var], [register_reader]
@@ -269,7 +274,7 @@ read_data <- function(sources
         field_layer = character(),
         source = character(),
         quantity = character(),
-        layer = character()
+        variable = character()
     )
     nvar <- length(vars)
     original_layer <- layers
@@ -288,7 +293,7 @@ read_data <- function(sources
                 field_layer = field_layers,
                 source = source_id,
                 quantity = quantity_id,
-                layer = unname(layers)
+                variable = unname(layers)
             )
         )
     }
@@ -497,11 +502,6 @@ read_data <- function(sources
         }
     }
 
-    # Remove day column if all values are last day of year.
-    if ("Day" %in% names(data@data) && all(data@data$Day == 364)) {
-        data@data$Day <- NULL
-    }
-
     log_debug("Successfully read all data")
 
     return(field_to_long_table(data, layer_metadata))
@@ -531,9 +531,11 @@ field_to_long_table <- function(field, layer_metadata) {
     result <- merge(result, layer_metadata, by = "field_layer", all.x = TRUE,
                     sort = FALSE)
     result[, field_layer := NULL]
+    result[, date := calc_date(result)]
+    id_cols <- unique(c(id_cols, "date"))
     data.table::setcolorder(
         result,
-        c(id_cols, "source", "quantity", "layer", "value")
+        c(id_cols, "source", "quantity", "variable", "value")
     )
     result[]
 }

@@ -38,9 +38,12 @@ false, only the predictions which have a
 matching observation will be returned.}
 }
 \value{
-A long \link[data.table:data.table]{data.table::data.table} with columns identifying
-the spatiotemporal record plus \code{source}, \code{quantity}, \code{layer}, and
-\code{value}.
+A long \link[data.table:data.table]{data.table::data.table} with a \code{date} column (\code{POSIXct} in
+UTC when \code{timestep} is available with \code{Year} and \code{Day}, otherwise
+\code{Date}), columns identifying the spatiotemporal record, and
+\code{source}, \code{quantity}, \code{variable}, and \code{value}. \code{Day} is zero-based;
+annual records are dated December 31. Subdaily intervals are inferred
+from the highest zero-based \code{timestep} in the returned data.
 }
 \description{
 Read data for the specified variable.

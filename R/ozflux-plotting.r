@@ -172,11 +172,9 @@ ozflux_panel <- function(
 #'
 #' Create ozflux site-level layerwise plots.
 #'
-#' Create a panel of plots, where each plot in the panel contains one of the
-#' layers of the specified variable. One panel will be generated for each site.
-#'
-#' (In this nomenclature, a "layer" technically refers to a column in the output
-#' file).
+#' Create site-level plots for one or more output variables/layers. By default,
+#' the requested output variables are drawn as separate facets, with one plot
+#' returned for each site.
 #'
 #' The plotting controls are semantic rather than ggplot-specific. `facet_by`
 #' chooses which data columns become small multiples. `site_layout` controls
@@ -194,9 +192,9 @@ ozflux_panel <- function(
 #' @param title The desired plot title. For separate site plots, the site name
 #' is prepended.
 #' @param facet_by Columns to draw as separate facets. Common values are
-#' `"layer"`, `"quantity"`, `"source"`, `"Site"`, `"entity"`, and `"pft"`.
-#' Use `NULL` or `"none"` for no faceting. Facets with only one value are
-#' omitted.
+#' `"variable"`, `"quantity"`, `"source"`, `"Site"`, `"entity"`, `"pft"`, and
+#' `"layer"`. Use `NULL` or `"none"` for no faceting. Facets with only one
+#' value are omitted.
 #' @param site_layout How multiple sites should be shown. `"separate"` returns
 #' one plot per site, `"facet"` adds site to the facets, and `"overlay"` draws
 #' all sites in the same facets.
@@ -230,7 +228,7 @@ ozflux_plot_layerwise <- function(
     sites = NULL,
     layers = NULL,
     title = NULL,
-    facet_by = "layer",
+    facet_by = "variable",
     site_layout = c("separate", "facet", "overlay"),
     entity_layout = c("series", "facet", "aggregate"),
     entity_level = c("auto", "stand", "patch", "indiv", "gridcell"),

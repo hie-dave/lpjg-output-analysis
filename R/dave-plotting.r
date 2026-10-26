@@ -31,8 +31,7 @@ dave_animation <- function(src,
 dave_animate_field <- function(data, title, layer, out_file = NULL, renderer = NULL) {
     data <- data.table::as.data.table(data)
     layer_arg <- layer
-    data <- data[layer == layer_arg]
-    data$date <- calc_date(data)
+    data <- data[variable == layer_arg]
     cols <- grDevices::hcl.colors(20, palette = "Viridis")
     p <- ggplot(data) +
         geom_raster(aes(x = Lon, y = Lat, fill = value)) +
@@ -180,13 +179,12 @@ dave_animate_dominance <- function(src,
     var <- sanitise_variable(var)
     long_data <- read_data(src, var, layers = pfts, read_obs = FALSE)
 
-    id_cols <- setdiff(names(long_data), c("source", "quantity", "layer", "value"))
+    id_cols <- setdiff(names(long_data), c("source", "quantity", "variable", "value"))
     data <- data.table::dcast(
         long_data,
-        stats::as.formula(paste(paste(id_cols, collapse = " + "), "~ layer")),
+        stats::as.formula(paste(paste(id_cols, collapse = " + "), "~ variable")),
         value.var = "value"
     )
-    data$date <- calc_date(data)
 
     # Compute dominance metrics
     .compute_dominance_metrics(data, pfts)

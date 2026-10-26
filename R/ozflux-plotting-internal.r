@@ -463,12 +463,11 @@ plot_timeseries <- function(
         log_error("Unable to plot: data is not in read_data() long format")
     }
     if (!is.null(layers)) {
-        gc <- gc[layer %in% layers]
+        gc <- gc[variable %in% layers]
     }
     if (nrow(gc) == 0) {
         log_error("Unable to plot: no rows are available")
     }
-    gc[, date := calc_date(gc)]
     gc[, series := get_series_labels(.SD)]
 
     ncolour <- length(unique(gc$series))
@@ -497,7 +496,7 @@ plot_timeseries <- function(
 
 get_series_labels <- function(data) {
     data <- data.table::as.data.table(data)
-    components <- intersect(c("source", "quantity", "layer"), names(data))
+    components <- intersect(c("source", "quantity", "variable"), names(data))
     components <- components[vapply(components, function(column) {
         length(unique(data[[column]])) > 1
     }, logical(1))]
@@ -522,7 +521,7 @@ filter_default_plot_layers <- function(data, sources, vars, sites) {
                 any_defaults <- TRUE
                 keep <- keep | (data$source == source@id &
                                 data$quantity == var@id &
-                                data$layer %in% default_layers)
+                                data$variable %in% default_layers)
             }
         }
     }
@@ -606,7 +605,7 @@ normalise_layerwise_mapping <- function(mapping, allowed, arg_name,
 
 plot_layerwise_table <- function(
     data,
-    facet_by = "layer",
+    facet_by = "variable",
     entity_layout = c("series", "facet", "aggregate"),
     entity_level = c("auto", "stand", "patch", "indiv", "gridcell"),
     colour_by = "source",
@@ -632,10 +631,10 @@ plot_layerwise_table <- function(
 
     data <- data.table::copy(data)
     data <- add_entity_column(data, entity_level)
-    data[, date := calc_date(data)]
 
-    allowed_mappings <- intersect(c("source", "quantity", "layer", "Site",
-                                    "entity", "pft"), names(data))
+    allowed_mappings <- intersect(c("source", "quantity", "variable", "layer",
+                                    "Site", "entity", "pft"),
+                                  names(data))
     facet_by <- normalise_layerwise_mapping(facet_by, allowed_mappings,
                                             "facet_by")
     colour_by <- normalise_layerwise_mapping(colour_by, allowed_mappings,
@@ -649,7 +648,7 @@ plot_layerwise_table <- function(
         facet_by <- unique(c(facet_by, "entity"))
     } else if (entity_layout == "aggregate") {
         grouping <- unique(c("date", "Year", "Day", "Lon", "Lat", "Site",
-                             "source", "quantity", "layer"))
+                             "source", "quantity", "variable", "layer"))
         grouping <- intersect(grouping, names(data))
         data <- data[!is.na(value),
                      .(value = mean(value, na.rm = TRUE)),
@@ -661,8 +660,8 @@ plot_layerwise_table <- function(
         length(unique(data[[column]])) > 1
     }, logical(1))]
 
-    group_cols <- unique(c("source", "quantity", "layer", "Site", "pft",
-                           if (entity_layout == "series") "entity",
+    group_cols <- unique(c("source", "quantity", "variable", "layer", "Site",
+                           "pft", if (entity_layout == "series") "entity",
                            colour_by, linetype_by, shape_by))
     group_cols <- intersect(group_cols, names(data))
     data[, group_id := do.call(paste, c(.SD, sep = " | ")), .SDcols = group_cols]
@@ -737,7 +736,7 @@ plot_pvo <- function(
                           names(gc))
     obs <- obs[, c(key_cols, "value"), with = FALSE]
     data.table::setnames(obs, "value", "observed")
-    pred <- pred[, c(key_cols, "source", "layer", "value"), with = FALSE]
+    pred <- pred[, c(key_cols, "source", "variable", "value"), with = FALSE]
     data <- merge(pred, obs, by = key_cols, allow.cartesian = TRUE)
     if (nrow(data) == 0) {
         log_error("Unable to plot: predictions do not overlap observations")
@@ -808,7 +807,7 @@ plot_subannual <- function(
     }
     data <- gc[!is.na(value),
                .(value = mean(value, na.rm = TRUE)),
-               by = .(Day, source, quantity, layer)]
+               by = .(Day, source, quantity, variable)]
     data[, series := get_series_labels(.SD)]
 
     if (is.null(colours)) {
@@ -1250,18 +1249,29 @@ get_panel_title <- function(vars) {
 }
 
 #'
-#' Calculate a date from a year and day.
-#' @param data A data frame containing a 'Year' and/or 'Day' column.
-#' @return A Date vector.
+#' Calculate a date from a year, day and optional timestep.
+#' @param data A data frame containing `Year`, optionally `Day` (zero-based)
+#' and `timestep` (zero-based within each day).
+#' @return A `Date` vector for annual and daily records, or a UTC `POSIXct`
+#' vector for subdaily records.
 #'
 #' @keywords internal
 #'
 calc_date <- function(data) {
-    if ("Year" %in% names(data) && "Day" %in% names(data)) {
-        return(as.Date(paste0(data$Year, "-", data$Day + 1), format = "%Y-%j"))
-    } else if ("Year" %in% names(data)) {
-        return(as.Date(paste0(data$Year, "-12-31"), format = "%Y-%m-%d"))
-    } else {
-        stop("Data must contain 'Year' and 'Day' columns, or 'Year' column.")
+    if (!("Year" %in% names(data))) {
+        stop("Data must contain a 'Year' column.")
     }
+    if (!("Day" %in% names(data))) {
+        return(as.Date(paste0(data$Year, "-12-31")))
+    }
+
+    date <- as.Date(paste0(data$Year, "-01-01")) + data$Day
+    if (!("timestep" %in% names(data))) {
+        return(date)
+    }
+
+    # A zero-based timestep index gives the number of steps in a full day.
+    steps_per_day <- if (all(is.na(data$timestep))) NA_real_ else
+        max(data$timestep, na.rm = TRUE) + 1
+    as.POSIXct(date, tz = "UTC") + data$timestep * (86400 / steps_per_day)
 }
