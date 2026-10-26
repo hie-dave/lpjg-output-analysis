@@ -10,7 +10,10 @@ ozflux_shiny(sources, launch.browser = FALSE, allow_unrecognised = FALSE)
 \arguments{
 \item{sources}{List of \link[DGVMTools:Source]{DGVMTools::Source} objects to plot}
 \item{launch.browser}{Whether to launch the app in the default web browser.}
-\item{allow_unrecognised}{Whether to ignore unrecognised source formats with a warning instead of an error.}
+\item{allow_unrecognised}{If \code{TRUE}, sources without the OZFLUX format are
+ignored with a warning. If \code{FALSE}, they cause an error. Sites absent from
+\code{ozflux.grid} are available regardless of this setting when they have a
+site instruction file and \code{gridlist.txt}.}
 }
 \details{
 Select multiple outputs and choose columns separately for each output.

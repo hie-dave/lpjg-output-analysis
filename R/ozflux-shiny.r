@@ -4,7 +4,10 @@
 #'
 #' @param sources List of [DGVMTools::Source] objects to plot
 #' @param launch.browser If `TRUE`, the app will be launched in the system's default web browser. Otherwise, it will run in the R session's built-in viewer (if available) or the console.
-#' @param allow_unrecognised If `TRUE`, sources with unrecognised formats will be ignored with a warning. If `FALSE`, the presence of any unrecognised source formats will cause an error. This is useful to avoid silent misconfiguration where a user accidentally provides sources that don't actually contain any OZFLUX data.
+#' @param allow_unrecognised If `TRUE`, sources without the OZFLUX format are
+#' ignored with a warning. If `FALSE`, they cause an error. Sites absent from
+#' `ozflux.grid` are available regardless of this setting when they have a
+#' site instruction file and `gridlist.txt`.
 #'
 #' @details Select multiple outputs and choose columns separately for each output.
 #' Timeseries are aligned by date and, where present, stand, patch, and indiv.
@@ -23,9 +26,18 @@ ozflux_shiny <- function(sources,
   sources <- sanitise_sources(sources)
   log_info("Starting ozflux_shiny with ", length(sources), " source(s)")
 
-  gridcells <- read_ozflux_sites()
-  gridcells <- get_available_sites_ozflux(sources,
-                                          allow_unrecognised = allow_unrecognised)
+  ozflux_source <- vapply(sources, function(source) source@format@id == "OZFLUX",
+                          logical(1))
+  if (any(!ozflux_source)) {
+    format_error <- "ozflux_shiny requires OZFLUX sources"
+    if (!allow_unrecognised) stop(format_error, "; set allow_unrecognised = TRUE to ignore other formats")
+    warning("Ignoring ", sum(!ozflux_source), " non-OZFLUX source(s)")
+    sources <- sources[ozflux_source]
+  }
+  if (!length(sources)) stop("No OZFLUX sources were provided")
+
+  gridcells <- get_available_sites_ozflux(sources, include_custom_sites = TRUE)
+  if (!nrow(gridcells)) stop("No OZFLUX sites with site instruction files were found")
 
   get_site_output_files <- function(site_name) {
     lapply(sources, function(source) {
@@ -99,11 +111,11 @@ ozflux_shiny <- function(sources,
     log_debug("Getting site layers for site '", site_name, "' and variable '", var_name, "'")
     var <- sanitise_variable(var_name)
     out_layers <- c()
-    for (source in sources) {
-      if (source@format@id != "OZFLUX") {
-        log_debug("Skipping non-OZFLUX source '", source@name, "' while querying layers")
-        next
-      }
+    files_by_source <- get_site_output_files(site_name)
+    for (source_index in seq_along(sources)) {
+      source <- sources[[source_index]]
+      available_files <- basename(files_by_source[[source_index]])
+      if (!any(available_files %in% paste0(var_name, c(".out", ".out.gz")))) next
       layers <- tryCatch(
         available_layers_ozflux(source, var, sites = site_name),
         error = function(e) {
@@ -165,7 +177,14 @@ ozflux_shiny <- function(sources,
     } else {
       log_debug("Reading ", cache_key, " from disk")
       var <- get_var(var_name)
-      data <- read_data(sources, var, sites = site_name, layers = layers)
+      site_sources <- Filter(function(source) {
+        root <- get_ozflux_path(source)
+        out_dir <- get_output_dir(file.path(root, "outputs.ins"))
+        file <- file.path(root, site_name, out_dir, paste0(var_name, ".out"))
+        file.exists(file) || file.exists(paste0(file, ".gz"))
+      }, sources)
+      if (!length(site_sources)) stop("No output found for ", var_name, " at site ", site_name)
+      data <- read_data(site_sources, var, sites = site_name, layers = layers)
       cached_vars <<- c(cached_vars, cache_key)
       cached_data <<- c(cached_data, data)
       log_debug("Cached data for key ", cache_key, "; cache now has ",

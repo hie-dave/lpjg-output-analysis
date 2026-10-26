@@ -2,7 +2,7 @@ get_ozflux_path <- function(source) {
     return(file.path(source@dir, "benchmarks", "ozflux"))
 }
 
-get_sites_ozflux <- function(source, allow_unrecognised = FALSE) {
+get_sites_ozflux <- function(source, include_custom_sites = FALSE) {
     ozflux <- get_ozflux_path(source)
     standard_sites <- read_ozflux_sites()$Name
 
@@ -10,7 +10,7 @@ get_sites_ozflux <- function(source, allow_unrecognised = FALSE) {
     for (dir in list.dirs(ozflux, full.names = FALSE, recursive = FALSE)) {
         ins <- file.path(ozflux, dir, paste0(dir, ".ins"))
         if (file.exists(ins)) {
-            if (allow_unrecognised || dir %in% standard_sites) {
+            if (include_custom_sites || dir %in% standard_sites) {
                 sites <- c(sites, dir)
             } else {
                 log_info("Ignoring site ", dir
@@ -33,11 +33,11 @@ get_coords <- function(source, site) {
     return(list(lon = lon, lat = lat))
 }
 
-get_available_sites_ozflux <- function(sources, allow_unrecognised) {
-    sites <- c()
+get_available_sites_ozflux <- function(sources, include_custom_sites = FALSE) {
+    sites <- data.frame(Name = character(), Lon = numeric(), Lat = numeric())
     for (source in sources) {
         if (source@format@id == "OZFLUX") {
-            for (site in get_sites_ozflux(source, allow_unrecognised)) {
+            for (site in get_sites_ozflux(source, include_custom_sites)) {
                 coords <- get_coords(source, site)
                 sites <- rbind(sites, data.frame(Name = site, Lon = coords$lon,
                                                  Lat = coords$lat))
