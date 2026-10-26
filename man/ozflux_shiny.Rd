@@ -22,6 +22,9 @@ Different aggregation levels remain separate series. Annual values are dated
 December 31. Colour, line type, and point type can vary by column, quantity,
 source, stand, patch, or cohort (when present). The combined plot uses a shared value axis. Observed
 comparisons and subannual plots use the first selected output.
+Timeseries legends show the fields that distinguish traces. The timeseries
+title can be overridden, and its y-axis uses registry units when one known
+quantity has the same units for every selected column.
 }
 \value{
 Returns a \link[shiny:shinyApp]{shiny::shinyApp} object

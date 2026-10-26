@@ -10,6 +10,23 @@ The code is structured as an R package, and provides a number of convenient
 functions for visualising LPJ-GUESS model outputs. Currently, these are mainly targeted at
 point-level simulations.
 
+To explore site-level factorial runs produced by `lpjguessRunner`, pass the
+top-level runner output directory (the one containing `index.toml`) to the
+interactive app:
+
+```R
+daveanalysis::runner_shiny("/path/to/runner/out")
+```
+
+The app discovers sites from instruction file basenames and simulations from
+their manifests. Select multiple sites, simulations, outputs, and columns to
+compare time series. Colour, line type, and point type can vary by site,
+simulation, stand, patch, cohort, or manifest factor. `lpjguessRunner` must be
+installed to use this app.
+Legend entries show only the fields that distinguish series. The plot controls
+let you place the legend on any side and set a custom title. For a single known
+output with consistent units, the y-axis shows those units automatically.
+
 To install the package, run the following R code:
 
 ```R

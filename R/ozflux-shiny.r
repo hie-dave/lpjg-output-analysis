@@ -15,6 +15,9 @@
 #' December 31. Colour, line type, and point type can vary by column, quantity,
 #' source, stand, patch, or cohort (when present). The combined plot uses a shared value axis. Observed
 #' comparisons and subannual plots use the first selected output.
+#' Timeseries legends show the fields that distinguish traces. The timeseries
+#' title can be overridden, and its y-axis uses registry units when one known
+#' quantity has the same units for every selected column.
 #'
 #' @return Returns a [shiny::shinyApp] object
 #' @import shiny
@@ -275,6 +278,14 @@ ozflux_shiny <- function(sources,
         selectInput("point_by", "Point type", c("None" = "none",
           "Constant" = "constant", "Vary by layer" = "Layer",
           "Vary by quantity" = "Quantity", "Vary by source" = "Source")),
+        textInput("plot_title", "Timeseries title (optional)",
+                  value = "", placeholder = "Automatic"),
+        selectInput("legend_location", "Legend location",
+          c("Right" = "right", "Left" = "left", "Above" = "top",
+            "Below" = "bottom"), selected = "right"),
+        selectInput("legend_direction", "Legend direction",
+          c("Vertical" = "vertical", "Horizontal" = "horizontal"),
+          selected = "vertical"),
         helpText("Observed comparisons and subannual plots use the first selected output. Combined timeseries use a shared value axis; units are shown in tooltips."),
         selectInput(inputId = "obs_layer",
               label = "Observed Layer",
@@ -577,7 +588,8 @@ ozflux_shiny <- function(sources,
       validate(need(input$line_by != "none" || input$point_by != "none",
                     "Enable lines or points to draw the timeseries."))
       ozflux_timeseries_plot(timeseries_data(), input$colour_by,
-        input$line_by, input$point_by, input$site)
+        input$line_by, input$point_by, input$site, input$legend_location,
+        input$legend_direction, input$plot_title)
     })
 
     output$pvo <- plotly::renderPlotly({
@@ -697,7 +709,10 @@ ozflux_entity_choices <- function(data) {
   choices[vapply(choices, function(column) any(!is.na(data[[column]])), logical(1))]
 }
 
-ozflux_timeseries_plot <- function(data, colour_by, line_by, point_by, site) {
+ozflux_timeseries_plot <- function(data, colour_by, line_by, point_by, site,
+                                   legend_location = "right",
+                                   legend_direction = "vertical",
+                                   title = NULL) {
   mapping <- function(by, values) {
     if (by %in% c("none", "constant")) return(rep(values[1], nrow(data)))
     levels <- unique(data[[by]])
@@ -711,22 +726,27 @@ ozflux_timeseries_plot <- function(data, colour_by, line_by, point_by, site) {
   mode <- if (line_by == "none") "markers" else
     if (point_by == "none") "lines" else "lines+markers"
   plot <- plotly::plot_ly()
+  labels <- timeseries_trace_labels(data,
+    c("Quantity", "Layer", "Source", "Entity"))
   for (id in unique(data$Series)) {
     rows <- which(data$Series == id)
     first <- rows[1]
     trace <- data[rows, ]
-    label <- paste(trace$Quantity[1], trace$Layer[1], trace$Source[1],
-                   trace$Entity[1], sep = " / ")
+    label <- labels$Name[match(id, labels$Series)]
+    full_label <- labels$Full[match(id, labels$Series)]
     plot <- plotly::add_trace(plot, x = trace$Date, y = trace$Value,
       type = "scatter", mode = mode, name = label,
-      text = paste(label, get_y_label(trace$Quantity[1]), sep = "<br>"),
+      showlegend = nrow(labels) > 1L,
+      text = paste(full_label, get_y_label(trace$Quantity[1]), sep = "<br>"),
       hovertemplate = "%{text}<br>%{x}<br>%{y}<extra></extra>",
       line = if (line_by != "none") list(color = colours[first], dash = lines[first]) else NULL,
       marker = if (point_by != "none") list(color = colours[first], symbol = points[first]) else NULL,
       connectgaps = FALSE)
   }
-  plotly::layout(plot, title = site, xaxis = list(title = "Date"),
-                 yaxis = list(title = "Value"))
+  plotly::layout(plot, title = timeseries_plot_title(data, site, title),
+    xaxis = list(title = "Date"),
+    yaxis = list(title = timeseries_y_title(data)),
+    legend = timeseries_legend_layout(legend_location, legend_direction))
 }
 
 ozflux_fresh_output_files <- function(site_out_dir, stale_threshold_secs = 10) {

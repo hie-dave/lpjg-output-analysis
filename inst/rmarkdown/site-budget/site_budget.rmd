@@ -102,7 +102,7 @@ read_data <- function(vars, layers = NULL, ...) {
 }
 
 calc_date <- function(year, day) {
-    return(as.Date(paste0(year, "-", day), format = "%Y-%j"))
+    return(as.Date(paste0(year, "-01-01")) + day)
 }
 
 som_pools <- c("SURFSTRUCT", "SOILSTRUCT", "SOILMICRO", "SURFHUMUS",
